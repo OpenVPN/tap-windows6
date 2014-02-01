@@ -309,6 +309,51 @@ tapReadConfiguration(
     return status;
 }
 
+// Returns with added reference on adapter context.
+PTAP_ADAPTER_CONTEXT
+tapAdapterContextFromDeviceObject(
+    __in PDEVICE_OBJECT DeviceObject
+    )
+{
+    LOCK_STATE              lockState;
+
+    // Acquire global adapter list lock.
+    NdisAcquireReadWriteLock(
+        &GlobalData.Lock,
+        FALSE,      // Acquire for read
+        &lockState
+        );
+
+    if (!IsListEmpty(&GlobalData.AdapterList))
+    {
+        PLIST_ENTRY             entry = GlobalData.AdapterList.Flink;
+        PTAP_ADAPTER_CONTEXT    adapter;
+
+        while (entry != &GlobalData.AdapterList)
+        {
+            adapter = CONTAINING_RECORD(entry, TAP_ADAPTER_CONTEXT, AdapterListLink);
+
+            // Match on DeviceObject
+            if(adapter->DeviceObject == DeviceObject )
+            {
+                // Add reference to adapter context.
+                tapAdapterContextReference(adapter);
+
+                // Release global adapter list lock.
+                NdisReleaseReadWriteLock(&GlobalData.Lock,&lockState);
+
+                return adapter;
+            }
+        }
+    }
+
+    // Release global adapter list lock.
+    NdisReleaseReadWriteLock(&GlobalData.Lock,&lockState);
+
+    return (PTAP_ADAPTER_CONTEXT )NULL;
+}
+
+
 NDIS_STATUS
 AdapterCreate(
     __in  NDIS_HANDLE                         MiniportAdapterHandle,
@@ -316,8 +361,8 @@ AdapterCreate(
     __in  PNDIS_MINIPORT_INIT_PARAMETERS      MiniportInitParameters
     )
 {
-    PTAP_ADAPTER_CONTEXT   adapter = NULL;
-    NDIS_STATUS    status;
+    PTAP_ADAPTER_CONTEXT    adapter = NULL;
+    NDIS_STATUS             status;
 
     UNREFERENCED_PARAMETER(MiniportDriverContext);
     UNREFERENCED_PARAMETER(MiniportInitParameters);
@@ -389,6 +434,14 @@ Return Value:
     UNREFERENCED_PARAMETER(HaltAction);
 
     DEBUGP (("[TAP] --> AdapterHalt\n"));
+
+    // Free the ANSI MiniportName buffer.
+    if(adapter->MiniportNameAnsi.Buffer != NULL)
+    {
+        RtlFreeAnsiString(&adapter->MiniportNameAnsi);
+    }
+
+    adapter->MiniportNameAnsi.Buffer = NULL;
 
     //
     // Remove Initial Reference Added in AdapterCreate.

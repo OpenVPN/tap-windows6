@@ -69,9 +69,26 @@ Return Value:
 --*/
 
 {
-    UNREFERENCED_PARAMETER(DeviceObject);
+    PTAP_ADAPTER_CONTEXT    adapter = NULL;
 
     PAGED_CODE();
+
+    //
+    // Find adapter context for this device.
+    // -------------------------------------
+    // Returns with added reference on adapter context.
+    //
+    adapter = tapAdapterContextFromDeviceObject(DeviceObject);
+
+    ASSERT(adapter);
+
+    // BUGBUG!!! Also check for halt state!!!
+    if(adapter == NULL)
+    {
+    }
+
+    // BUGBUG!!! Just dereference for now...
+    tapAdapterContextDereference(adapter);
 
     Irp->IoStatus.Status = STATUS_SUCCESS;
     Irp->IoStatus.Information = 0;

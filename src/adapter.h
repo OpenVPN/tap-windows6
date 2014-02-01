@@ -31,6 +31,9 @@
 
 //
 // Each adapter managed by this driver has a TapAdapter struct.
+// ------------------------------------------------------------
+// Since there is a one-to-one relationship between adapter instances
+// and device instances this structure is the device extension as well.
 //
 typedef struct _TAP_ADAPTER_CONTEXT
 {
@@ -61,6 +64,15 @@ typedef struct _TAP_ADAPTER_CONTEXT
 
     MACADDR                 PermanentAddress;   // From registry, if available
     MACADDR                 CurrentAddress;
+
+
+
+    // Device registration parameters from NdisRegisterDeviceEx.
+    NDIS_HANDLE             DeviceHandle;
+    PDEVICE_OBJECT          DeviceObject;
+
+
+
 
   BOOLEAN m_InterfaceIsRunning;
   LONG m_Rx, m_Tx, m_RxErr, m_TxErr;
@@ -143,6 +155,12 @@ tapAdapterContextDereference(
 
     return refCount;
 }
+
+// Returns with added reference on adapter context.
+PTAP_ADAPTER_CONTEXT
+tapAdapterContextFromDeviceObject(
+    __in PDEVICE_OBJECT DeviceObject
+    );
 
 // Prototypes for standard NDIS miniport entry points
 MINIPORT_INITIALIZE                 AdapterCreate;
