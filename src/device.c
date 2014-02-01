@@ -67,7 +67,6 @@ Return Value:
     NT status code
 
 --*/
-
 {
     PTAP_ADAPTER_CONTEXT    adapter = NULL;
 
@@ -154,17 +153,30 @@ Return Value:
 --*/
 
 {
-    PIO_STACK_LOCATION  irpSp;// Pointer to current stack location
-    NTSTATUS            ntStatus = STATUS_SUCCESS;// Assume success
-    ULONG               inBufLength; // Input buffer length
-    ULONG               outBufLength; // Output buffer length
-    PCHAR               inBuf, outBuf; // pointer to Input and output buffer
-    PMDL                mdl = NULL;
-    PCHAR               buffer = NULL;
-
-    UNREFERENCED_PARAMETER(DeviceObject);
+    PIO_STACK_LOCATION      irpSp;// Pointer to current stack location
+    NTSTATUS                ntStatus = STATUS_SUCCESS;// Assume success
+    ULONG                   inBufLength; // Input buffer length
+    ULONG                   outBufLength; // Output buffer length
+    PCHAR                   inBuf, outBuf; // pointer to Input and output buffer
+    PMDL                    mdl = NULL;
+    PCHAR                   buffer = NULL;
+    PTAP_ADAPTER_CONTEXT    adapter = NULL;
 
     PAGED_CODE();
+
+    //
+    // Find adapter context for this device.
+    // -------------------------------------
+    // Returns with added reference on adapter context.
+    //
+    adapter = tapAdapterContextFromDeviceObject(DeviceObject);
+
+    ASSERT(adapter);
+
+    // BUGBUG!!! Also check for halt state!!!
+    if(adapter == NULL)
+    {
+    }
 
     irpSp = IoGetCurrentIrpStackLocation( Irp );
     inBufLength = irpSp->Parameters.DeviceIoControl.InputBufferLength;
@@ -179,12 +191,77 @@ Return Value:
     //
     // Determine which I/O control code was specified.
     //
-
     switch ( irpSp->Parameters.DeviceIoControl.IoControlCode )
     {
     case TAP_WIN_IOCTL_GET_MAC:
+        {
+            if (outBufLength >= MACADDR_SIZE )
+            {
+                COPY_MAC(
+                    Irp->AssociatedIrp.SystemBuffer,
+                    adapter->CurrentAddress
+                    );
+
+                Irp->IoStatus.Information = MACADDR_SIZE;
+            }
+            else
+            {
+                // BUGBUG!!! Fixme!!!
+                //NOTE_ERROR();
+                Irp->IoStatus.Status = ntStatus = STATUS_BUFFER_TOO_SMALL;
+            }
+        }
+        break;
+
     case TAP_WIN_IOCTL_GET_VERSION:
+        {
+            const ULONG size = sizeof (ULONG) * 3;
+
+            if (outBufLength >= size)
+            {
+                ((PULONG) (Irp->AssociatedIrp.SystemBuffer))[0]
+                    = TAP_DRIVER_MAJOR_VERSION;
+
+                ((PULONG) (Irp->AssociatedIrp.SystemBuffer))[1]
+                    = TAP_DRIVER_MINOR_VERSION;
+
+                ((PULONG) (Irp->AssociatedIrp.SystemBuffer))[2]
+#if DBG
+                    = 1;
+#else
+                    = 0;
+#endif
+                Irp->IoStatus.Information = size;
+            }
+            else
+            {
+                // BUGBUG!!! Fixme!!!
+                //NOTE_ERROR();
+                Irp->IoStatus.Status = ntStatus = STATUS_BUFFER_TOO_SMALL;
+            }
+        }
+        break;
+
     case TAP_WIN_IOCTL_GET_MTU:
+        {
+            const ULONG size = sizeof (ULONG) * 1;
+
+            if (outBufLength >= size)
+            {
+                ((PULONG) (Irp->AssociatedIrp.SystemBuffer))[0]
+                    = adapter->MtuSize;
+
+                Irp->IoStatus.Information = size;
+            }
+            else
+            {
+                // BUGBUG!!! Fixme!!!
+                //NOTE_ERROR();
+                Irp->IoStatus.Status = ntStatus = STATUS_BUFFER_TOO_SMALL;
+            }
+        }
+        break;
+
     case TAP_WIN_IOCTL_GET_INFO:
     case TAP_WIN_IOCTL_CONFIG_POINT_TO_POINT:
     case TAP_WIN_IOCTL_SET_MEDIA_STATUS:
@@ -202,11 +279,17 @@ Return Value:
     }
 
 End:
+
+    // Remove reference added by tapAdapterContextFromDeviceObject,
+    if(adapter != NULL)
+    {
+        tapAdapterContextDereference(adapter);
+    }
+
     //
     // Finish the I/O operation by simply completing the packet and returning
     // the same status as in the packet itself.
     //
-
     Irp->IoStatus.Status = ntStatus;
 
     IoCompleteRequest( Irp, IO_NO_INCREMENT );

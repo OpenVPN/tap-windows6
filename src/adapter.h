@@ -66,7 +66,6 @@ typedef struct _TAP_ADAPTER_CONTEXT
     MACADDR                 CurrentAddress;
 
 
-
     // Device registration parameters from NdisRegisterDeviceEx.
     NDIS_HANDLE             DeviceHandle;
     PDEVICE_OBJECT          DeviceObject;
