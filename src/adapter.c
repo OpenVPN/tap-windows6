@@ -332,11 +332,31 @@ tapReadConfiguration(
                 Adapter->PermanentAddress
                 );
 
+            DEBUGP (("[%s] Using MAC PermanentAddress %x:%x:%x:%x:%x:%x\n",
+                MINIPORT_INSTANCE_ID (Adapter),
+                Adapter->PermanentAddress[0],
+                Adapter->PermanentAddress[1],
+                Adapter->PermanentAddress[2],
+                Adapter->PermanentAddress[3],
+                Adapter->PermanentAddress[4],
+                Adapter->PermanentAddress[5])
+                );
+
             // Now seed the current MAC address with the permanent address.
             COPY_MAC(Adapter->CurrentAddress, Adapter->PermanentAddress);
 
+            DEBUGP (("[%s] Using MAC CurrentAddress %x:%x:%x:%x:%x:%x\n",
+                MINIPORT_INSTANCE_ID (Adapter),
+                Adapter->CurrentAddress[0],
+                Adapter->CurrentAddress[1],
+                Adapter->CurrentAddress[2],
+                Adapter->CurrentAddress[3],
+                Adapter->CurrentAddress[4],
+                Adapter->CurrentAddress[5])
+                );
+
             // Read optional AllowNonAdmin setting from registry.
-    #if ENABLE_NONADMIN
+#if ENABLE_NONADMIN
             NdisReadConfiguration (
                 &localStatus,
                 &configParameter,
@@ -352,7 +372,7 @@ tapReadConfiguration(
                     Adapter->AllowNonAdmin = TRUE;
                 }
             }
-    #endif
+#endif
         }
 
         // Close the configuration handle.
