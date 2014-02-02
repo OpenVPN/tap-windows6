@@ -48,35 +48,49 @@
 // Define the NDIS miniport interface version that this driver targets.
 //
 #if defined(NDIS60_MINIPORT)
-#  define TAP_NDIS_MAJOR_VERSION        6
-#  define TAP_NDIS_MINOR_VERSION        0
+#  define TAP_NDIS_MAJOR_VERSION    6
+#  define TAP_NDIS_MINOR_VERSION    0
 #elif defined(NDIS620_MINIPORT)
-#  define TAP_NDIS_MAJOR_VERSION        6
-#  define TAP_NDIS_MINOR_VERSION        20
+#  define TAP_NDIS_MAJOR_VERSION    6
+#  define TAP_NDIS_MINOR_VERSION    20
 #elif defined(NDIS630_MINIPORT)
-#  define TAP_NDIS_MAJOR_VERSION        6
-#  define TAP_NDIS_MINOR_VERSION        30
+#  define TAP_NDIS_MAJOR_VERSION    6
+#  define TAP_NDIS_MINOR_VERSION    30
 #else
-#define TAP_NDIS_MAJOR_VERSION          5
-#define TAP_NDIS_MINOR_VERSION          0
+#define TAP_NDIS_MAJOR_VERSION      5
+#define TAP_NDIS_MINOR_VERSION      0
 #endif
 
 //===========================================================
 // Driver constants
 //===========================================================
 
-#define ETHERNET_HEADER_SIZE     (sizeof (ETH_HEADER))
-#define ETHERNET_MTU             1500
-#define ETHERNET_PACKET_SIZE     (ETHERNET_MTU + ETHERNET_HEADER_SIZE)
-#define DEFAULT_PACKET_LOOKAHEAD (ETHERNET_PACKET_SIZE)
+#define ETHERNET_HEADER_SIZE        (sizeof (ETH_HEADER))
+#define ETHERNET_MTU                1500
+#define ETHERNET_PACKET_SIZE        (ETHERNET_MTU + ETHERNET_HEADER_SIZE)
+#define DEFAULT_PACKET_LOOKAHEAD    (ETHERNET_PACKET_SIZE)
 
-#define NIC_MAX_MCAST_LIST 32  // Max length of multicast address list
+#define NIC_MAX_MCAST_LIST          32  // Max length of multicast address list
 
-#define MINIMUM_MTU 576        // USE TCP Minimum MTU
-#define MAXIMUM_MTU 65536      // IP maximum MTU
+//===========================================================
+// Medium properties
+//===========================================================
 
-#define PACKET_QUEUE_SIZE   64 // tap -> userspace queue size
-#define IRP_QUEUE_SIZE      16 // max number of simultaneous i/o operations from userspace
-#define INJECT_QUEUE_SIZE   16 // DHCP/ARP -> tap injection queue
+#define TAP_FRAME_HEADER_SIZE       ETHERNET_HEADER_SIZE
+#define TAP_FRAME_MAX_DATA_SIZE     ETHERNET_MTU
+#define TAP_MAX_FRAME_SIZE          (TAP_FRAME_HEADER_SIZE + TAP_FRAME_MAX_DATA_SIZE)
+#define TAP_MIN_FRAME_SIZE          60
+
+#define TAP_MEDIUM_TYPE             NdisMedium802_3
+
+// If you have physical hardware on 802.3, use NdisPhysicalMedium802_3.
+#define TAP_PHYSICAL_MEDIUM         NdisPhysicalMediumUnspecified
+
+#define MINIMUM_MTU                 576        // USE TCP Minimum MTU
+#define MAXIMUM_MTU                 65536      // IP maximum MTU
+
+#define PACKET_QUEUE_SIZE           64 // tap -> userspace queue size
+#define IRP_QUEUE_SIZE              16 // max number of simultaneous i/o operations from userspace
+#define INJECT_QUEUE_SIZE           16 // DHCP/ARP -> tap injection queue
 
 #define TAP_LITTLE_ENDIAN      // affects ntohs, htonl, etc. functions

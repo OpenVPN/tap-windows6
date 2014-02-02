@@ -103,7 +103,8 @@ Return Value:
 
 --*/
 {
-    NDIS_STATUS    status;
+    NDIS_STATUS    status =NDIS_STATUS_SUCCESS;
+    NDIS_MEDIUM    Medium = TAP_MEDIUM_TYPE;
     ULONG          ulInfo;
     USHORT         usInfo;
     ULONG64        ulInfo64;
@@ -134,17 +135,100 @@ Return Value:
         ulInfoLen = MACADDR_SIZE;
         break;
 
-        // TODO: Inplement these query information requests.
-    case OID_GEN_HARDWARE_STATUS:
+    case OID_GEN_MEDIA_SUPPORTED:
+        //
+        // Return an array of media that are supported by the miniport.
+        // This miniport only supports one medium (Ethernet), so the OID
+        // returns identical results to OID_GEN_MEDIA_IN_USE.
+        //
+
+        __fallthrough;
+
+    case OID_GEN_MEDIA_IN_USE:
+        //
+        // Return an array of media that are currently in use by the
+        // miniport.  This array should be a subset of the array returned
+        // by OID_GEN_MEDIA_SUPPORTED.
+        //
+        pInfo = &Medium;
+        ulInfoLen = sizeof(Medium);
+        break;
+
     case OID_GEN_MAXIMUM_TOTAL_SIZE:
+        //
+        // Specify the maximum total packet length, in bytes, the NIC
+        // supports including the header. A protocol driver might use
+        // this returned length as a gauge to determine the maximum
+        // size packet that a NIC driver could forward to the
+        // protocol driver. The miniport driver must never indicate
+        // up to the bound protocol driver packets received over the
+        // network that are longer than the packet size specified by
+        // OID_GEN_MAXIMUM_TOTAL_SIZE.
+        //
 
         __fallthrough;
 
     case OID_GEN_TRANSMIT_BLOCK_SIZE:
+        //
+        // The OID_GEN_TRANSMIT_BLOCK_SIZE OID specifies the minimum
+        // number of bytes that a single net packet occupies in the
+        // transmit buffer space of the NIC. In our case, the transmit
+        // block size is identical to its maximum packet size.
+        __fallthrough;
+
     case OID_GEN_RECEIVE_BLOCK_SIZE:
+        //
+        // The OID_GEN_RECEIVE_BLOCK_SIZE OID specifies the amount of
+        // storage, in bytes, that a single packet occupies in the receive
+        // buffer space of the NIC.
+        //
+        ulInfo = (ULONG) TAP_MAX_FRAME_SIZE;
+        pInfo = &ulInfo;
+        break;
+
+    case OID_GEN_INTERRUPT_MODERATION:
+        {
+            PNDIS_INTERRUPT_MODERATION_PARAMETERS moderationParams
+                = (PNDIS_INTERRUPT_MODERATION_PARAMETERS)OidRequest->DATA.QUERY_INFORMATION.InformationBuffer;
+
+            moderationParams->Header.Type = NDIS_OBJECT_TYPE_DEFAULT; 
+            moderationParams->Header.Revision = NDIS_INTERRUPT_MODERATION_PARAMETERS_REVISION_1;
+            moderationParams->Header.Size = NDIS_SIZEOF_INTERRUPT_MODERATION_PARAMETERS_REVISION_1;
+            moderationParams->Flags = 0;
+            moderationParams->InterruptModeration = NdisInterruptModerationNotSupported;
+            ulInfoLen = NDIS_SIZEOF_INTERRUPT_MODERATION_PARAMETERS_REVISION_1;
+        }
+        break;
+
+    case OID_PNP_QUERY_POWER:
+        // simply succeed this.
+        break;
+
+    case OID_GEN_VENDOR_DRIVER_VERSION:
+        //
+        // Specify the vendor-assigned version number of the NIC driver.
+        // The low-order half of the return value specifies the minor
+        // version; the high-order half specifies the major version.
+        //
+
+        ulInfo = TAP_DRIVER_VENDOR_VERSION;
+        pInfo = &ulInfo;
+        break;
+
+    case OID_GEN_DRIVER_VERSION:
+        //
+        // Specify the NDIS version in use by the NIC driver. The high
+        // byte is the major version number; the low byte is the minor
+        // version number.
+        //
+        usInfo = (USHORT) (TAP_NDIS_MAJOR_VERSION<<8) + TAP_NDIS_MINOR_VERSION;
+        pInfo = (PVOID) &usInfo;
+        ulInfoLen = sizeof(USHORT);
+        break;
+
+        // TODO: Inplement these query information requests.
+    case OID_GEN_HARDWARE_STATUS:
     case OID_GEN_RECEIVE_BUFFER_SPACE:
-    case OID_GEN_MEDIA_SUPPORTED:
-    case OID_GEN_MEDIA_IN_USE:
     case OID_GEN_MAXIMUM_SEND_PACKETS:
     case OID_GEN_XMIT_ERROR:
     case OID_GEN_RCV_ERROR:
@@ -152,8 +236,6 @@ Return Value:
     case OID_GEN_RCV_NO_BUFFER:
     case OID_GEN_VENDOR_ID:
     case OID_GEN_VENDOR_DESCRIPTION:
-    case OID_GEN_VENDOR_DRIVER_VERSION:
-    case OID_GEN_DRIVER_VERSION:
     case OID_802_3_MAXIMUM_LIST_SIZE:
     case OID_GEN_XMIT_OK:
     case OID_GEN_RCV_OK:
@@ -169,8 +251,6 @@ Return Value:
     case OID_802_3_XMIT_HEARTBEAT_FAILURE:
     case OID_802_3_XMIT_TIMES_CRS_LOST:
     case OID_802_3_XMIT_LATE_COLLISIONS:
-    case OID_GEN_INTERRUPT_MODERATION:
-    case OID_PNP_QUERY_POWER:
 
     default:
         //
