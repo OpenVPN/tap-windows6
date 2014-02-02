@@ -46,7 +46,7 @@ typedef struct {
 } ETH_ADDR;
 
 typedef struct {
-  ETH_ADDR list[NIC_MAX_MCAST_LIST];
+  ETH_ADDR list[TAP_MAX_MCAST_LIST];
 } MC_LIST;
 
 //----------------

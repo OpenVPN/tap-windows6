@@ -28,6 +28,53 @@
 
 #include "tap-windows.h"
 
+NDIS_OID TAPSupportedOids[] =
+{
+        OID_GEN_HARDWARE_STATUS,
+        OID_GEN_TRANSMIT_BUFFER_SPACE,
+        OID_GEN_RECEIVE_BUFFER_SPACE,
+        OID_GEN_TRANSMIT_BLOCK_SIZE,
+        OID_GEN_RECEIVE_BLOCK_SIZE,
+        OID_GEN_VENDOR_ID,
+        OID_GEN_VENDOR_DESCRIPTION,
+        OID_GEN_VENDOR_DRIVER_VERSION,
+        OID_GEN_CURRENT_PACKET_FILTER,
+        OID_GEN_CURRENT_LOOKAHEAD,
+        OID_GEN_DRIVER_VERSION,
+        OID_GEN_MAXIMUM_TOTAL_SIZE,
+        OID_GEN_XMIT_OK,
+        OID_GEN_RCV_OK,
+        OID_GEN_STATISTICS,
+#ifdef IMPLEMENT_OPTIONAL_OIDS
+        OID_GEN_TRANSMIT_QUEUE_LENGTH,       // Optional
+#endif // IMPLEMENT_OPTIONAL_OIDS
+        OID_GEN_LINK_PARAMETERS,
+        OID_GEN_INTERRUPT_MODERATION,
+        OID_GEN_MEDIA_SUPPORTED,
+        OID_GEN_MEDIA_IN_USE,
+        OID_GEN_MAXIMUM_SEND_PACKETS,
+        OID_GEN_XMIT_ERROR,
+        OID_GEN_RCV_ERROR,
+        OID_GEN_RCV_NO_BUFFER,
+        OID_802_3_PERMANENT_ADDRESS,
+        OID_802_3_CURRENT_ADDRESS,
+        OID_802_3_MULTICAST_LIST,
+        OID_802_3_MAXIMUM_LIST_SIZE,
+        OID_802_3_RCV_ERROR_ALIGNMENT,
+        OID_802_3_XMIT_ONE_COLLISION,
+        OID_802_3_XMIT_MORE_COLLISIONS,
+#ifdef IMPLEMENT_OPTIONAL_OIDS
+        OID_802_3_XMIT_DEFERRED,             // Optional
+        OID_802_3_XMIT_MAX_COLLISIONS,       // Optional
+        OID_802_3_RCV_OVERRUN,               // Optional
+        OID_802_3_XMIT_UNDERRUN,             // Optional
+        OID_802_3_XMIT_HEARTBEAT_FAILURE,    // Optional
+        OID_802_3_XMIT_TIMES_CRS_LOST,       // Optional
+        OID_802_3_XMIT_LATE_COLLISIONS,      // Optional
+        OID_PNP_CAPABILITIES,                // Optional
+#endif // IMPLEMENT_OPTIONAL_OIDS
+};
+
 //======================================================================
 // TAP NDIS 6 Miniport Callbacks
 //======================================================================
@@ -130,7 +177,7 @@ tapReadConfiguration(
     Adapter->MtuSize = ETHERNET_MTU;
     Adapter->MediaStateAlwaysConnected = FALSE;
     Adapter->MediaState = FALSE;
-
+    Adapter->AllowNonAdmin = FALSE;
     //
     // Open the registry for this adapter to read advanced
     // configuration parameters stored by the INF file.
@@ -223,6 +270,7 @@ tapReadConfiguration(
 
         if (status == NDIS_STATUS_SUCCESS)
         {
+            NDIS_STATUS localStatus;    // Use default if these fail.
             NDIS_CONFIGURATION_PARAMETER *configParameter;
             NDIS_STRING mtuKey = NDIS_STRING_CONST("MTU");
             NDIS_STRING mediaStatusKey = NDIS_STRING_CONST("MediaStatus");
@@ -232,14 +280,14 @@ tapReadConfiguration(
 
             // Read MTU from the registry.
             NdisReadConfiguration (
-                &status,
+                &localStatus,
                 &configParameter,
                 configHandle,
                 &mtuKey,
                 NdisParameterInteger
                 );
 
-            if (status == NDIS_STATUS_SUCCESS)
+            if (localStatus == NDIS_STATUS_SUCCESS)
             {
                 if (configParameter->ParameterType == NdisParameterInteger)
                 {
@@ -261,14 +309,14 @@ tapReadConfiguration(
 
             // Read MediaStatus setting from registry.
             NdisReadConfiguration (
-                &status,
+                &localStatus,
                 &configParameter,
                 configHandle,
                 &mediaStatusKey,
                 NdisParameterInteger
                 );
 
-            if (status == NDIS_STATUS_SUCCESS)
+            if (localStatus == NDIS_STATUS_SUCCESS)
             {
                 if (configParameter->ParameterType == NdisParameterInteger)
                 {
@@ -290,14 +338,14 @@ tapReadConfiguration(
             // Read optional AllowNonAdmin setting from registry.
     #if ENABLE_NONADMIN
             NdisReadConfiguration (
-                &status,
+                &localStatus,
                 &configParameter,
                 configHandle,
                 &allowNonAdminKey,
                 NdisParameterInteger
                 );
 
-            if (status == NDIS_STATUS_SUCCESS)
+            if (localStatus == NDIS_STATUS_SUCCESS)
             {
                 if (configParameter->ParameterType == NdisParameterInteger)
                 {
@@ -380,6 +428,190 @@ AdapterCreate(
 
     DEBUGP (("[TAP] --> AdapterCreate\n"));
 
+    do
+    {
+        NDIS_MINIPORT_ADAPTER_REGISTRATION_ATTRIBUTES regAttributes = {0};
+        NDIS_MINIPORT_ADAPTER_GENERAL_ATTRIBUTES genAttributes = {0};
+        NDIS_PNP_CAPABILITIES pnpCapabilities = {0};
+
+        //
+        // Allocate adapter context structure and initialize all the
+        // memory resources for sending and receiving packets.
+        //
+        // Returns with reference count initialized to one.
+        //
+        adapter = tapAdapterContextAllocate(MiniportAdapterHandle);
+
+        if(adapter == NULL)
+        {
+            DEBUGP (("[TAP] Couldn't allocate adapter memory\n"));
+            status = NDIS_STATUS_RESOURCES;
+            break;
+        }
+
+        //
+        // First read adapter configuration from registry.
+        // -----------------------------------------------
+        // Subsequent device registration will fail if NetCfgInstanceId
+        // has not been successfully read.
+        //
+        status = tapReadConfiguration(adapter);
+
+        //
+        // Set the registration attributes.
+        //
+        {C_ASSERT(sizeof(regAttributes) >= NDIS_SIZEOF_MINIPORT_ADAPTER_REGISTRATION_ATTRIBUTES_REVISION_1);}
+        regAttributes.Header.Type = NDIS_OBJECT_TYPE_MINIPORT_ADAPTER_REGISTRATION_ATTRIBUTES;
+        regAttributes.Header.Size = NDIS_SIZEOF_MINIPORT_ADAPTER_REGISTRATION_ATTRIBUTES_REVISION_1;
+        regAttributes.Header.Revision = NDIS_SIZEOF_MINIPORT_ADAPTER_REGISTRATION_ATTRIBUTES_REVISION_1;
+
+        regAttributes.MiniportAdapterContext = adapter;
+        regAttributes.AttributeFlags = TAP_ADAPTER_ATTRIBUTES_FLAGS;
+
+        regAttributes.CheckForHangTimeInSeconds = TAP_ADAPTER_CHECK_FOR_HANG_TIME_IN_SECONDS;
+        regAttributes.InterfaceType = TAP_INTERFACE_TYPE;
+
+        //NDIS_DECLARE_MINIPORT_ADAPTER_CONTEXT(TAP_ADAPTER_CONTEXT);
+        status = NdisMSetMiniportAttributes(
+                    MiniportAdapterHandle,
+                    (PNDIS_MINIPORT_ADAPTER_ATTRIBUTES)&regAttributes
+                    );
+
+        if (status != NDIS_STATUS_SUCCESS)
+        {
+            DEBUGP (("[TAP] NdisSetOptionalHandlers failed; Status 0x%08x\n",status));
+            break;
+        }
+
+        //
+        // Next, set the general attributes.
+        //
+        {C_ASSERT(sizeof(genAttributes) >= NDIS_SIZEOF_MINIPORT_ADAPTER_GENERAL_ATTRIBUTES_REVISION_1);}
+        genAttributes.Header.Type = NDIS_OBJECT_TYPE_MINIPORT_ADAPTER_GENERAL_ATTRIBUTES;
+        genAttributes.Header.Size = NDIS_SIZEOF_MINIPORT_ADAPTER_GENERAL_ATTRIBUTES_REVISION_1;
+        genAttributes.Header.Revision = NDIS_MINIPORT_ADAPTER_GENERAL_ATTRIBUTES_REVISION_1;
+
+        //
+        // Specify the medium type that the NIC can support but not
+        // necessarily the medium type that the NIC currently uses.
+        //
+        genAttributes.MediaType = TAP_MEDIUM_TYPE;
+
+        //
+        // Specifiy medium type that the NIC currently uses.
+        //
+        genAttributes.PhysicalMediumType = TAP_PHYSICAL_MEDIUM;
+
+        //
+        // Specifiy the maximum network frame size, in bytes, that the NIC
+        // supports excluding the header.
+        //
+        genAttributes.MtuSize = TAP_FRAME_MAX_DATA_SIZE;
+        genAttributes.MaxXmitLinkSpeed = TAP_XMIT_SPEED;
+        genAttributes.XmitLinkSpeed = TAP_XMIT_SPEED;
+        genAttributes.MaxRcvLinkSpeed = TAP_RECV_SPEED;
+        genAttributes.RcvLinkSpeed = TAP_RECV_SPEED;
+
+        // BUGBUG!!! Implement me!!!
+        //genAttributes.MediaConnectState = HWGetMediaConnectStatus(adapter);
+        genAttributes.MediaConnectState = MediaConnectStateDisconnected;
+
+        genAttributes.MediaDuplexState = MediaDuplexStateFull;
+
+        //
+        // The maximum number of bytes the NIC can provide as lookahead data.
+        // If that value is different from the size of the lookahead buffer
+        // supported by bound protocols, NDIS will call MiniportOidRequest to
+        // set the size of the lookahead buffer provided by the miniport driver
+        // to the minimum of the miniport driver and protocol(s) values. If the
+        // driver always indicates up full packets with
+        // NdisMIndicateReceiveNetBufferLists, it should set this value to the
+        // maximum total frame size, which excludes the header.
+        //
+        // Upper-layer drivers examine lookahead data to determine whether a
+        // packet that is associated with the lookahead data is intended for
+        // one or more of their clients. If the underlying driver supports
+        // multipacket receive indications, bound protocols are given full net
+        // packets on every indication. Consequently, this value is identical
+        // to that returned for OID_GEN_RECEIVE_BLOCK_SIZE.
+        //
+        genAttributes.LookaheadSize = TAP_MAX_LOOKAHEAD;
+        genAttributes.MacOptions = TAP_MAC_OPTIONS;
+        genAttributes.SupportedPacketFilters = TAP_SUPPORTED_FILTERS;
+
+        //
+        // The maximum number of multicast addresses the NIC driver can manage.
+        // This list is global for all protocols bound to (or above) the NIC.
+        // Consequently, a protocol can receive NDIS_STATUS_MULTICAST_FULL from
+        // the NIC driver when attempting to set the multicast address list,
+        // even if the number of elements in the given list is less than the
+        // number originally returned for this query.
+        //
+        genAttributes.MaxMulticastListSize = TAP_MAX_MCAST_LIST;
+        genAttributes.MacAddressLength = MACADDR_SIZE;
+
+        //
+        // Return the MAC address of the NIC burnt in the hardware.
+        //
+        COPY_MAC(genAttributes.PermanentMacAddress, adapter->PermanentAddress);
+
+        //
+        // Return the MAC address the NIC is currently programmed to use. Note
+        // that this address could be different from the permananent address as
+        // the user can override using registry. Read NdisReadNetworkAddress
+        // doc for more info.
+        //
+        COPY_MAC(genAttributes.CurrentMacAddress, adapter->CurrentAddress);
+
+        genAttributes.RecvScaleCapabilities = NULL;
+        genAttributes.AccessType = TAP_ACCESS_TYPE;
+        genAttributes.DirectionType = TAP_DIRECTION_TYPE;
+        genAttributes.ConnectionType = TAP_CONNECTION_TYPE;
+        genAttributes.IfType = TAP_IFTYPE;
+        genAttributes.IfConnectorPresent = TAP_HAS_PHYSICAL_CONNECTOR;
+        genAttributes.SupportedStatistics = TAP_SUPPORTED_STATISTICS;
+        genAttributes.SupportedPauseFunctions = NdisPauseFunctionsUnsupported; // IEEE 802.3 pause frames 
+        genAttributes.DataBackFillSize = 0;
+        genAttributes.ContextBackFillSize = 0;
+
+        //
+        // The SupportedOidList is an array of OIDs for objects that the
+        // underlying driver or its NIC supports.  Objects include general,
+        // media-specific, and implementation-specific objects. NDIS forwards a
+        // subset of the returned list to protocols that make this query. That
+        // is, NDIS filters any supported statistics OIDs out of the list
+        // because protocols never make statistics queries.
+        //
+        genAttributes.SupportedOidList = TAPSupportedOids;
+        genAttributes.SupportedOidListLength = sizeof(TAPSupportedOids);
+        genAttributes.AutoNegotiationFlags = NDIS_LINK_STATE_DUPLEX_AUTO_NEGOTIATED;
+
+        //
+        // Set power management capabilities
+        //
+        NdisZeroMemory(&pnpCapabilities, sizeof(pnpCapabilities));
+        pnpCapabilities.WakeUpCapabilities.MinMagicPacketWakeUp = NdisDeviceStateUnspecified;
+        pnpCapabilities.WakeUpCapabilities.MinPatternWakeUp = NdisDeviceStateUnspecified;
+        genAttributes.PowerManagementCapabilities = &pnpCapabilities;
+
+        status = NdisMSetMiniportAttributes(
+                    MiniportAdapterHandle,
+                    (PNDIS_MINIPORT_ADAPTER_ATTRIBUTES)&genAttributes
+                    );
+
+        if (status != NDIS_STATUS_SUCCESS)
+        {
+            DEBUGP (("[TAP] NdisMSetMiniportAttributes failed; Status 0x%08x\n",status));
+            break;
+        }
+
+        //
+        // Create the Win32 device I/O interface.
+        //
+
+        // BUGBUG!!! TODO!!!
+    } while(FALSE);
+
     //
     // Allocate adapter context structure and initialize all the
     // memory resources for sending and receiving packets.
@@ -396,6 +628,21 @@ AdapterCreate(
     {
         // Read adapter configuration from registry.
         status = tapReadConfiguration(adapter);
+    }
+
+    if(status != NDIS_STATUS_SUCCESS)
+    {
+        if(adapter != NULL)
+        {
+            //
+            // Remove reference when adapter context was allocated
+            // ---------------------------------------------------
+            // This should result in freeing adapter context memory
+            // and assiciated resources.
+            //
+            tapAdapterContextDereference(adapter);
+            adapter = NULL;
+        }
     }
 
     DEBUGP (("[TAP] <-- AdapterCreate; status = %8.8X\n",status));
@@ -446,16 +693,8 @@ Return Value:
 
     DEBUGP (("[TAP] --> AdapterHalt\n"));
 
-    // Free the ANSI NetCfgInstanceId buffer.
-    if(adapter->NetCfgInstanceIdAnsi.Buffer != NULL)
-    {
-        RtlFreeAnsiString(&adapter->NetCfgInstanceIdAnsi);
-    }
-
-    adapter->NetCfgInstanceIdAnsi.Buffer = NULL;
-
     //
-    // Remove Initial Reference Added in AdapterCreate.
+    // Remove initial reference added in AdapterCreate.
     // ------------------------------------------------
     // This should result in freeing adapter context memory
     // and resources allocated in AdapterCreate.
@@ -679,6 +918,14 @@ tapAdapterContextFree(
 
     // Insure that adapter context has been removed from global adapter list.
     RemoveEntryList(&Adapter->AdapterListLink);
+
+    // Free the ANSI NetCfgInstanceId buffer.
+    if(Adapter->NetCfgInstanceIdAnsi.Buffer != NULL)
+    {
+        RtlFreeAnsiString(&Adapter->NetCfgInstanceIdAnsi);
+    }
+
+    Adapter->NetCfgInstanceIdAnsi.Buffer = NULL;
 
     NdisFreeMemory(Adapter,0,0);
 }

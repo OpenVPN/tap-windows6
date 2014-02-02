@@ -70,8 +70,6 @@
 #define ETHERNET_PACKET_SIZE        (ETHERNET_MTU + ETHERNET_HEADER_SIZE)
 #define DEFAULT_PACKET_LOOKAHEAD    (ETHERNET_PACKET_SIZE)
 
-#define NIC_MAX_MCAST_LIST          32  // Max length of multicast address list
-
 //===========================================================
 // Medium properties
 //===========================================================
@@ -83,8 +81,96 @@
 
 #define TAP_MEDIUM_TYPE             NdisMedium802_3
 
+//===========================================================
+// Physical adapter properties
+//===========================================================
+
+// The bus that connects the adapter to the PC.
+// (Example: PCI adapters should use NdisInterfacePci).
+#define TAP_INTERFACE_TYPE          NdisInterfaceInternal
+
 // If you have physical hardware on 802.3, use NdisPhysicalMedium802_3.
 #define TAP_PHYSICAL_MEDIUM         NdisPhysicalMediumUnspecified
+
+// Claim to be 100mbps duplex
+#define MEGABITS_PER_SECOND                1000000ULL
+#define TAP_XMIT_SPEED                     (100ULL*MEGABITS_PER_SECOND)
+#define TAP_RECV_SPEED                     (100ULL*MEGABITS_PER_SECOND)
+
+#define TAP_MAX_LOOKAHEAD                  TAP_FRAME_MAX_DATA_SIZE
+#define TAP_BUFFER_SIZE                    TAP_MAX_FRAME_SIZE
+
+// Set this value to TRUE if there is a physical adapter.
+#define TAP_HAS_PHYSICAL_CONNECTOR         FALSE
+#define TAP_ACCESS_TYPE                    NET_IF_ACCESS_BROADCAST
+#define TAP_DIRECTION_TYPE                 NET_IF_DIRECTION_SENDRECEIVE
+#define TAP_CONNECTION_TYPE                NET_IF_CONNECTION_DEDICATED
+
+// This value must match the *IfType in the driver .inf file
+#define TAP_IFTYPE                         IF_TYPE_ETHERNET_CSMACD
+
+//
+// This is a virtual device, so it can tolerate surprise removal and
+// suspend.  Ensure the correct flags are set for your hardware.
+//
+#define TAP_ADAPTER_ATTRIBUTES_FLAGS (\
+                NDIS_MINIPORT_ATTRIBUTES_SURPRISE_REMOVE_OK | NDIS_MINIPORT_ATTRIBUTES_NDIS_WDM)
+
+#define TAP_SUPPORTED_FILTERS ( \
+                NDIS_PACKET_TYPE_DIRECTED   | \
+                NDIS_PACKET_TYPE_MULTICAST  | \
+                NDIS_PACKET_TYPE_BROADCAST  | \
+                NDIS_PACKET_TYPE_ALL_LOCAL  | \
+                NDIS_PACKET_TYPE_PROMISCUOUS | \
+                NDIS_PACKET_TYPE_ALL_MULTICAST)
+
+#define TAP_MAX_MCAST_LIST          32  // Max length of multicast address list
+
+//
+// Specify a bitmask that defines optional properties of the NIC.
+// This miniport indicates receive with NdisMIndicateReceiveNetBufferLists
+// function.  Such a driver should set this NDIS_MAC_OPTION_TRANSFERS_NOT_PEND
+// flag.
+//
+// NDIS_MAC_OPTION_NO_LOOPBACK tells NDIS that NIC has no internal
+// loopback support so NDIS will manage loopbacks on behalf of
+// this driver.
+//
+// NDIS_MAC_OPTION_COPY_LOOKAHEAD_DATA tells the protocol that
+// our receive buffer is not on a device-specific card. If
+// NDIS_MAC_OPTION_COPY_LOOKAHEAD_DATA is not set, multi-buffer
+// indications are copied to a single flat buffer.
+//
+#define TAP_MAC_OPTIONS (\
+                NDIS_MAC_OPTION_RECEIVE_SERIALIZED | \
+                NDIS_MAC_OPTION_COPY_LOOKAHEAD_DATA | \
+                NDIS_MAC_OPTION_TRANSFERS_NOT_PEND  | \
+                NDIS_MAC_OPTION_NO_LOOPBACK)
+
+#define TAP_ADAPTER_CHECK_FOR_HANG_TIME_IN_SECONDS 4
+
+
+// NDIS 6.x miniports must support all counters in OID_GEN_STATISTICS.
+#define TAP_SUPPORTED_STATISTICS (\
+                NDIS_STATISTICS_FLAGS_VALID_DIRECTED_FRAMES_RCV    | \
+                NDIS_STATISTICS_FLAGS_VALID_MULTICAST_FRAMES_RCV   | \
+                NDIS_STATISTICS_FLAGS_VALID_BROADCAST_FRAMES_RCV   | \
+                NDIS_STATISTICS_FLAGS_VALID_BYTES_RCV              | \
+                NDIS_STATISTICS_FLAGS_VALID_RCV_DISCARDS           | \
+                NDIS_STATISTICS_FLAGS_VALID_RCV_ERROR              | \
+                NDIS_STATISTICS_FLAGS_VALID_DIRECTED_FRAMES_XMIT   | \
+                NDIS_STATISTICS_FLAGS_VALID_MULTICAST_FRAMES_XMIT  | \
+                NDIS_STATISTICS_FLAGS_VALID_BROADCAST_FRAMES_XMIT  | \
+                NDIS_STATISTICS_FLAGS_VALID_BYTES_XMIT             | \
+                NDIS_STATISTICS_FLAGS_VALID_XMIT_ERROR             | \
+                NDIS_STATISTICS_FLAGS_VALID_XMIT_DISCARDS          | \
+                NDIS_STATISTICS_FLAGS_VALID_DIRECTED_BYTES_RCV     | \
+                NDIS_STATISTICS_FLAGS_VALID_MULTICAST_BYTES_RCV    | \
+                NDIS_STATISTICS_FLAGS_VALID_BROADCAST_BYTES_RCV    | \
+                NDIS_STATISTICS_FLAGS_VALID_DIRECTED_BYTES_XMIT    | \
+                NDIS_STATISTICS_FLAGS_VALID_MULTICAST_BYTES_XMIT   | \
+                NDIS_STATISTICS_FLAGS_VALID_BROADCAST_BYTES_XMIT)
+
 
 #define MINIMUM_MTU                 576        // USE TCP Minimum MTU
 #define MAXIMUM_MTU                 65536      // IP maximum MTU
