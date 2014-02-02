@@ -106,9 +106,10 @@ tapReadPermanentAddress(
         //
         // There is no (valid) address stashed in the registry parameter.
         //
-        // Make up a dummy mac address.
+        // Make up a dummy mac address based on the ANSI representation of the
+        // NetCfgInstanceId GUID.
         //
-        GenerateRandomMac(Adapter->PermanentAddress, MINIPORT_ANSI_NAME(Adapter));
+        GenerateRandomMac(Adapter->PermanentAddress, MINIPORT_INSTANCE_ID(Adapter));
     }
 }
 
@@ -153,13 +154,22 @@ tapReadConfiguration(
     if(status == NDIS_STATUS_SUCCESS)
     {
         NDIS_CONFIGURATION_PARAMETER *configParameter;
-        NDIS_STRING mkey = NDIS_STRING_CONST("MiniportName");
+        NDIS_STRING mkey = NDIS_STRING_CONST("NetCfgInstanceId");
 
         //
-        // Read MiniportName from the registry.
+        // Read NetCfgInstanceId from the registry.
         // ------------------------------------
-        // MiniportName is required to create device and associated
+        // NetCfgInstanceId is required to create device and associated
         // symbolic link for the adapter device.
+        //
+        // NetCfgInstanceId is  a GUID string provided by NDIS that identifies
+        // the adapter instance. An example is:
+        // 
+        //    NetCfgInstanceId={410EB49D-2381-4FE7-9B36-498E22619DF0}
+        //
+        // Other names are derived from NetCfgInstanceId. For example, MiniportName:
+        //
+        //    MiniportName=\DEVICE\{410EB49D-2381-4FE7-9B36-498E22619DF0}
         //
         NdisReadConfiguration (
             &status,
@@ -173,40 +183,41 @@ tapReadConfiguration(
         {
             if (configParameter->ParameterType == NdisParameterString)
             {
-                DEBUGP (("[TAP] NdisReadConfiguration (MiniportName=%zW)\n",
-                    configParameter->ParameterData.StringData ));
+                DEBUGP (("[TAP] NdisReadConfiguration (NetCfgInstanceId=%wZ)\n",
+                    &configParameter->ParameterData.StringData ));
 
-                // Save MiniportName as UNICODE.
-                Adapter->MiniportName.Length = Adapter->MiniportName.MaximumLength
+                // Save NetCfgInstanceId as UNICODE_STRING.
+                Adapter->NetCfgInstanceId.Length = Adapter->NetCfgInstanceId.MaximumLength
                     = configParameter->ParameterData.StringData.Length;
 
-                Adapter->MiniportName.Buffer = Adapter->MiniportNameBuffer;
+                Adapter->NetCfgInstanceId.Buffer = Adapter->NetCfgInstanceIdBuffer;
 
                 NdisMoveMemory(
-                    Adapter->MiniportName.Buffer, 
+                    Adapter->NetCfgInstanceId.Buffer, 
                     configParameter->ParameterData.StringData.Buffer,
-                    Adapter->MiniportName.Length
+                    Adapter->NetCfgInstanceId.Length
                     );
 
+                // Save NetCfgInstanceId as ANSI_STRING as well.
                 if (RtlUnicodeStringToAnsiString (
-                        &Adapter->MiniportNameAnsi,
+                        &Adapter->NetCfgInstanceIdAnsi,
                         &configParameter->ParameterData.StringData,
                         TRUE) != STATUS_SUCCESS
                     )
                 {
-                    DEBUGP (("[TAP] MiniportName ANSI name conversion failed\n"));
+                    DEBUGP (("[TAP] NetCfgInstanceId ANSI name conversion failed\n"));
                     status = NDIS_STATUS_RESOURCES;
                 }
             }
             else
             {
-                DEBUGP (("[TAP] MiniportName has invalid type\n"));
+                DEBUGP (("[TAP] NetCfgInstanceId has invalid type\n"));
                 status = NDIS_STATUS_INVALID_DATA;
             }
         }
         else
         {
-            DEBUGP (("[TAP] MiniportName failed\n"));
+            DEBUGP (("[TAP] NetCfgInstanceId failed\n"));
             status = NDIS_STATUS_INVALID_DATA;
         }
 
@@ -435,13 +446,13 @@ Return Value:
 
     DEBUGP (("[TAP] --> AdapterHalt\n"));
 
-    // Free the ANSI MiniportName buffer.
-    if(adapter->MiniportNameAnsi.Buffer != NULL)
+    // Free the ANSI NetCfgInstanceId buffer.
+    if(adapter->NetCfgInstanceIdAnsi.Buffer != NULL)
     {
-        RtlFreeAnsiString(&adapter->MiniportNameAnsi);
+        RtlFreeAnsiString(&adapter->NetCfgInstanceIdAnsi);
     }
 
-    adapter->MiniportNameAnsi.Buffer = NULL;
+    adapter->NetCfgInstanceIdAnsi.Buffer = NULL;
 
     //
     // Remove Initial Reference Added in AdapterCreate.

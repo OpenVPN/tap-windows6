@@ -27,7 +27,7 @@
 // Memory allocation tags.
 #define TAP_TAG_ADAPTER     ((ULONG)'ApaT')     // "TapA
 
-#define TAP_MAX_NDIS_NAME_LENGTH     260
+#define TAP_MAX_NDIS_NAME_LENGTH     64     // 38 character GUID string plus extra..
 
 //
 // Each adapter managed by this driver has a TapAdapter struct.
@@ -43,12 +43,23 @@ typedef struct _TAP_ADAPTER_CONTEXT
 
     NDIS_HANDLE             MiniportAdapterHandle;
 
-    // Miniport name as UNICODE
-    NDIS_STRING             MiniportName;
-    WCHAR                   MiniportNameBuffer[TAP_MAX_NDIS_NAME_LENGTH];
+    //
+    // NetCfgInstanceId as UNICODE_STRING
+    // ----------------------------------
+    // This a GUID string provided by NDIS that identifies the adapter instance.
+    // An example is:
+    // 
+    //    NetCfgInstanceId={410EB49D-2381-4FE7-9B36-498E22619DF0}
+    //
+    // Other names are derived from NetCfgInstanceId. For example, MiniportName:
+    //
+    //    MiniportName=\DEVICE\{410EB49D-2381-4FE7-9B36-498E22619DF0}
+    //
+    NDIS_STRING             NetCfgInstanceId;
+    WCHAR                   NetCfgInstanceIdBuffer[TAP_MAX_NDIS_NAME_LENGTH];
 
-# define MINIPORT_ANSI_NAME(a) ((a)->MiniportNameAnsi.Buffer)
-    ANSI_STRING             MiniportNameAnsi;   // Used occasionally
+# define MINIPORT_INSTANCE_ID(a) ((a)->NetCfgInstanceIdAnsi.Buffer)
+    ANSI_STRING             NetCfgInstanceIdAnsi;   // Used occasionally
 
     ULONG                   MtuSize;        // 1500 byte (typical)
 
