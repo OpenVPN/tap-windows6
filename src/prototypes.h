@@ -40,17 +40,17 @@ DRIVER_INITIALIZE   DriverEntry;
 //    IN PIRP p_IRP
 //   );
 //
-//NDIS_STATUS CreateTapDevice
-//   (
-//    TapExtensionPointer p_Extension,
-//    const char *p_Name
-//   );
-//
-//VOID DestroyTapDevice
-//   (
-//    TapExtensionPointer p_Extension
-//   );
-//
+
+NDIS_STATUS
+CreateTapDevice(
+    __in PTAP_ADAPTER_CONTEXT   Adapter
+   );
+
+VOID
+DestroyTapDevice(
+    __in PTAP_ADAPTER_CONTEXT   Adapter
+   );
+
 //VOID TapDeviceFreeResources
 //   (
 //    TapExtensionPointer p_Extension

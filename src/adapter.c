@@ -148,6 +148,9 @@ tapReadPermanentAddress(
         }
     }
 
+    // BUGBUG!!! MAC address is all zeroes in registry...
+    macFromRegistry = FALSE;
+
     if(!macFromRegistry)
     {
         //
@@ -637,24 +640,6 @@ AdapterCreate(
         }
     } while(FALSE);
 
-    //
-    // Allocate adapter context structure and initialize all the
-    // memory resources for sending and receiving packets.
-    //
-    // Returns with reference count initialized to one.
-    //
-    adapter = tapAdapterContextAllocate(MiniportAdapterHandle);
-
-    if(adapter == NULL)
-    {
-        status = NDIS_STATUS_RESOURCES;
-    }
-    else
-    {
-        // Read adapter configuration from registry.
-        status = tapReadConfiguration(adapter);
-    }
-
     if(status != NDIS_STATUS_SUCCESS)
     {
         if(adapter != NULL)
@@ -866,6 +851,26 @@ Return Value:
 }
 
 VOID
+AdapterCancelSend(
+    __in  NDIS_HANDLE             MiniportAdapterContext,
+    __in  PVOID                   CancelId
+    )
+{
+    PTAP_ADAPTER_CONTEXT   adapter = (PTAP_ADAPTER_CONTEXT )MiniportAdapterContext;
+
+    //
+    // This miniport completes its sends quickly, so it isn't strictly
+    // neccessary to implement MiniportCancelSend.
+    //
+    // If we did implement it, we'd have to walk the Adapter->SendWaitList
+    // and look for any NB that points to a NBL where the CancelId matches
+    // NDIS_GET_NET_BUFFER_LIST_CANCEL_ID(Nbl).  For any NB that so matches,
+    // we'd remove the NB from the SendWaitList and set the NBL's status to
+    // NDIS_STATUS_SEND_ABORTED, then complete the NBL.
+    //
+}
+
+VOID
 AdapterReturnNetBufferLists(
     __in  NDIS_HANDLE             MiniportAdapterContext,
     __in  PNET_BUFFER_LIST        NetBufferLists,
@@ -934,6 +939,101 @@ AdapterReset(
 
     return status;
 }
+
+VOID
+AdapterDevicePnpEventNotify(
+    __in  NDIS_HANDLE             MiniportAdapterContext,
+    __in  PNET_DEVICE_PNP_EVENT   NetDevicePnPEvent
+    )
+{
+    PTAP_ADAPTER_CONTEXT   adapter = (PTAP_ADAPTER_CONTEXT )MiniportAdapterContext;
+
+/*
+    switch (NetDevicePnPEvent->DevicePnPEvent)
+    {
+        case NdisDevicePnPEventSurpriseRemoved:
+            //
+            // Called when NDIS receives IRP_MN_SUPRISE_REMOVAL.
+            // NDIS calls MiniportHalt function after this call returns.
+            //
+            MP_SET_FLAG(Adapter, fMP_ADAPTER_SURPRISE_REMOVED);
+            DEBUGP(MP_INFO, "[%p] MPDevicePnpEventNotify: NdisDevicePnPEventSurpriseRemoved\n", Adapter);
+            break;
+
+        case NdisDevicePnPEventPowerProfileChanged:
+            //
+            // After initializing a miniport driver and after miniport driver
+            // receives an OID_PNP_SET_POWER notification that specifies
+            // a device power state of NdisDeviceStateD0 (the powered-on state),
+            // NDIS calls the miniport's MiniportPnPEventNotify function with
+            // PnPEvent set to NdisDevicePnPEventPowerProfileChanged.
+            //
+            DEBUGP(MP_INFO, "[%p] MPDevicePnpEventNotify: NdisDevicePnPEventPowerProfileChanged\n", Adapter);
+
+            if (NetDevicePnPEvent->InformationBufferLength == sizeof(ULONG))
+            {
+                ULONG NdisPowerProfile = *((PULONG)NetDevicePnPEvent->InformationBuffer);
+
+                if (NdisPowerProfile == NdisPowerProfileBattery)
+                {
+                    DEBUGP(MP_INFO, "[%p] The host system is running on battery power\n", Adapter);
+                }
+                if (NdisPowerProfile == NdisPowerProfileAcOnLine)
+                {
+                    DEBUGP(MP_INFO, "[%p] The host system is running on AC power\n", Adapter);
+                }
+            }
+            break;
+
+        default:
+            DEBUGP(MP_ERROR, "[%p] MPDevicePnpEventNotify: unknown PnP event 0x%x\n", Adapter, NetDevicePnPEvent->DevicePnPEvent);
+    }
+*/
+}
+
+VOID
+AdapterShutdownEx(
+    __in  NDIS_HANDLE             MiniportAdapterContext,
+    __in  NDIS_SHUTDOWN_ACTION    ShutdownAction
+    )
+/*++
+
+Routine Description:
+
+    The MiniportShutdownEx handler restores hardware to its initial state when
+    the system is shut down, whether by the user or because an unrecoverable
+    system error occurred. This is to ensure that the NIC is in a known
+    state and ready to be reinitialized when the machine is rebooted after
+    a system shutdown occurs for any reason, including a crash dump.
+
+    Here just disable the interrupt and stop the DMA engine.  Do not free
+    memory resources or wait for any packet transfers to complete.  Do not call
+    into NDIS at this time.
+
+    This can be called at aribitrary IRQL, including in the context of a
+    bugcheck.
+
+Arguments:
+
+    MiniportAdapterContext  Pointer to our adapter
+    ShutdownAction  The reason why NDIS called the shutdown function
+
+Return Value:
+
+    None.
+
+--*/
+{
+    PTAP_ADAPTER_CONTEXT   adapter = (PTAP_ADAPTER_CONTEXT )MiniportAdapterContext;
+
+    UNREFERENCED_PARAMETER(ShutdownAction);
+    UNREFERENCED_PARAMETER(MiniportAdapterContext);
+
+    //
+    // We don't have any hardware to reset.
+    //
+}
+
 
 // Free adapter context memory and associated resources.
 VOID

@@ -187,11 +187,11 @@ MINIPORT_RESTART                    AdapterRestart;
 MINIPORT_OID_REQUEST                AdapterOidRequest;
 MINIPORT_SEND_NET_BUFFER_LISTS      AdapterSendNetBufferLists;
 MINIPORT_RETURN_NET_BUFFER_LISTS    AdapterReturnNetBufferLists;
-//MINIPORT_CANCEL_SEND                MPCancelSend;
+MINIPORT_CANCEL_SEND                AdapterCancelSend;
 MINIPORT_CHECK_FOR_HANG             AdapterCheckForHangEx;
 MINIPORT_RESET                      AdapterReset;
-//MINIPORT_DEVICE_PNP_EVENT_NOTIFY    MPDevicePnpEventNotify;
-//MINIPORT_SHUTDOWN                   MPShutdownEx;
+MINIPORT_DEVICE_PNP_EVENT_NOTIFY    AdapterDevicePnpEventNotify;
+MINIPORT_SHUTDOWN                   AdapterShutdownEx;
 MINIPORT_CANCEL_OID_REQUEST         AdapterCancelOidRequest;
 
 #endif // __TAP_ADAPTER_CONTEXT_H_

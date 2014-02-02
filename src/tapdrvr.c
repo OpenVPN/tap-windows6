@@ -48,9 +48,6 @@
 TAP_GLOBAL      GlobalData;
 
 
-#define NT_DEVICE_NAME      L"\\Device\\SIOCTL"
-#define DOS_DEVICE_NAME     L"\\DosDevices\\IoctlTest"
-
 #ifdef ALLOC_PRAGMA
 #pragma alloc_text( INIT, DriverEntry )
 #pragma alloc_text( PAGE, TapDriverUnload)
@@ -80,9 +77,6 @@ Arguments:
 --*/
 {
     NTSTATUS                                status;
-    UNICODE_STRING  ntUnicodeString;    // NT Device Name "\Device\SIOCTL"
-    UNICODE_STRING  ntWin32NameString;    // Win32 Name "\DosDevices\IoctlTest"
-    PDEVICE_OBJECT  deviceObject = NULL;    // ptr to device object
 
     UNREFERENCED_PARAMETER(RegistryPath);
 
@@ -110,10 +104,10 @@ Arguments:
 
         NdisZeroMemory(&miniportCharacteristics, sizeof(miniportCharacteristics));
 
-        {C_ASSERT(sizeof(miniportCharacteristics) >= NDIS_SIZEOF_MINIPORT_DRIVER_CHARACTERISTICS_REVISION_1);}
+        {C_ASSERT(sizeof(miniportCharacteristics) >= NDIS_SIZEOF_MINIPORT_DRIVER_CHARACTERISTICS_REVISION_2);}
         miniportCharacteristics.Header.Type = NDIS_OBJECT_TYPE_MINIPORT_DRIVER_CHARACTERISTICS;
-        miniportCharacteristics.Header.Size = NDIS_SIZEOF_MINIPORT_DRIVER_CHARACTERISTICS_REVISION_1;
-        miniportCharacteristics.Header.Revision = NDIS_MINIPORT_DRIVER_CHARACTERISTICS_REVISION_1;
+        miniportCharacteristics.Header.Size = NDIS_SIZEOF_MINIPORT_DRIVER_CHARACTERISTICS_REVISION_2;
+        miniportCharacteristics.Header.Revision = NDIS_MINIPORT_DRIVER_CHARACTERISTICS_REVISION_2;
 
         miniportCharacteristics.MajorNdisVersion = TAP_NDIS_MAJOR_VERSION;
         miniportCharacteristics.MinorNdisVersion = TAP_NDIS_MINOR_VERSION;
@@ -132,11 +126,11 @@ Arguments:
         miniportCharacteristics.OidRequestHandler = AdapterOidRequest;
         miniportCharacteristics.SendNetBufferListsHandler = AdapterSendNetBufferLists;
         miniportCharacteristics.ReturnNetBufferListsHandler = AdapterReturnNetBufferLists;
-        //miniportCharacteristics.CancelSendHandler = MPCancelSend;
+        miniportCharacteristics.CancelSendHandler = AdapterCancelSend;
         miniportCharacteristics.CheckForHangHandlerEx = AdapterCheckForHangEx;
         miniportCharacteristics.ResetHandlerEx = AdapterReset;
-        //miniportCharacteristics.DevicePnPEventNotifyHandler = MPDevicePnpEventNotify;
-        //miniportCharacteristics.ShutdownHandlerEx = MPShutdownEx;
+        miniportCharacteristics.DevicePnPEventNotifyHandler = AdapterDevicePnpEventNotify;
+        miniportCharacteristics.ShutdownHandlerEx = AdapterShutdownEx;
         miniportCharacteristics.CancelOidRequestHandler = AdapterCancelOidRequest;
 
         //
@@ -167,55 +161,6 @@ Arguments:
             break;
         }
     } while(FALSE);
-
-    RtlInitUnicodeString( &ntUnicodeString, NT_DEVICE_NAME );
-
-    status = IoCreateDevice(
-        DriverObject,                   // Our Driver Object
-        0,                              // We don't use a device extension
-        &ntUnicodeString,               // Device name "\Device\SIOCTL"
-        FILE_DEVICE_UNKNOWN,            // Device type
-        FILE_DEVICE_SECURE_OPEN,     // Device characteristics
-        FALSE,                          // Not an exclusive device
-        &deviceObject );                // Returned ptr to Device Object
-
-    if ( !NT_SUCCESS( status ) )
-    {
-        return status;
-    }
-
-    //
-    // Initialize the driver object with this driver's entry points.
-    //
-    DriverObject->MajorFunction[IRP_MJ_CREATE] = TapDeviceCreate;
-    DriverObject->MajorFunction[IRP_MJ_READ] = TapDeviceRead;
-    DriverObject->MajorFunction[IRP_MJ_WRITE] = TapDeviceWrite;
-    DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = TapDeviceControl;
-    DriverObject->MajorFunction[IRP_MJ_CLEANUP] = TapDeviceCleanup;
-    DriverObject->MajorFunction[IRP_MJ_CLOSE] = TapDeviceClose;
-
-    //
-    // Initialize a Unicode String containing the Win32 name
-    // for our device.
-    //
-
-    RtlInitUnicodeString( &ntWin32NameString, DOS_DEVICE_NAME );
-
-    //
-    // Create a symbolic link between our device name  and the Win32 name
-    //
-
-    status = IoCreateSymbolicLink(
-        &ntWin32NameString, &ntUnicodeString );
-
-    if ( !NT_SUCCESS( status ) )
-    {
-        //
-        // Delete everything that this routine has allocated.
-        //
-        //SIOCTL_KDPRINT(("Couldn't create symbolic link\n"));
-        IoDeleteDevice( deviceObject );
-    }
 
     DEBUGP (("[TAP] <-- DriverEntry; status = %8.8X\n",status));
 
@@ -269,24 +214,6 @@ Return Value:
 	 //  __TIME__,
 	 //  NInstances(),
 	 //  InstanceMaxBucketSize()));
-
-    //
-    // Create counted string version of our Win32 device name.
-    //
-
-    RtlInitUnicodeString( &uniWin32NameString, DOS_DEVICE_NAME );
-
-
-    //
-    // Delete the link from our device name to a name in the Win32 namespace.
-    //
-
-    IoDeleteSymbolicLink( &uniWin32NameString );
-
-    if ( deviceObject != NULL )
-    {
-        IoDeleteDevice( deviceObject );
-    }
 
     DEBUGP (("[TAP] <-- TapDriverUnload\n"));
 }

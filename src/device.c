@@ -439,6 +439,9 @@ tapMakeDeviceNames(
     {
         NDIS_STRING     linkNamePrefix = NDIS_STRING_CONST("\\DosDevices\\Global\\");
 
+        Adapter->LinkName.Buffer = Adapter->LinkNameBuffer;
+        Adapter->LinkName.MaximumLength = sizeof(Adapter->LinkNameBuffer);
+
         status = tapConcatenateNdisStrings(
                     &Adapter->LinkName,
                     &linkNamePrefix,
@@ -513,7 +516,7 @@ CreateTapDevice(
         (Adapter->DeviceObject)->Flags |= DO_DIRECT_IO;;
     }
 
-    status = NDIS_STATUS_FAILURE;
+    DEBUGP (("[TAP] <-- CreateTapDevice; status = %8.8X\n",status));
 
     return status;
 }
