@@ -50,6 +50,9 @@
 #if defined(NDIS60_MINIPORT)
 #  define TAP_NDIS_MAJOR_VERSION    6
 #  define TAP_NDIS_MINOR_VERSION    0
+#elif defined(NDIS61_MINIPORT)
+#  define TAP_NDIS_MAJOR_VERSION    6
+#  define TAP_NDIS_MINOR_VERSION    1
 #elif defined(NDIS620_MINIPORT)
 #  define TAP_NDIS_MAJOR_VERSION    6
 #  define TAP_NDIS_MINOR_VERSION    20

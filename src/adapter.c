@@ -628,8 +628,13 @@ AdapterCreate(
         //
         // Create the Win32 device I/O interface.
         //
+        status = CreateTapDevice(adapter);
 
-        // BUGBUG!!! TODO!!!
+        if (status != NDIS_STATUS_SUCCESS)
+        {
+            DEBUGP (("[TAP] CreateTapDevice failed; Status 0x%08x\n",status));
+            break;
+        }
     } while(FALSE);
 
     //
@@ -712,6 +717,11 @@ Return Value:
     UNREFERENCED_PARAMETER(HaltAction);
 
     DEBUGP (("[TAP] --> AdapterHalt\n"));
+
+    //
+    // Destroy the TAP Win32 device.
+    //
+    DestroyTapDevice(adapter);
 
     //
     // Remove initial reference added in AdapterCreate.

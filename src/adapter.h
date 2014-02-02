@@ -78,6 +78,12 @@ typedef struct _TAP_ADAPTER_CONTEXT
 
 
     // Device registration parameters from NdisRegisterDeviceEx.
+    NDIS_STRING             DeviceName;
+    WCHAR                   DeviceNameBuffer[TAP_MAX_NDIS_NAME_LENGTH];
+
+    NDIS_STRING             LinkName;
+    WCHAR                   LinkNameBuffer[TAP_MAX_NDIS_NAME_LENGTH];
+
     NDIS_HANDLE             DeviceHandle;
     PDEVICE_OBJECT          DeviceObject;
 

@@ -378,3 +378,161 @@ Return Value:
 
     return STATUS_SUCCESS;
 }
+
+NTSTATUS
+tapConcatenateNdisStrings(
+    __inout     PNDIS_STRING    DestinationString,
+    __in_opt    PNDIS_STRING    SourceString1,
+    __in_opt    PNDIS_STRING    SourceString2,
+    __in_opt    PNDIS_STRING    SourceString3
+    )
+{
+    NTSTATUS status;
+
+    ASSERT(SourceString1 && SourceString2 && SourceString3);
+
+    status = RtlAppendUnicodeStringToString(
+                DestinationString,
+                SourceString1
+                );
+
+    if(status == STATUS_SUCCESS)
+    {
+        status = RtlAppendUnicodeStringToString(
+                    DestinationString,
+                    SourceString2
+                    );
+
+        if(status == STATUS_SUCCESS)
+        {
+            status = RtlAppendUnicodeStringToString(
+                        DestinationString,
+                        SourceString3
+                        );
+        }
+    }
+
+    return status;
+}
+
+NTSTATUS
+tapMakeDeviceNames(
+    __in PTAP_ADAPTER_CONTEXT   Adapter
+    )
+{
+    NDIS_STATUS     status;
+    NDIS_STRING     deviceNamePrefix = NDIS_STRING_CONST("\\Device\\");
+    NDIS_STRING     tapNameSuffix = NDIS_STRING_CONST(".tap");
+
+    // Generate DeviceName from NetCfgInstanceId.
+    Adapter->DeviceName.Buffer = Adapter->DeviceNameBuffer;
+    Adapter->DeviceName.MaximumLength = sizeof(Adapter->DeviceNameBuffer);
+
+    status = tapConcatenateNdisStrings(
+                &Adapter->DeviceName,
+                &deviceNamePrefix,
+                &Adapter->NetCfgInstanceId,
+                &tapNameSuffix
+                );
+
+    if(status == STATUS_SUCCESS)
+    {
+        NDIS_STRING     linkNamePrefix = NDIS_STRING_CONST("\\DosDevices\\Global\\");
+
+        status = tapConcatenateNdisStrings(
+                    &Adapter->LinkName,
+                    &linkNamePrefix,
+                    &Adapter->NetCfgInstanceId,
+                    &tapNameSuffix
+                    );
+    }
+
+    return status;
+}
+
+NDIS_STATUS
+CreateTapDevice(
+    __in PTAP_ADAPTER_CONTEXT   Adapter
+   )
+{
+    NDIS_STATUS                     status;
+    NDIS_DEVICE_OBJECT_ATTRIBUTES   deviceAttribute;
+    PDRIVER_DISPATCH                dispatchTable[IRP_MJ_MAXIMUM_FUNCTION+1];
+
+    DEBUGP (("[TAP] version [%d.%d] creating tap device: %wZ\n",
+        TAP_DRIVER_MAJOR_VERSION,
+        TAP_DRIVER_MINOR_VERSION,
+        &Adapter->NetCfgInstanceId));
+
+    // Generate DeviceName and LinkName from NetCfgInstanceId.
+    status = tapMakeDeviceNames(Adapter);
+
+    if (NT_SUCCESS(status))
+    {
+        DEBUGP (("[TAP] DeviceName: %wZ\n",&Adapter->DeviceName));
+        DEBUGP (("[TAP] LinkName: %wZ\n",&Adapter->LinkName));
+
+        // Initialize dispatch table.
+        NdisZeroMemory(dispatchTable, (IRP_MJ_MAXIMUM_FUNCTION+1) * sizeof(PDRIVER_DISPATCH));
+
+        dispatchTable[IRP_MJ_CREATE] = TapDeviceCreate;
+        dispatchTable[IRP_MJ_CLEANUP] = TapDeviceCleanup;
+        dispatchTable[IRP_MJ_CLOSE] = TapDeviceClose;
+        dispatchTable[IRP_MJ_READ] = TapDeviceRead;
+        dispatchTable[IRP_MJ_WRITE] = TapDeviceWrite;
+        dispatchTable[IRP_MJ_DEVICE_CONTROL] = TapDeviceControl;
+
+        //
+        // Create a device object and register dispatch handlers
+        //
+        NdisZeroMemory(&deviceAttribute, sizeof(NDIS_DEVICE_OBJECT_ATTRIBUTES));
+
+        deviceAttribute.Header.Type = NDIS_OBJECT_TYPE_DEVICE_OBJECT_ATTRIBUTES;
+        deviceAttribute.Header.Revision = NDIS_DEVICE_OBJECT_ATTRIBUTES_REVISION_1;
+        deviceAttribute.Header.Size = sizeof(NDIS_DEVICE_OBJECT_ATTRIBUTES);
+
+        deviceAttribute.DeviceName = &Adapter->DeviceName;
+        deviceAttribute.SymbolicName = &Adapter->LinkName;
+        deviceAttribute.MajorFunctions = &dispatchTable[0];
+        //deviceAttribute.ExtensionSize = sizeof(FILTER_DEVICE_EXTENSION);
+
+        status = NdisRegisterDeviceEx(
+                    Adapter->MiniportAdapterHandle,
+                    &deviceAttribute,
+                    &Adapter->DeviceObject,
+                    &Adapter->DeviceHandle
+                    );
+    }
+
+    ASSERT(NT_SUCCESS(status));
+
+    if (NT_SUCCESS(status))
+    {
+        // Set TAP device flags.
+        (Adapter->DeviceObject)->Flags &= ~DO_BUFFERED_IO;
+        (Adapter->DeviceObject)->Flags |= DO_DIRECT_IO;;
+    }
+
+    status = NDIS_STATUS_FAILURE;
+
+    return status;
+}
+
+VOID
+DestroyTapDevice(
+    __in PTAP_ADAPTER_CONTEXT   Adapter
+   )
+{
+    DEBUGP (("[TAP] Destroying tap device: %wZ\n",
+        &Adapter->NetCfgInstanceId));
+
+    // Flush IRP queues. Wait for pending I/O. Etc.
+
+    // Deregister the Win32 device.
+    if(Adapter->DeviceHandle)
+    {
+        NdisDeregisterDeviceEx(Adapter->DeviceHandle);
+    }
+
+    Adapter->DeviceHandle = NULL;
+}
