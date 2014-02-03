@@ -100,6 +100,9 @@
 #define TAP_XMIT_SPEED                     (100ULL*MEGABITS_PER_SECOND)
 #define TAP_RECV_SPEED                     (100ULL*MEGABITS_PER_SECOND)
 
+// Max number of multicast addresses supported in hardware
+#define TAP_MAX_MCAST_LIST                 32
+
 #define TAP_MAX_LOOKAHEAD                  TAP_FRAME_MAX_DATA_SIZE
 #define TAP_BUFFER_SIZE                    TAP_MAX_FRAME_SIZE
 

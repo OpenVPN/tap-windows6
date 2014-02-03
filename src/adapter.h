@@ -87,8 +87,12 @@ typedef struct _TAP_ADAPTER_CONTEXT
     NDIS_HANDLE             DeviceHandle;
     PDEVICE_OBJECT          DeviceObject;
 
+    // Multicast list. Fixed size.
+    ULONG                   ulMCListSize;
+    UCHAR                   MCList[TAP_MAX_MCAST_LIST][MACADDR_SIZE];
 
-
+    ULONG                   PacketFilter;
+    ULONG                   ulLookahead;
 
   BOOLEAN m_InterfaceIsRunning;
   LONG m_Rx, m_Tx, m_RxErr, m_TxErr;
@@ -96,7 +100,6 @@ typedef struct _TAP_ADAPTER_CONTEXT
   LONG m_RxTrunc, m_TxTrunc;
 #endif
   NDIS_MEDIUM m_Medium;
-  ULONG m_Lookahead;
 
   // Adapter power state
   char m_DeviceState;
@@ -129,12 +132,6 @@ typedef struct _TAP_ADAPTER_CONTEXT
   // resources.
   BOOLEAN m_CalledAdapterFreeResources;
   BOOLEAN m_RegisteredAdapterShutdownHandler;
-
-  // Multicast list info
-  NDIS_SPIN_LOCK m_MCLock;
-  BOOLEAN m_MCLockAllocated;
-  ULONG m_MCListSize;
-  MC_LIST m_MCList;
 
 } TAP_ADAPTER_CONTEXT, *PTAP_ADAPTER_CONTEXT;
 

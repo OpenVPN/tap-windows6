@@ -33,9 +33,86 @@
 //======================================================================
 
 NDIS_STATUS
+tapSetMulticastList(
+    __in PTAP_ADAPTER_CONTEXT   Adapter,
+    __in PNDIS_OID_REQUEST      OidRequest
+    )
+{
+    NDIS_STATUS   status = NDIS_STATUS_SUCCESS;
+
+    //
+    // Initialize.
+    //
+    OidRequest->DATA.SET_INFORMATION.BytesNeeded = MACADDR_SIZE;
+    OidRequest->DATA.SET_INFORMATION.BytesRead
+        = OidRequest->DATA.SET_INFORMATION.InformationBufferLength;
+
+
+    do
+    {
+        if (OidRequest->DATA.SET_INFORMATION.InformationBufferLength % MACADDR_SIZE)
+        {
+            status = NDIS_STATUS_INVALID_LENGTH;
+            break;
+        }
+
+        if (OidRequest->DATA.SET_INFORMATION.InformationBufferLength > (TAP_MAX_MCAST_LIST * MACADDR_SIZE))
+        {
+            status = NDIS_STATUS_MULTICAST_FULL;
+            OidRequest->DATA.SET_INFORMATION.BytesNeeded = TAP_MAX_MCAST_LIST * MACADDR_SIZE;
+            break;
+        }
+
+        // BUGBUG!!! Is lock needed??? If so, use NDIS_RW_LOCK. Also apply to packet filter.
+
+        NdisZeroMemory(Adapter->MCList,
+                       TAP_MAX_MCAST_LIST * MACADDR_SIZE);
+
+        NdisMoveMemory(Adapter->MCList,
+                       OidRequest->DATA.SET_INFORMATION.InformationBuffer,
+                       OidRequest->DATA.SET_INFORMATION.InformationBufferLength);
+
+        Adapter->ulMCListSize = OidRequest->DATA.SET_INFORMATION.InformationBufferLength / MACADDR_SIZE;
+
+    } while(FALSE);
+    return status;
+}
+
+NDIS_STATUS
+tapSetPacketFilter(
+    __in PTAP_ADAPTER_CONTEXT   Adapter,
+    __in ULONG                  PacketFilter
+    )
+{
+    NDIS_STATUS   status = NDIS_STATUS_SUCCESS;
+
+    // any bits not supported?
+    if (PacketFilter & ~(TAP_SUPPORTED_FILTERS))
+    {
+        DEBUGP (("[TAP] Unsupported packet filter: 0x%08x\n", PacketFilter));
+        status = NDIS_STATUS_NOT_SUPPORTED;
+    }
+    else
+    {
+        // Any actual filtering changes?
+        if (PacketFilter != Adapter->PacketFilter)
+        {
+            //
+            // Change the filtering modes on hardware
+            //
+
+            // Save the new packet filter value
+            Adapter->PacketFilter = PacketFilter;
+        }
+    }
+
+    return status;
+}
+
+NDIS_STATUS
 tapSetInformation(
-    __in PTAP_ADAPTER_CONTEXT       Adapter,
-    __in PNDIS_OID_REQUEST  OidRequest
+    __in PTAP_ADAPTER_CONTEXT   Adapter,
+    __in PNDIS_OID_REQUEST      OidRequest
     )
 /*++
 
@@ -58,10 +135,60 @@ Return Value:
 
     switch(OidRequest->DATA.SET_INFORMATION.Oid)
     {
-        // TODO: Inplement these set information requests.
     case OID_802_3_MULTICAST_LIST:
-    case OID_GEN_CURRENT_PACKET_FILTER:
+        //
+        // Set the multicast address list on the NIC for packet reception.
+        // The NIC driver can set a limit on the number of multicast
+        // addresses bound protocol drivers can enable simultaneously.
+        // NDIS returns NDIS_STATUS_MULTICAST_FULL if a protocol driver
+        // exceeds this limit or if it specifies an invalid multicast
+        // address.
+        //
+        status = tapSetMulticastList(Adapter,OidRequest);
+        break;
+
     case OID_GEN_CURRENT_LOOKAHEAD:
+        //
+        // A protocol driver can set a suggested value for the number
+        // of bytes to be used in its binding; however, the underlying
+        // NIC driver is never required to limit its indications to
+        // the value set.
+        //
+        if (OidRequest->DATA.SET_INFORMATION.InformationBufferLength != sizeof(ULONG))
+        {
+            OidRequest->DATA.SET_INFORMATION.BytesNeeded = sizeof(ULONG);
+            status = NDIS_STATUS_INVALID_LENGTH;
+            break;
+        }
+
+        Adapter->ulLookahead = *(PULONG)OidRequest->DATA.SET_INFORMATION.InformationBuffer;
+
+        OidRequest->DATA.SET_INFORMATION.BytesRead = sizeof(ULONG);
+        status = NDIS_STATUS_SUCCESS;
+        break;
+
+    case OID_GEN_CURRENT_PACKET_FILTER:
+            //
+            // Program the hardware to indicate the packets
+            // of certain filter types.
+            //
+            if(OidRequest->DATA.SET_INFORMATION.InformationBufferLength != sizeof(ULONG))
+            {
+                OidRequest->DATA.SET_INFORMATION.BytesNeeded = sizeof(ULONG);
+                status = NDIS_STATUS_INVALID_LENGTH;
+                break;
+            }
+
+            OidRequest->DATA.SET_INFORMATION.BytesRead
+                = OidRequest->DATA.SET_INFORMATION.InformationBufferLength;
+
+            status = tapSetPacketFilter(
+                            Adapter,
+                            *((PULONG)OidRequest->DATA.SET_INFORMATION.InformationBuffer));
+
+            break;
+
+        // TODO: Inplement these set information requests.
     case OID_PNP_SET_POWER:
 
 #if (NDIS_SUPPORT_NDIS61)
@@ -83,8 +210,8 @@ Return Value:
 
 NDIS_STATUS
 tapQueryInformation(
-    __in PTAP_ADAPTER_CONTEXT       Adapter,
-    __in PNDIS_OID_REQUEST  OidRequest
+    __in PTAP_ADAPTER_CONTEXT   Adapter,
+    __in PNDIS_OID_REQUEST      OidRequest
     )
 /*++
 
@@ -226,6 +353,21 @@ Return Value:
         ulInfoLen = sizeof(USHORT);
         break;
 
+    case OID_802_3_MAXIMUM_LIST_SIZE:
+        //
+        // The maximum number of multicast addresses the NIC driver
+        // can manage. This list is global for all protocols bound
+        // to (or above) the NIC. Consequently, a protocol can receive
+        // NDIS_STATUS_MULTICAST_FULL from the NIC driver when
+        // attempting to set the multicast address list, even if
+        // the number of elements in the given list is less than
+        // the number originally returned for this query.
+        //
+
+        ulInfo = TAP_MAX_MCAST_LIST;
+        pInfo = &ulInfo;
+        break;
+
         // TODO: Inplement these query information requests.
     case OID_GEN_HARDWARE_STATUS:
     case OID_GEN_RECEIVE_BUFFER_SPACE:
@@ -236,7 +378,6 @@ Return Value:
     case OID_GEN_RCV_NO_BUFFER:
     case OID_GEN_VENDOR_ID:
     case OID_GEN_VENDOR_DESCRIPTION:
-    case OID_802_3_MAXIMUM_LIST_SIZE:
     case OID_GEN_XMIT_OK:
     case OID_GEN_RCV_OK:
     case OID_GEN_STATISTICS:
