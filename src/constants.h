@@ -92,6 +92,12 @@
 // (Example: PCI adapters should use NdisInterfacePci).
 #define TAP_INTERFACE_TYPE          NdisInterfaceInternal
 
+#define TAP_VENDOR_DESC             PRODUCT_TAP_WIN_DEVICE_DESCRIPTION
+
+// Highest byte is the NIC byte plus three vendor bytes. This is normally
+// obtained from the NIC.
+#define TAP_VENDOR_ID               0x00FFFFFF
+
 // If you have physical hardware on 802.3, use NdisPhysicalMedium802_3.
 #define TAP_PHYSICAL_MEDIUM         NdisPhysicalMediumUnspecified
 

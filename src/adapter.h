@@ -94,6 +94,46 @@ typedef struct _TAP_ADAPTER_CONTEXT
     ULONG                   PacketFilter;
     ULONG                   ulLookahead;
 
+    //
+    // Statistics
+    // -------------------------------------------------------------------------
+    //
+
+    // Packet counts
+    ULONG64                 FramesRxDirected;
+    ULONG64                 FramesRxMulticast;
+    ULONG64                 FramesRxBroadcast;
+    ULONG64                 FramesTxDirected;
+    ULONG64                 FramesTxMulticast;
+    ULONG64                 FramesTxBroadcast;
+
+    // Byte counts
+    ULONG64                 BytesRxDirected;
+    ULONG64                 BytesRxMulticast;
+    ULONG64                 BytesRxBroadcast;
+    ULONG64                 BytesTxDirected;
+    ULONG64                 BytesTxMulticast;
+    ULONG64                 BytesTxBroadcast;
+
+    // Count of transmit errors
+    ULONG                   TxAbortExcessCollisions;
+    ULONG                   TxLateCollisions;
+    ULONG                   TxDmaUnderrun;
+    ULONG                   TxLostCRS;
+    ULONG                   TxOKButDeferred;
+    ULONG                   OneRetry;
+    ULONG                   MoreThanOneRetry;
+    ULONG                   TotalRetries;
+    ULONG                   TransmitFailuresOther;
+
+    // Count of receive errors
+    ULONG                   RxCrcErrors;
+    ULONG                   RxAlignmentErrors;
+    ULONG                   RxResourceErrors;
+    ULONG                   RxDmaOverrunErrors;
+    ULONG                   RxCdtFrames;
+    ULONG                   RxRuntErrors;
+
   BOOLEAN m_InterfaceIsRunning;
   LONG m_Rx, m_Tx, m_RxErr, m_TxErr;
 #if PACKET_TRUNCATION_CHECK

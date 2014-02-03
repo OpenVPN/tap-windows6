@@ -28,6 +28,187 @@
 
 #include "tap-windows.h"
 
+#ifndef DBG
+
+#define DBG_PRINT_OID_NAME
+
+#else
+
+VOID
+DBG_PRINT_OID_NAME(
+    __in  NDIS_OID  Oid
+    )
+{
+    PCHAR oidName = NULL;
+
+    switch (Oid){
+
+        #undef MAKECASE
+        #define MAKECASE(oidx) case oidx: oidName = #oidx "\n"; break;
+
+        /* Operational OIDs */
+        MAKECASE(OID_GEN_SUPPORTED_LIST)
+        MAKECASE(OID_GEN_HARDWARE_STATUS)
+        MAKECASE(OID_GEN_MEDIA_SUPPORTED)
+        MAKECASE(OID_GEN_MEDIA_IN_USE)
+        MAKECASE(OID_GEN_MAXIMUM_LOOKAHEAD)
+        MAKECASE(OID_GEN_MAXIMUM_FRAME_SIZE)
+        MAKECASE(OID_GEN_LINK_SPEED)
+        MAKECASE(OID_GEN_TRANSMIT_BUFFER_SPACE)
+        MAKECASE(OID_GEN_RECEIVE_BUFFER_SPACE)
+        MAKECASE(OID_GEN_TRANSMIT_BLOCK_SIZE)
+        MAKECASE(OID_GEN_RECEIVE_BLOCK_SIZE)
+        MAKECASE(OID_GEN_VENDOR_ID)
+        MAKECASE(OID_GEN_VENDOR_DESCRIPTION)
+        MAKECASE(OID_GEN_VENDOR_DRIVER_VERSION)
+        MAKECASE(OID_GEN_CURRENT_PACKET_FILTER)
+        MAKECASE(OID_GEN_CURRENT_LOOKAHEAD)
+        MAKECASE(OID_GEN_DRIVER_VERSION)
+        MAKECASE(OID_GEN_MAXIMUM_TOTAL_SIZE)
+        MAKECASE(OID_GEN_PROTOCOL_OPTIONS)
+        MAKECASE(OID_GEN_MAC_OPTIONS)
+        MAKECASE(OID_GEN_MEDIA_CONNECT_STATUS)
+        MAKECASE(OID_GEN_MAXIMUM_SEND_PACKETS)
+        MAKECASE(OID_GEN_SUPPORTED_GUIDS)
+        MAKECASE(OID_GEN_NETWORK_LAYER_ADDRESSES)
+        MAKECASE(OID_GEN_TRANSPORT_HEADER_OFFSET)
+        MAKECASE(OID_GEN_MEDIA_CAPABILITIES)
+        MAKECASE(OID_GEN_PHYSICAL_MEDIUM)
+        MAKECASE(OID_GEN_MACHINE_NAME)
+        MAKECASE(OID_GEN_VLAN_ID)
+        MAKECASE(OID_GEN_RNDIS_CONFIG_PARAMETER)
+
+        /* Operational OIDs for NDIS 6.0 */
+        MAKECASE(OID_GEN_MAX_LINK_SPEED)
+        MAKECASE(OID_GEN_LINK_STATE)
+        MAKECASE(OID_GEN_LINK_PARAMETERS)
+        MAKECASE(OID_GEN_MINIPORT_RESTART_ATTRIBUTES)
+        MAKECASE(OID_GEN_ENUMERATE_PORTS)
+        MAKECASE(OID_GEN_PORT_STATE)
+        MAKECASE(OID_GEN_PORT_AUTHENTICATION_PARAMETERS)
+        MAKECASE(OID_GEN_INTERRUPT_MODERATION)
+        MAKECASE(OID_GEN_PHYSICAL_MEDIUM_EX)
+
+        /* Statistical OIDs */
+        MAKECASE(OID_GEN_XMIT_OK)
+        MAKECASE(OID_GEN_RCV_OK)
+        MAKECASE(OID_GEN_XMIT_ERROR)
+        MAKECASE(OID_GEN_RCV_ERROR)
+        MAKECASE(OID_GEN_RCV_NO_BUFFER)
+        MAKECASE(OID_GEN_DIRECTED_BYTES_XMIT)
+        MAKECASE(OID_GEN_DIRECTED_FRAMES_XMIT)
+        MAKECASE(OID_GEN_MULTICAST_BYTES_XMIT)
+        MAKECASE(OID_GEN_MULTICAST_FRAMES_XMIT)
+        MAKECASE(OID_GEN_BROADCAST_BYTES_XMIT)
+        MAKECASE(OID_GEN_BROADCAST_FRAMES_XMIT)
+        MAKECASE(OID_GEN_DIRECTED_BYTES_RCV)
+        MAKECASE(OID_GEN_DIRECTED_FRAMES_RCV)
+        MAKECASE(OID_GEN_MULTICAST_BYTES_RCV)
+        MAKECASE(OID_GEN_MULTICAST_FRAMES_RCV)
+        MAKECASE(OID_GEN_BROADCAST_BYTES_RCV)
+        MAKECASE(OID_GEN_BROADCAST_FRAMES_RCV)
+        MAKECASE(OID_GEN_RCV_CRC_ERROR)
+        MAKECASE(OID_GEN_TRANSMIT_QUEUE_LENGTH)
+
+        /* Statistical OIDs for NDIS 6.0 */
+        MAKECASE(OID_GEN_STATISTICS)
+        MAKECASE(OID_GEN_BYTES_RCV)
+        MAKECASE(OID_GEN_BYTES_XMIT)
+        MAKECASE(OID_GEN_RCV_DISCARDS)
+        MAKECASE(OID_GEN_XMIT_DISCARDS)
+
+        /* Misc OIDs */
+        MAKECASE(OID_GEN_GET_TIME_CAPS)
+        MAKECASE(OID_GEN_GET_NETCARD_TIME)
+        MAKECASE(OID_GEN_NETCARD_LOAD)
+        MAKECASE(OID_GEN_DEVICE_PROFILE)
+        MAKECASE(OID_GEN_INIT_TIME_MS)
+        MAKECASE(OID_GEN_RESET_COUNTS)
+        MAKECASE(OID_GEN_MEDIA_SENSE_COUNTS)
+
+        /* PnP power management operational OIDs */
+        MAKECASE(OID_PNP_CAPABILITIES)
+        MAKECASE(OID_PNP_SET_POWER)
+        MAKECASE(OID_PNP_QUERY_POWER)
+        MAKECASE(OID_PNP_ADD_WAKE_UP_PATTERN)
+        MAKECASE(OID_PNP_REMOVE_WAKE_UP_PATTERN)
+        MAKECASE(OID_PNP_ENABLE_WAKE_UP)
+        MAKECASE(OID_PNP_WAKE_UP_PATTERN_LIST)
+
+        /* PnP power management statistical OIDs */
+        MAKECASE(OID_PNP_WAKE_UP_ERROR)
+        MAKECASE(OID_PNP_WAKE_UP_OK)
+
+        /* Ethernet operational OIDs */
+        MAKECASE(OID_802_3_PERMANENT_ADDRESS)
+        MAKECASE(OID_802_3_CURRENT_ADDRESS)
+        MAKECASE(OID_802_3_MULTICAST_LIST)
+        MAKECASE(OID_802_3_MAXIMUM_LIST_SIZE)
+        MAKECASE(OID_802_3_MAC_OPTIONS)
+
+        /* Ethernet operational OIDs for NDIS 6.0 */
+        MAKECASE(OID_802_3_ADD_MULTICAST_ADDRESS)
+        MAKECASE(OID_802_3_DELETE_MULTICAST_ADDRESS)
+
+        /* Ethernet statistical OIDs */
+        MAKECASE(OID_802_3_RCV_ERROR_ALIGNMENT)
+        MAKECASE(OID_802_3_XMIT_ONE_COLLISION)
+        MAKECASE(OID_802_3_XMIT_MORE_COLLISIONS)
+        MAKECASE(OID_802_3_XMIT_DEFERRED)
+        MAKECASE(OID_802_3_XMIT_MAX_COLLISIONS)
+        MAKECASE(OID_802_3_RCV_OVERRUN)
+        MAKECASE(OID_802_3_XMIT_UNDERRUN)
+        MAKECASE(OID_802_3_XMIT_HEARTBEAT_FAILURE)
+        MAKECASE(OID_802_3_XMIT_TIMES_CRS_LOST)
+        MAKECASE(OID_802_3_XMIT_LATE_COLLISIONS)
+
+        /*  TCP/IP OIDs */
+        MAKECASE(OID_TCP_TASK_OFFLOAD)
+        MAKECASE(OID_TCP_TASK_IPSEC_ADD_SA)
+        MAKECASE(OID_TCP_TASK_IPSEC_DELETE_SA)
+        MAKECASE(OID_TCP_SAN_SUPPORT)
+        MAKECASE(OID_TCP_TASK_IPSEC_ADD_UDPESP_SA)
+        MAKECASE(OID_TCP_TASK_IPSEC_DELETE_UDPESP_SA)
+        MAKECASE(OID_TCP4_OFFLOAD_STATS)
+        MAKECASE(OID_TCP6_OFFLOAD_STATS)
+        MAKECASE(OID_IP4_OFFLOAD_STATS)
+        MAKECASE(OID_IP6_OFFLOAD_STATS)
+
+        /* TCP offload OIDs for NDIS 6 */
+        MAKECASE(OID_TCP_OFFLOAD_CURRENT_CONFIG)
+        MAKECASE(OID_TCP_OFFLOAD_PARAMETERS)
+        MAKECASE(OID_TCP_OFFLOAD_HARDWARE_CAPABILITIES)
+        MAKECASE(OID_TCP_CONNECTION_OFFLOAD_CURRENT_CONFIG)
+        MAKECASE(OID_TCP_CONNECTION_OFFLOAD_HARDWARE_CAPABILITIES)
+        MAKECASE(OID_OFFLOAD_ENCAPSULATION)
+
+#if (NDIS_SUPPORT_NDIS620)
+        /* VMQ OIDs for NDIS 6.20 */
+        MAKECASE(OID_RECEIVE_FILTER_FREE_QUEUE)
+        MAKECASE(OID_RECEIVE_FILTER_CLEAR_FILTER)
+        MAKECASE(OID_RECEIVE_FILTER_ALLOCATE_QUEUE)
+        MAKECASE(OID_RECEIVE_FILTER_QUEUE_ALLOCATION_COMPLETE)
+        MAKECASE(OID_RECEIVE_FILTER_SET_FILTER)
+#endif
+
+#if (NDIS_SUPPORT_NDIS630)
+        /* NDIS QoS OIDs for NDIS 6.30 */
+        MAKECASE(OID_QOS_PARAMETERS)
+#endif
+    }
+
+    if (oidName)
+    {
+        DEBUGP(("OID: %s", oidName));
+    }
+    else
+    {
+        DEBUGP(("<** Unknown OID 0x%08x **>\n", Oid));
+    }
+}
+
+#endif // DBG
+
 //======================================================================
 // TAP NDIS 6 OID Request Callbacks
 //======================================================================
@@ -131,7 +312,9 @@ Return Value:
 
 --*/
 {
-    NDIS_STATUS    status;
+    NDIS_STATUS    status = NDIS_STATUS_SUCCESS;
+
+    DBG_PRINT_OID_NAME(OidRequest->DATA.SET_INFORMATION.Oid);
 
     switch(OidRequest->DATA.SET_INFORMATION.Oid)
     {
@@ -233,6 +416,7 @@ Return Value:
     NDIS_STATUS             status = NDIS_STATUS_SUCCESS;
     NDIS_MEDIUM             Medium = TAP_MEDIUM_TYPE;
     NDIS_HARDWARE_STATUS    HardwareStatus = NdisHardwareStatusReady;
+    UCHAR                   VendorDesc[] = TAP_VENDOR_DESC;
     ULONG                   ulInfo;
     USHORT                  usInfo;
     ULONG64                 ulInfo64;
@@ -240,6 +424,8 @@ Return Value:
     // Default to returning the ULONG value
     PVOID                   pInfo=NULL;
     ULONG                   ulInfoLen = sizeof(ulInfo);
+
+    DBG_PRINT_OID_NAME(OidRequest->DATA.QUERY_INFORMATION.Oid);
 
     // Dispatch based on object identifier (OID).
     switch(OidRequest->DATA.QUERY_INFORMATION.Oid)
@@ -338,7 +524,29 @@ Return Value:
         break;
 
     case OID_PNP_QUERY_POWER:
-        // simply succeed this.
+        // Simply succeed this.
+        break;
+
+    case OID_GEN_VENDOR_ID:
+        //
+        // Specify a three-byte IEEE-registered vendor code, followed
+        // by a single byte that the vendor assigns to identify a
+        // particular NIC. The IEEE code uniquely identifies the vendor
+        // and is the same as the three bytes appearing at the beginning
+        // of the NIC hardware address. Vendors without an IEEE-registered
+        // code should use the value 0xFFFFFF.
+        //
+
+        ulInfo = TAP_VENDOR_ID;
+        pInfo = &ulInfo;
+        break;
+
+    case OID_GEN_VENDOR_DESCRIPTION:
+        //
+        // Specify a zero-terminated string describing the NIC vendor.
+        //
+        pInfo = VendorDesc;
+        ulInfoLen = sizeof(VendorDesc);
         break;
 
     case OID_GEN_VENDOR_DRIVER_VERSION:
@@ -378,26 +586,217 @@ Return Value:
         pInfo = &ulInfo;
         break;
 
+    case OID_GEN_XMIT_ERROR:
+        ulInfo = (ULONG)
+            (Adapter->TxAbortExcessCollisions +
+            Adapter->TxDmaUnderrun +
+            Adapter->TxLostCRS +
+            Adapter->TxLateCollisions+
+            Adapter->TransmitFailuresOther);
+        pInfo = &ulInfo;
+        break;
+
+    case OID_GEN_RCV_ERROR:
+        ulInfo = (ULONG)
+            (Adapter->RxCrcErrors +
+            Adapter->RxAlignmentErrors +
+            Adapter->RxDmaOverrunErrors +
+            Adapter->RxRuntErrors);
+        pInfo = &ulInfo;
+        break;
+
+    case OID_GEN_RCV_DISCARDS:
+        ulInfo = (ULONG)Adapter->RxResourceErrors;
+        pInfo = &ulInfo;
+        break;
+
+    case OID_GEN_RCV_NO_BUFFER:
+        ulInfo = (ULONG)Adapter->RxResourceErrors;
+        pInfo = &ulInfo;
+        break;
+
+    case OID_GEN_XMIT_OK:
+        ulInfo64 = Adapter->FramesTxBroadcast
+            + Adapter->FramesTxMulticast
+            + Adapter->FramesTxDirected;
+        pInfo = &ulInfo64;
+        if (OidRequest->DATA.QUERY_INFORMATION.InformationBufferLength >= sizeof(ULONG64) ||
+            OidRequest->DATA.QUERY_INFORMATION.InformationBufferLength == 0)
+        {
+            ulInfoLen = sizeof(ULONG64);
+        }
+        else
+        {
+            ulInfoLen = sizeof(ULONG);
+        }
+
+        // We should always report that only 8 bytes are required to keep ndistest happy
+        OidRequest->DATA.QUERY_INFORMATION.BytesNeeded =  sizeof(ULONG64);
+        break;
+
+    case OID_GEN_RCV_OK:
+        ulInfo64 = Adapter->FramesRxBroadcast
+            + Adapter->FramesRxMulticast
+            + Adapter->FramesRxDirected;
+
+        pInfo = &ulInfo64;
+
+        if (OidRequest->DATA.QUERY_INFORMATION.InformationBufferLength >= sizeof(ULONG64) ||
+            OidRequest->DATA.QUERY_INFORMATION.InformationBufferLength == 0)
+        {
+            ulInfoLen = sizeof(ULONG64);
+        }
+        else
+        {
+            ulInfoLen = sizeof(ULONG);
+        }
+
+        // We should always report that only 8 bytes are required to keep ndistest happy
+        OidRequest->DATA.QUERY_INFORMATION.BytesNeeded =  sizeof(ULONG64);
+        break;
+
+    case OID_802_3_RCV_ERROR_ALIGNMENT:
+
+        ulInfo = Adapter->RxAlignmentErrors;
+        pInfo = &ulInfo;
+        break;
+
+    case OID_802_3_XMIT_ONE_COLLISION:
+
+        ulInfo = Adapter->OneRetry;
+        pInfo = &ulInfo;
+        break;
+
+    case OID_802_3_XMIT_MORE_COLLISIONS:
+
+        ulInfo = Adapter->MoreThanOneRetry;
+        pInfo = &ulInfo;
+        break;
+
+    case OID_802_3_XMIT_DEFERRED:
+
+        ulInfo = Adapter->TxOKButDeferred;
+        pInfo = &ulInfo;
+        break;
+
+    case OID_802_3_XMIT_MAX_COLLISIONS:
+
+        ulInfo = Adapter->TxAbortExcessCollisions;
+        pInfo = &ulInfo;
+        break;
+
+    case OID_802_3_RCV_OVERRUN:
+
+        ulInfo = Adapter->RxDmaOverrunErrors;
+        pInfo = &ulInfo;
+        break;
+
+    case OID_802_3_XMIT_UNDERRUN:
+
+        ulInfo = Adapter->TxDmaUnderrun;
+        pInfo = &ulInfo;
+        break;
+
+    case OID_GEN_STATISTICS:
+
+        if (OidRequest->DATA.QUERY_INFORMATION.InformationBufferLength < sizeof(NDIS_STATISTICS_INFO))
+        {
+            status = NDIS_STATUS_INVALID_LENGTH;
+            OidRequest->DATA.QUERY_INFORMATION.BytesNeeded = sizeof(NDIS_STATISTICS_INFO);
+            break;
+        }
+        else
+        {
+            PNDIS_STATISTICS_INFO Statistics
+                = (PNDIS_STATISTICS_INFO)OidRequest->DATA.QUERY_INFORMATION.InformationBuffer;
+
+            {C_ASSERT(sizeof(NDIS_STATISTICS_INFO) >= NDIS_SIZEOF_STATISTICS_INFO_REVISION_1);}
+            Statistics->Header.Type = NDIS_OBJECT_TYPE_DEFAULT;
+            Statistics->Header.Size = NDIS_SIZEOF_STATISTICS_INFO_REVISION_1;
+            Statistics->Header.Revision = NDIS_STATISTICS_INFO_REVISION_1;
+
+            Statistics->SupportedStatistics = TAP_SUPPORTED_STATISTICS;
+
+            /* Bytes in */
+            Statistics->ifHCInOctets =
+                Adapter->BytesRxDirected +
+                Adapter->BytesRxMulticast +
+                Adapter->BytesRxBroadcast;
+
+            Statistics->ifHCInUcastOctets =
+                Adapter->BytesRxDirected;
+
+            Statistics->ifHCInMulticastOctets =
+                Adapter->BytesRxMulticast;
+
+            Statistics->ifHCInBroadcastOctets =
+                Adapter->BytesRxBroadcast;
+
+            /* Packets in */
+            Statistics->ifHCInUcastPkts =
+                Adapter->FramesRxDirected;
+
+            Statistics->ifHCInMulticastPkts =
+                Adapter->FramesRxMulticast;
+
+            Statistics->ifHCInBroadcastPkts =
+                Adapter->FramesRxBroadcast;
+
+            /* Errors in */
+            Statistics->ifInErrors =
+                Adapter->RxCrcErrors +
+                Adapter->RxAlignmentErrors +
+                Adapter->RxDmaOverrunErrors +
+                Adapter->RxRuntErrors;
+
+            Statistics->ifInDiscards =
+                Adapter->RxResourceErrors;
+
+
+            /* Bytes out */
+            Statistics->ifHCOutOctets =
+                Adapter->BytesTxDirected +
+                Adapter->BytesTxMulticast +
+                Adapter->BytesTxBroadcast;
+
+            Statistics->ifHCOutUcastOctets =
+                Adapter->BytesTxDirected;
+
+            Statistics->ifHCOutMulticastOctets =
+                Adapter->BytesTxMulticast;
+
+            Statistics->ifHCOutBroadcastOctets =
+                Adapter->BytesTxBroadcast;
+
+            /* Packets out */
+            Statistics->ifHCOutUcastPkts =
+                Adapter->FramesTxDirected;
+
+            Statistics->ifHCOutMulticastPkts =
+                Adapter->FramesTxMulticast;
+
+            Statistics->ifHCOutBroadcastPkts =
+                Adapter->FramesTxBroadcast;
+
+            /* Errors out */
+            Statistics->ifOutErrors =
+                Adapter->TxAbortExcessCollisions +
+                Adapter->TxDmaUnderrun +
+                Adapter->TxLostCRS +
+                Adapter->TxLateCollisions+
+                Adapter->TransmitFailuresOther;
+
+            Statistics->ifOutDiscards = 0ULL;
+
+            ulInfoLen = NDIS_SIZEOF_STATISTICS_INFO_REVISION_1;
+        }
+
+        break;
+
         // TODO: Inplement these query information requests.
     case OID_GEN_RECEIVE_BUFFER_SPACE:
     case OID_GEN_MAXIMUM_SEND_PACKETS:
-    case OID_GEN_XMIT_ERROR:
-    case OID_GEN_RCV_ERROR:
-    case OID_GEN_RCV_DISCARDS:
-    case OID_GEN_RCV_NO_BUFFER:
-    case OID_GEN_VENDOR_ID:
-    case OID_GEN_VENDOR_DESCRIPTION:
-    case OID_GEN_XMIT_OK:
-    case OID_GEN_RCV_OK:
-    case OID_GEN_STATISTICS:
     case OID_GEN_TRANSMIT_QUEUE_LENGTH:
-    case OID_802_3_RCV_ERROR_ALIGNMENT:
-    case OID_802_3_XMIT_ONE_COLLISION:
-    case OID_802_3_XMIT_MORE_COLLISIONS:
-    case OID_802_3_XMIT_DEFERRED:
-    case OID_802_3_XMIT_MAX_COLLISIONS:
-    case OID_802_3_RCV_OVERRUN:
-    case OID_802_3_XMIT_UNDERRUN:
     case OID_802_3_XMIT_HEARTBEAT_FAILURE:
     case OID_802_3_XMIT_TIMES_CRS_LOST:
     case OID_802_3_XMIT_LATE_COLLISIONS:
