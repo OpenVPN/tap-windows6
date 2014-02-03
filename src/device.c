@@ -526,7 +526,7 @@ DestroyTapDevice(
     __in PTAP_ADAPTER_CONTEXT   Adapter
    )
 {
-    DEBUGP (("[TAP] Destroying tap device: %wZ\n",
+    DEBUGP (("[TAP] --> DestroyTapDevice; Adapter: %wZ\n",
         &Adapter->NetCfgInstanceId));
 
     // Flush IRP queues. Wait for pending I/O. Etc.
@@ -538,4 +538,6 @@ DestroyTapDevice(
     }
 
     Adapter->DeviceHandle = NULL;
+
+    DEBUGP (("[TAP] <-- DestroyTapDevice\n"));
 }

@@ -215,6 +215,11 @@ Return Value:
 	 //  NInstances(),
 	 //  InstanceMaxBucketSize()));
 
+    if(GlobalData.NdisDriverHandle != NULL )
+    {
+        NdisMDeregisterMiniportDriver(GlobalData.NdisDriverHandle);
+    }
+
     DEBUGP (("[TAP] <-- TapDriverUnload\n"));
 }
 

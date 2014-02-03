@@ -121,7 +121,7 @@ tapReadPermanentAddress(
     NDIS_CONFIGURATION_PARAMETER *configParameter;
     NDIS_STRING macKey = NDIS_STRING_CONST("MAC");
     ANSI_STRING macString;
-    BOOLEAN macFromRegistry;
+    BOOLEAN macFromRegistry = FALSE;
 
     // Read MAC parameter from registry.
     NdisReadConfiguration(
@@ -134,7 +134,9 @@ tapReadPermanentAddress(
 
     if (status == NDIS_STATUS_SUCCESS)
     {
-        if (configParameter->ParameterType == NdisParameterString)
+        if( (configParameter->ParameterType == NdisParameterString)
+            && (configParameter->ParameterData.StringData.Length >= 12)
+            )
         {
             if (RtlUnicodeStringToAnsiString(
                     &macString,
@@ -147,9 +149,6 @@ tapReadPermanentAddress(
             }
         }
     }
-
-    // BUGBUG!!! MAC address is all zeroes in registry...
-    macFromRegistry = FALSE;
 
     if(!macFromRegistry)
     {
@@ -1043,6 +1042,8 @@ tapAdapterContextFree(
 {
     PLIST_ENTRY listEntry = &Adapter->AdapterListLink;
 
+    DEBUGP (("[TAP] --> tapAdapterContextFree\n"));
+
     // Adapter contrxt should already be removed.
     ASSERT( (listEntry->Flink == listEntry) && (listEntry->Blink == listEntry ) );
 
@@ -1058,4 +1059,6 @@ tapAdapterContextFree(
     Adapter->NetCfgInstanceIdAnsi.Buffer = NULL;
 
     NdisFreeMemory(Adapter,0,0);
+
+    DEBUGP (("[TAP] <-- tapAdapterContextFree\n"));
 }
