@@ -230,19 +230,29 @@ Return Value:
 
 --*/
 {
-    NDIS_STATUS    status =NDIS_STATUS_SUCCESS;
-    NDIS_MEDIUM    Medium = TAP_MEDIUM_TYPE;
-    ULONG          ulInfo;
-    USHORT         usInfo;
-    ULONG64        ulInfo64;
+    NDIS_STATUS             status = NDIS_STATUS_SUCCESS;
+    NDIS_MEDIUM             Medium = TAP_MEDIUM_TYPE;
+    NDIS_HARDWARE_STATUS    HardwareStatus = NdisHardwareStatusReady;
+    ULONG                   ulInfo;
+    USHORT                  usInfo;
+    ULONG64                 ulInfo64;
 
     // Default to returning the ULONG value
-    PVOID          pInfo=NULL;
-    ULONG          ulInfoLen = sizeof(ulInfo);
+    PVOID                   pInfo=NULL;
+    ULONG                   ulInfoLen = sizeof(ulInfo);
 
     // Dispatch based on object identifier (OID).
     switch(OidRequest->DATA.QUERY_INFORMATION.Oid)
     {
+    case OID_GEN_HARDWARE_STATUS:
+        //
+        // Specify the current hardware status of the underlying NIC as
+        // one of the following NDIS_HARDWARE_STATUS-type values.
+        //
+        pInfo = (PVOID) &HardwareStatus;
+        ulInfoLen = sizeof(NDIS_HARDWARE_STATUS);
+        break;
+
     case OID_802_3_PERMANENT_ADDRESS:
         //
         // Return the MAC address of the NIC burnt in the hardware.
@@ -369,7 +379,6 @@ Return Value:
         break;
 
         // TODO: Inplement these query information requests.
-    case OID_GEN_HARDWARE_STATUS:
     case OID_GEN_RECEIVE_BUFFER_SPACE:
     case OID_GEN_MAXIMUM_SEND_PACKETS:
     case OID_GEN_XMIT_ERROR:
