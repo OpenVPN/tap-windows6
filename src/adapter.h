@@ -216,6 +216,7 @@ tapAdapterContextFromDeviceObject(
     );
 
 // Prototypes for standard NDIS miniport entry points
+MINIPORT_SET_OPTIONS                AdapterSetOptions;
 MINIPORT_INITIALIZE                 AdapterCreate;
 MINIPORT_HALT                       AdapterHalt;
 MINIPORT_UNLOAD                     TapDriverUnload;

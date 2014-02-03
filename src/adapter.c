@@ -434,6 +434,45 @@ tapAdapterContextFromDeviceObject(
     return (PTAP_ADAPTER_CONTEXT )NULL;
 }
 
+NDIS_STATUS
+AdapterSetOptions(
+    __in  NDIS_HANDLE             NdisDriverHandle,
+    __in  NDIS_HANDLE             DriverContext
+    )
+/*++
+Routine Description:
+
+    The MiniportSetOptions function registers optional handlers.  For each
+    optional handler that should be registered, this function makes a call
+    to NdisSetOptionalHandlers.
+
+    MiniportSetOptions runs at IRQL = PASSIVE_LEVEL.
+
+Arguments:
+
+    DriverContext  The context handle
+
+Return Value:
+
+    NDIS_STATUS_xxx code
+
+--*/
+{
+    NDIS_STATUS status;
+
+    DEBUGP (("[TAP] --> AdapterSetOptions\n"));
+
+    //
+    // Set any optional handlers by filling out the appropriate struct and
+    // calling NdisSetOptionalHandlers here.
+    //
+
+    status = NDIS_STATUS_SUCCESS;
+
+    DEBUGP (("[TAP] <-- AdapterSetOptions; status = %8.8X\n",status));
+
+    return status;
+}
 
 NDIS_STATUS
 AdapterCreate(
@@ -724,13 +763,59 @@ AdapterPause(
     __in  NDIS_HANDLE                       MiniportAdapterContext,
     __in  PNDIS_MINIPORT_PAUSE_PARAMETERS   PauseParameters
     )
+/*++
+
+Routine Description:
+
+    When a miniport receives a pause request, it enters into a Pausing state.
+    The miniport should not indicate up any more network data.  Any pending
+    send requests must be completed, and new requests must be rejected with
+    NDIS_STATUS_PAUSED.
+
+    Once all sends have been completed and all recieve NBLs have returned to
+    the miniport, the miniport enters the Paused state.
+
+    While paused, the miniport can still service interrupts from the hardware
+    (to, for example, continue to indicate NDIS_STATUS_MEDIA_CONNECT
+    notifications).
+
+    The miniport must continue to be able to handle status indications and OID
+    requests.  MiniportPause is different from MiniportHalt because, in
+    general, the MiniportPause operation won't release any resources.
+    MiniportPause must not attempt to acquire any resources where allocation
+    can fail, since MiniportPause itself must not fail.
+
+
+    MiniportPause runs at IRQL = PASSIVE_LEVEL.
+
+Arguments:
+
+    MiniportAdapterContext  Pointer to the Adapter
+    MiniportPauseParameters  Additional information about the pause operation
+
+Return Value:
+
+    If the miniport is able to immediately enter the Paused state, it should
+    return NDIS_STATUS_SUCCESS.
+
+    If the miniport must wait for send completions or pending receive NBLs, it
+    should return NDIS_STATUS_PENDING now, and call NDISMPauseComplete when the
+    miniport has entered the Paused state.
+
+    No other return value is permitted.  The pause operation must not fail.
+
+--*/
 {
     PTAP_ADAPTER_CONTEXT   adapter = (PTAP_ADAPTER_CONTEXT )MiniportAdapterContext;
     NDIS_STATUS    status;
 
     UNREFERENCED_PARAMETER(PauseParameters);
 
+    DEBUGP (("[TAP] --> AdapterPause\n"));
+
     status = NDIS_STATUS_SUCCESS;
+
+    DEBUGP (("[TAP] <-- AdapterPause; status = %8.8X\n",status));
 
     return status;
 }
@@ -740,13 +825,53 @@ AdapterRestart(
     __in  NDIS_HANDLE                             MiniportAdapterContext,
     __in  PNDIS_MINIPORT_RESTART_PARAMETERS       RestartParameters
     )
+/*++
+
+Routine Description:
+
+    When a miniport receives a restart request, it enters into a Restarting
+    state.  The miniport may begin indicating received data (e.g., using
+    NdisMIndicateReceiveNetBufferLists), handling status indications, and
+    processing OID requests in the Restarting state.  However, no sends will be
+    requested while the miniport is in the Restarting state.
+
+    Once the miniport is ready to send data, it has entered the Running state.
+    The miniport informs NDIS that it is in the Running state by returning
+    NDIS_STATUS_SUCCESS from this MiniportRestart function; or if this function
+    has already returned NDIS_STATUS_PENDING, by calling NdisMRestartComplete.
+
+
+    MiniportRestart runs at IRQL = PASSIVE_LEVEL.
+
+Arguments:
+
+    MiniportAdapterContext  Pointer to the Adapter
+    RestartParameters  Additional information about the restart operation
+
+Return Value:
+
+    If the miniport is able to immediately enter the Running state, it should
+    return NDIS_STATUS_SUCCESS.
+
+    If the miniport is still in the Restarting state, it should return
+    NDIS_STATUS_PENDING now, and call NdisMRestartComplete when the miniport
+    has entered the Running state.
+
+    Other NDIS_STATUS codes indicate errors.  If an error is encountered, the
+    miniport must return to the Paused state (i.e., stop indicating receives).
+
+--*/
 {
     PTAP_ADAPTER_CONTEXT   adapter = (PTAP_ADAPTER_CONTEXT )MiniportAdapterContext;
     NDIS_STATUS    status;
 
     UNREFERENCED_PARAMETER(RestartParameters);
 
-    status = NDIS_STATUS_FAILURE;
+    DEBUGP (("[TAP] --> AdapterRestart\n"));
+
+    status = NDIS_STATUS_SUCCESS;
+
+    DEBUGP (("[TAP] <-- AdapterRestart; status = %8.8X\n",status));
 
     return status;
 }
@@ -927,6 +1052,48 @@ AdapterReset(
     __in   NDIS_HANDLE            MiniportAdapterContext,
     __out PBOOLEAN                AddressingReset
     )
+/*++
+
+Routine Description:
+
+    MiniportResetEx is a required to issue a hardware reset to the NIC
+    and/or to reset the driver's software state.
+
+    1) The miniport driver can optionally complete any pending
+        OID requests. NDIS will submit no further OID requests
+        to the miniport driver for the NIC being reset until
+        the reset operation has finished. After the reset,
+        NDIS will resubmit to the miniport driver any OID requests
+        that were pending but not completed by the miniport driver
+        before the reset.
+
+    2) A deserialized miniport driver must complete any pending send
+        operations. NDIS will not requeue pending send packets for
+        a deserialized driver since NDIS does not maintain the send
+        queue for such a driver.
+
+    3) If MiniportReset returns NDIS_STATUS_PENDING, the driver must
+        complete the original request subsequently with a call to
+        NdisMResetComplete.
+
+    MiniportReset runs at IRQL <= DISPATCH_LEVEL.
+
+Arguments:
+
+AddressingReset - If multicast or functional addressing information
+                  or the lookahead size, is changed by a reset,
+                  MiniportReset must set the variable at AddressingReset
+                  to TRUE before it returns control. This causes NDIS to
+                  call the MiniportSetInformation function to restore
+                  the information.
+
+MiniportAdapterContext - Pointer to our adapter
+
+Return Value:
+
+    NDIS_STATUS
+
+--*/
 {
     PTAP_ADAPTER_CONTEXT   adapter = (PTAP_ADAPTER_CONTEXT )MiniportAdapterContext;
     NDIS_STATUS    status;
@@ -934,7 +1101,16 @@ AdapterReset(
     UNREFERENCED_PARAMETER(MiniportAdapterContext);
     UNREFERENCED_PARAMETER(AddressingReset);
 
-    status = NDIS_STATUS_HARD_ERRORS;
+    DEBUGP (("[TAP] --> AdapterReset\n"));
+
+    // See note above...
+    *AddressingReset = FALSE;
+
+    // BUGBUG!!! TODO!!! Lots of work here...
+
+    status = NDIS_STATUS_SUCCESS;
+
+    DEBUGP (("[TAP] <-- AdapterReset; status = %8.8X\n",status));
 
     return status;
 }
@@ -946,6 +1122,8 @@ AdapterDevicePnpEventNotify(
     )
 {
     PTAP_ADAPTER_CONTEXT   adapter = (PTAP_ADAPTER_CONTEXT )MiniportAdapterContext;
+
+    DEBUGP (("[TAP] --> AdapterDevicePnpEventNotify\n"));
 
 /*
     switch (NetDevicePnPEvent->DevicePnPEvent)
@@ -988,6 +1166,7 @@ AdapterDevicePnpEventNotify(
             DEBUGP(MP_ERROR, "[%p] MPDevicePnpEventNotify: unknown PnP event 0x%x\n", Adapter, NetDevicePnPEvent->DevicePnPEvent);
     }
 */
+    DEBUGP (("[TAP] <-- AdapterDevicePnpEventNotify\n"));
 }
 
 VOID
@@ -1028,9 +1207,13 @@ Return Value:
     UNREFERENCED_PARAMETER(ShutdownAction);
     UNREFERENCED_PARAMETER(MiniportAdapterContext);
 
+    DEBUGP (("[TAP] --> AdapterShutdownEx\n"));
+
     //
     // We don't have any hardware to reset.
     //
+
+    DEBUGP (("[TAP] <-- AdapterShutdownEx\n"));
 }
 
 
