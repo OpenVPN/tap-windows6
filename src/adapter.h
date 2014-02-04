@@ -137,6 +137,27 @@ typedef struct _TAP_ADAPTER_CONTEXT
     IO_CSQ                      PendingReadCsqQueue;
     LIST_ENTRY                  PendingReadIrpQueue;
 
+    // Info for point-to-point mode
+    BOOLEAN                     m_tun;
+    IPADDR                      m_localIP;
+    IPADDR                      m_remoteNetwork;
+    IPADDR                      m_remoteNetmask;
+    ETH_HEADER                  m_TapToUser;
+    ETH_HEADER                  m_UserToTap;
+    ETH_HEADER                  m_UserToTap_IPv6; // same as UserToTap but proto=ipv6
+
+    // Info for DHCP server masquerade
+    BOOLEAN                     m_dhcp_enabled;
+    IPADDR                      m_dhcp_addr;
+    ULONG                       m_dhcp_netmask;
+    IPADDR                      m_dhcp_server_ip;
+    BOOLEAN                     m_dhcp_server_arp;
+    MACADDR                     m_dhcp_server_mac;
+    ULONG                       m_dhcp_lease_time;
+    UCHAR                       m_dhcp_user_supplied_options_buffer[DHCP_USER_SUPPLIED_OPTIONS_BUFFER_SIZE];
+    ULONG                       m_dhcp_user_supplied_options_buffer_len;
+    BOOLEAN                     m_dhcp_received_discover;
+    ULONG                       m_dhcp_bad_requests;
 
     // Multicast list. Fixed size.
     ULONG                       ulMCListSize;
@@ -195,28 +216,7 @@ typedef struct _TAP_ADAPTER_CONTEXT
   // Adapter power state
   char m_DeviceState;
 
-  // Info for point-to-point mode
-  BOOLEAN m_tun;
-  IPADDR m_localIP;
-  IPADDR m_remoteNetwork;
-  IPADDR m_remoteNetmask;
-  ETH_HEADER m_TapToUser;
-  ETH_HEADER m_UserToTap;
-  ETH_HEADER m_UserToTap_IPv6;		// same as UserToTap but proto=ipv6
   MACADDR m_MAC_Broadcast;
-
-  // Used for DHCP server masquerade
-  BOOLEAN m_dhcp_enabled;
-  IPADDR m_dhcp_addr;
-  ULONG m_dhcp_netmask;
-  IPADDR m_dhcp_server_ip;
-  BOOLEAN m_dhcp_server_arp;
-  MACADDR m_dhcp_server_mac;
-  ULONG m_dhcp_lease_time;
-  UCHAR m_dhcp_user_supplied_options_buffer[DHCP_USER_SUPPLIED_OPTIONS_BUFFER_SIZE];
-  ULONG m_dhcp_user_supplied_options_buffer_len;
-  BOOLEAN m_dhcp_received_discover;
-  ULONG m_dhcp_bad_requests;
 
   // Help to tear down the adapter by keeping
   // some state information on allocated

@@ -109,7 +109,11 @@ ParseMAC (MACADDR dest, const char *src)
  * of collision would be 0.01157288998621678766.
  */
 
-VOID GenerateRandomMac (MACADDR mac, const unsigned char *adapter_name)
+VOID
+GenerateRandomMac(
+    __in MACADDR mac,
+    __in const unsigned char *adapter_name
+    )
 {
   unsigned const char *cp = adapter_name;
   unsigned char c;
@@ -148,8 +152,13 @@ VOID GenerateRandomMac (MACADDR mac, const unsigned char *adapter_name)
     }
 }
 
-VOID GenerateRelatedMAC (MACADDR dest, const MACADDR src, const int delta)
+VOID
+GenerateRelatedMAC(
+    __in MACADDR dest,
+    __in const MACADDR src,
+    __in const int delta
+    )
 {
-  COPY_MAC (dest, src);
-  dest[2] += (UCHAR) delta;
+    COPY_MAC (dest, src);
+    dest[2] += (UCHAR) delta;
 }

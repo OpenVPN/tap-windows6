@@ -126,6 +126,26 @@ TapDeviceWrite(
     return ntStatus;
 }
 
+//======================================================
+// If DHCP mode is used together with tun
+// mode, consider the fact that the P2P remote subnet
+// might enclose the DHCP masq server address.
+//======================================================
+VOID
+CheckIfDhcpAndTunMode (
+    __in PTAP_ADAPTER_CONTEXT   Adapter
+    )
+{
+    if (Adapter->m_tun && Adapter->m_dhcp_enabled)
+    {
+        if ((Adapter->m_dhcp_server_ip & Adapter->m_remoteNetmask) == Adapter->m_remoteNetwork)
+        {
+            COPY_MAC (Adapter->m_dhcp_server_mac, Adapter->m_TapToUser.dest);
+            Adapter->m_dhcp_server_arp = FALSE;
+        }
+    }
+}
+
 // IRP_MJ_DEVICE_CONTROL callback.
 NTSTATUS
 TapDeviceControl(
@@ -263,13 +283,59 @@ Return Value:
         }
         break;
 
+    case TAP_WIN_IOCTL_CONFIG_TUN:
+        {
+            if(inBufLength >= sizeof(IPADDR)*3)
+            {
+                MACADDR dest;
+
+                adapter->m_tun = FALSE;
+
+                GenerateRelatedMAC (dest, adapter->CurrentAddress, 1);
+
+                adapter->m_localIP =       ((IPADDR*) (Irp->AssociatedIrp.SystemBuffer))[0];
+                adapter->m_remoteNetwork = ((IPADDR*) (Irp->AssociatedIrp.SystemBuffer))[1];
+                adapter->m_remoteNetmask = ((IPADDR*) (Irp->AssociatedIrp.SystemBuffer))[2];
+
+                // Sanity check on network/netmask
+                if ((adapter->m_remoteNetwork & adapter->m_remoteNetmask) != adapter->m_remoteNetwork)
+                {
+                    // BUGBUG!!! Fixme!!!
+                    //NOTE_ERROR();
+                    Irp->IoStatus.Status = ntStatus = STATUS_INVALID_PARAMETER;
+                    break;
+                }
+
+                COPY_MAC (adapter->m_TapToUser.src, adapter->CurrentAddress);
+                COPY_MAC (adapter->m_TapToUser.dest, dest);
+                COPY_MAC (adapter->m_UserToTap.src, dest);
+                COPY_MAC (adapter->m_UserToTap.dest, adapter->CurrentAddress);
+
+                adapter->m_TapToUser.proto = adapter->m_UserToTap.proto = htons (ETH_P_IP);
+                adapter->m_UserToTap_IPv6 = adapter->m_UserToTap;
+                adapter->m_UserToTap_IPv6.proto = htons(ETH_P_IPV6);
+
+                adapter->m_tun = TRUE;
+
+                CheckIfDhcpAndTunMode (adapter);
+
+                Irp->IoStatus.Information = 1; // Simple boolean value
+            }
+            else
+            {
+                // BUGBUG!!! Fixme!!!
+                //NOTE_ERROR();
+                Irp->IoStatus.Status = ntStatus = STATUS_BUFFER_TOO_SMALL;
+            }
+        }
+        break;
+
     case TAP_WIN_IOCTL_GET_INFO:
     case TAP_WIN_IOCTL_CONFIG_POINT_TO_POINT:
     case TAP_WIN_IOCTL_SET_MEDIA_STATUS:
     case TAP_WIN_IOCTL_CONFIG_DHCP_MASQ:
     case TAP_WIN_IOCTL_GET_LOG_LINE:
     case TAP_WIN_IOCTL_CONFIG_DHCP_SET_OPT:
-    case TAP_WIN_IOCTL_CONFIG_TUN:
     default:
 
         //

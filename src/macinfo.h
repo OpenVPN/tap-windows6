@@ -39,6 +39,16 @@ BOOLEAN
 ParseMAC (MACADDR dest, const char *src);
 
 VOID
-GenerateRandomMac (MACADDR mac, const unsigned char *adapter_name);
+GenerateRandomMac(
+    __in MACADDR mac,
+    __in const unsigned char *adapter_name
+    );
+
+VOID
+GenerateRelatedMAC(
+    __in MACADDR dest,
+    __in const MACADDR src,
+    __in const int delta
+    );
 
 #endif
