@@ -295,6 +295,11 @@ tapReadConfiguration(
                 {
                     int mtu = configParameter->ParameterData.IntegerData;
 
+                    if(mtu == 0)
+                    {
+                        mtu = ETHERNET_MTU;
+                    }
+
                     // Sanity check
                     if (mtu < MINIMUM_MTU)
                     {

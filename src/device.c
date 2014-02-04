@@ -552,6 +552,7 @@ DestroyTapDevice(
     // Deregister the Win32 device.
     if(Adapter->DeviceHandle)
     {
+        DEBUGP (("[TAP] Calling NdisDeregisterDeviceEx\n"));
         NdisDeregisterDeviceEx(Adapter->DeviceHandle);
     }
 
