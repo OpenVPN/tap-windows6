@@ -309,6 +309,11 @@ tapReadConfiguration(
                 }
             }
 
+            DEBUGP (("[%s] Using MTU %d\n",
+                MINIPORT_INSTANCE_ID (Adapter),
+                Adapter->MtuSize
+                ));
+
             // Read MediaStatus setting from registry.
             NdisReadConfiguration (
                 &localStatus,

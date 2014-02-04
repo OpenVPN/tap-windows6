@@ -27,6 +27,7 @@
 //
 
 #include "tap-windows.h"
+#include <wdmsec.h> // for SDDLs
 
 //======================================================================
 // TAP Win32 Device I/O Callbacks
@@ -498,6 +499,23 @@ CreateTapDevice(
         deviceAttribute.SymbolicName = &Adapter->LinkName;
         deviceAttribute.MajorFunctions = &dispatchTable[0];
         //deviceAttribute.ExtensionSize = sizeof(FILTER_DEVICE_EXTENSION);
+
+#if ENABLE_NONADMIN
+        if(Adapter->AllowNonAdmin)
+        {
+            //
+            // SDDL_DEVOBJ_SYS_ALL_WORLD_RWX_RES_RWX allows the kernel and system complete
+            // control over the device. By default the admin can access the entire device,
+            // but cannot change the ACL (the admin must take control of the device first)
+            //
+            // Everyone else, including "restricted" or "untrusted" code can read or write
+            // to the device. Traversal beneath the device is also granted (removing it
+            // would only effect storage devices, except if the "bypass-traversal"
+            // privilege was revoked).
+            //
+            deviceAttribute.DefaultSDDLString = &SDDL_DEVOBJ_SYS_ALL_ADM_RWX_WORLD_RWX_RES_RWX;
+        }
+#endif
 
         status = NdisRegisterDeviceEx(
                     Adapter->MiniportAdapterHandle,

@@ -7,7 +7,12 @@ MINORCOMP=ndis
 TARGETNAME=tapoas
 TARGETTYPE=DRIVER
 TARGETPATH=.
-TARGETLIBS=$(DDK_LIB_PATH)\ndis.lib $(DDK_LIB_PATH)\ntstrsafe.lib
+
+TARGETLIBS=\
+    $(DDK_LIB_PATH)\ndis.lib \
+    $(DDK_LIB_PATH)\ntstrsafe.lib \
+    $(DDK_LIB_PATH)\wdmsec.lib
+
 INCLUDES=$(DDK_INCLUDE_PATH) ..
 
 # System and NDIS wrapper definitions.
