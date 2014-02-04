@@ -123,6 +123,11 @@ tapAdapterContextAllocate(
 
         // Safe for multiple removes.
         NdisInitializeListHead(&adapter->AdapterListLink);
+
+        //
+        // The miniport adapter is initially powered up
+        //
+        adapter->CurrentPowerState = NdisDeviceStateD0;
     }
 
     return adapter;
