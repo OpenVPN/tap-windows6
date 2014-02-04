@@ -113,6 +113,9 @@ tapAdapterContextAllocate(
             tapCsqCompleteCanceledIrp
             );
 
+        // Allocate the adapter lock.
+        NdisAllocateSpinLock(&adapter->AdapterLock);
+
         // Add initial reference. Normally removed in AdapterHalt.
         adapter->RefCount = 1;
 
@@ -590,6 +593,13 @@ AdapterCreate(
             break;
         }
 
+        // Enter the Initializing state.
+        DEBUGP (("[TAP] Miniport State: Initializing\n"));
+
+        tapAdapterAcquireLock(adapter,FALSE);
+        adapter->Locked.AdapterState = MiniportInitializingState;
+        tapAdapterReleaseLock(adapter,FALSE);
+
         //
         // First read adapter configuration from registry.
         // -----------------------------------------------
@@ -763,10 +773,21 @@ AdapterCreate(
         }
     } while(FALSE);
 
-    if(status != NDIS_STATUS_SUCCESS)
+    if(status == NDIS_STATUS_SUCCESS)
+    {
+        // Enter the Paused state if initialization is complete.
+        DEBUGP (("[TAP] Miniport State: Paused\n"));
+
+        tapAdapterAcquireLock(adapter,FALSE);
+        adapter->Locked.AdapterState = MiniportPausedState;
+        tapAdapterReleaseLock(adapter,FALSE);
+    }
+    else
     {
         if(adapter != NULL)
         {
+            DEBUGP (("[TAP] Miniport State: Halted\n"));
+
             //
             // Remove reference when adapter context was allocated
             // ---------------------------------------------------
@@ -825,6 +846,13 @@ Return Value:
     UNREFERENCED_PARAMETER(HaltAction);
 
     DEBUGP (("[TAP] --> AdapterHalt\n"));
+
+    // Enter the Halted state.
+    DEBUGP (("[TAP] Miniport State: Halted\n"));
+
+    tapAdapterAcquireLock(adapter,FALSE);
+    adapter->Locked.AdapterState = MiniportHaltedState;
+    tapAdapterReleaseLock(adapter,FALSE);
 
     // Remove this adapter from the global adapter list.
     tapAdapterContextRemoveFromGlobalList(adapter);
@@ -901,7 +929,21 @@ Return Value:
 
     DEBUGP (("[TAP] --> AdapterPause\n"));
 
+    // Enter the Pausing state.
+    DEBUGP (("[TAP] Miniport State: Pausing\n"));
+
+    tapAdapterAcquireLock(adapter,FALSE);
+    adapter->Locked.AdapterState = MiniportPausingState;
+    tapAdapterReleaseLock(adapter,FALSE);
+
     status = NDIS_STATUS_SUCCESS;
+
+    // Enter the Paused state.
+    DEBUGP (("[TAP] Miniport State: Paused\n"));
+
+    tapAdapterAcquireLock(adapter,FALSE);
+    adapter->Locked.AdapterState = MiniportPausedState;
+    tapAdapterReleaseLock(adapter,FALSE);
 
     DEBUGP (("[TAP] <-- AdapterPause; status = %8.8X\n",status));
 
@@ -957,7 +999,33 @@ Return Value:
 
     DEBUGP (("[TAP] --> AdapterRestart\n"));
 
+    // Enter the Restarting state.
+    DEBUGP (("[TAP] Miniport State: Restarting\n"));
+
+    tapAdapterAcquireLock(adapter,FALSE);
+    adapter->Locked.AdapterState = MiniportRestartingState;
+    tapAdapterReleaseLock(adapter,FALSE);
+
     status = NDIS_STATUS_SUCCESS;
+
+    if(status == NDIS_STATUS_SUCCESS)
+    {
+        // Enter the Running state.
+        DEBUGP (("[TAP] Miniport State: Running\n"));
+
+        tapAdapterAcquireLock(adapter,FALSE);
+        adapter->Locked.AdapterState = MiniportRunning;
+        tapAdapterReleaseLock(adapter,FALSE);
+    }
+    else
+    {
+        // Enter the Paused state if restart failed.
+        DEBUGP (("[TAP] Miniport State: Paused\n"));
+
+        tapAdapterAcquireLock(adapter,FALSE);
+        adapter->Locked.AdapterState = MiniportPausedState;
+        tapAdapterReleaseLock(adapter,FALSE);
+    }
 
     DEBUGP (("[TAP] <-- AdapterRestart; status = %8.8X\n",status));
 
@@ -1297,6 +1365,13 @@ Return Value:
 
     DEBUGP (("[TAP] --> AdapterShutdownEx\n"));
 
+    // Enter the Shutdown state.
+    DEBUGP (("[TAP] Miniport State: Shutdown\n"));
+
+    tapAdapterAcquireLock(adapter,FALSE);
+    adapter->Locked.AdapterState = MiniportShutdownState;
+    tapAdapterReleaseLock(adapter,FALSE);
+
     //
     // We don't have any hardware to reset.
     //
@@ -1320,6 +1395,9 @@ tapAdapterContextFree(
 
     // Insure that adapter context has been removed from global adapter list.
     RemoveEntryList(&Adapter->AdapterListLink);
+
+    // Free the adapter lock.
+    NdisFreeSpinLock(Adapter->AdapterLock);
 
     // Free the ANSI NetCfgInstanceId buffer.
     if(Adapter->NetCfgInstanceIdAnsi.Buffer != NULL)

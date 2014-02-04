@@ -29,6 +29,40 @@
 
 #define TAP_MAX_NDIS_NAME_LENGTH     64     // 38 character GUID string plus extra..
 
+// MSDN Ref: http://msdn.microsoft.com/en-us/library/windows/hardware/ff560490(v=vs.85).aspx
+typedef
+enum _TAP_MINIPORT_ADAPTER_STATE
+{
+    // The Halted state is the initial state of all adapters. When an
+    // adapter is in the Halted state, NDIS can call the driver's
+    // MiniportInitializeEx function to initialize the adapter.
+    MiniportHaltedState,
+
+    // In the Shutdown state, a system shutdown and restart must occur
+    // before the system can use the adapter again.
+    MiniportShutdownState,
+
+    // In the Initializing state, a miniport driver completes any
+    //operations that are required to initialize an adapter.
+    MiniportInitializingState,
+
+    // Entering the Paused state...
+    MiniportPausingState,
+
+    // In the Paused state, the adapter does not indicate received
+    // network data or accept send requests.
+    MiniportPausedState,
+
+    // In the Running state, a miniport driver performs send and
+    // receive processing for an adapter.
+    MiniportRunning,
+
+    // In the Restarting state, a miniport driver completes any
+    // operations that are required to restart send and receive
+    // operations for an adapter.
+    MiniportRestartingState
+} TAP_MINIPORT_ADAPTER_STATE, *PTAP_MINIPORT_ADAPTER_STATE;
+
 //
 // Each adapter managed by this driver has a TapAdapter struct.
 // ------------------------------------------------------------
@@ -37,11 +71,23 @@
 //
 typedef struct _TAP_ADAPTER_CONTEXT
 {
-    LIST_ENTRY              AdapterListLink;
+    LIST_ENTRY                  AdapterListLink;
 
-    volatile LONG           RefCount;
+    volatile LONG               RefCount;
 
-    NDIS_HANDLE             MiniportAdapterHandle;
+    NDIS_HANDLE                 MiniportAdapterHandle;
+
+    NDIS_SPIN_LOCK              AdapterLock;    // Lock for protection of state and outstanding sends and recvs
+
+    //
+    // All fields that are protected by the AdapterLock are included
+    // in the Locked structure to remind us to take the Lock
+    // before accessing them :)
+    //
+    struct
+    {
+        TAP_MINIPORT_ADAPTER_STATE  AdapterState;
+    } Locked;
 
     //
     // NetCfgInstanceId as UNICODE_STRING
@@ -55,49 +101,49 @@ typedef struct _TAP_ADAPTER_CONTEXT
     //
     //    MiniportName=\DEVICE\{410EB49D-2381-4FE7-9B36-498E22619DF0}
     //
-    NDIS_STRING             NetCfgInstanceId;
-    WCHAR                   NetCfgInstanceIdBuffer[TAP_MAX_NDIS_NAME_LENGTH];
+    NDIS_STRING                 NetCfgInstanceId;
+    WCHAR                       NetCfgInstanceIdBuffer[TAP_MAX_NDIS_NAME_LENGTH];
 
 # define MINIPORT_INSTANCE_ID(a) ((a)->NetCfgInstanceIdAnsi.Buffer)
-    ANSI_STRING             NetCfgInstanceIdAnsi;   // Used occasionally
+    ANSI_STRING                 NetCfgInstanceIdAnsi;   // Used occasionally
 
-    ULONG                   MtuSize;        // 1500 byte (typical)
+    ULONG                       MtuSize;        // 1500 byte (typical)
 
     // TRUE if adapter should always be
     // "connected" even when device node
     // is not open by a userspace process.
-    BOOLEAN                 MediaStateAlwaysConnected;
+    BOOLEAN                     MediaStateAlwaysConnected;
 
     // TRUE if device is "connected"
-    BOOLEAN                 MediaState;
+    BOOLEAN                     MediaState;
 
-    BOOLEAN                 AllowNonAdmin;
+    BOOLEAN                     AllowNonAdmin;
 
-    MACADDR                 PermanentAddress;   // From registry, if available
-    MACADDR                 CurrentAddress;
+    MACADDR                     PermanentAddress;   // From registry, if available
+    MACADDR                     CurrentAddress;
 
     // Device registration parameters from NdisRegisterDeviceEx.
-    NDIS_STRING             DeviceName;
-    WCHAR                   DeviceNameBuffer[TAP_MAX_NDIS_NAME_LENGTH];
+    NDIS_STRING                 DeviceName;
+    WCHAR                       DeviceNameBuffer[TAP_MAX_NDIS_NAME_LENGTH];
 
-    NDIS_STRING             LinkName;
-    WCHAR                   LinkNameBuffer[TAP_MAX_NDIS_NAME_LENGTH];
+    NDIS_STRING                 LinkName;
+    WCHAR                       LinkNameBuffer[TAP_MAX_NDIS_NAME_LENGTH];
 
-    NDIS_HANDLE             DeviceHandle;
-    PDEVICE_OBJECT          DeviceObject;
+    NDIS_HANDLE                 DeviceHandle;
+    PDEVICE_OBJECT              DeviceObject;
 
     // Cancel-Safe read IRP queue.
-    KSPIN_LOCK              PendingReadCsqQueueLock;
-    IO_CSQ                  PendingReadCsqQueue;
-    LIST_ENTRY              PendingReadIrpQueue;
+    KSPIN_LOCK                  PendingReadCsqQueueLock;
+    IO_CSQ                      PendingReadCsqQueue;
+    LIST_ENTRY                  PendingReadIrpQueue;
 
 
     // Multicast list. Fixed size.
-    ULONG                   ulMCListSize;
-    UCHAR                   MCList[TAP_MAX_MCAST_LIST][MACADDR_SIZE];
+    ULONG                       ulMCListSize;
+    UCHAR                       MCList[TAP_MAX_MCAST_LIST][MACADDR_SIZE];
 
-    ULONG                   PacketFilter;
-    ULONG                   ulLookahead;
+    ULONG                       PacketFilter;
+    ULONG                       ulLookahead;
 
     //
     // Statistics
@@ -105,39 +151,39 @@ typedef struct _TAP_ADAPTER_CONTEXT
     //
 
     // Packet counts
-    ULONG64                 FramesRxDirected;
-    ULONG64                 FramesRxMulticast;
-    ULONG64                 FramesRxBroadcast;
-    ULONG64                 FramesTxDirected;
-    ULONG64                 FramesTxMulticast;
-    ULONG64                 FramesTxBroadcast;
+    ULONG64                     FramesRxDirected;
+    ULONG64                     FramesRxMulticast;
+    ULONG64                     FramesRxBroadcast;
+    ULONG64                     FramesTxDirected;
+    ULONG64                     FramesTxMulticast;
+    ULONG64                     FramesTxBroadcast;
 
     // Byte counts
-    ULONG64                 BytesRxDirected;
-    ULONG64                 BytesRxMulticast;
-    ULONG64                 BytesRxBroadcast;
-    ULONG64                 BytesTxDirected;
-    ULONG64                 BytesTxMulticast;
-    ULONG64                 BytesTxBroadcast;
+    ULONG64                     BytesRxDirected;
+    ULONG64                     BytesRxMulticast;
+    ULONG64                     BytesRxBroadcast;
+    ULONG64                     BytesTxDirected;
+    ULONG64                     BytesTxMulticast;
+    ULONG64                     BytesTxBroadcast;
 
     // Count of transmit errors
-    ULONG                   TxAbortExcessCollisions;
-    ULONG                   TxLateCollisions;
-    ULONG                   TxDmaUnderrun;
-    ULONG                   TxLostCRS;
-    ULONG                   TxOKButDeferred;
-    ULONG                   OneRetry;
-    ULONG                   MoreThanOneRetry;
-    ULONG                   TotalRetries;
-    ULONG                   TransmitFailuresOther;
+    ULONG                       TxAbortExcessCollisions;
+    ULONG                       TxLateCollisions;
+    ULONG                       TxDmaUnderrun;
+    ULONG                       TxLostCRS;
+    ULONG                       TxOKButDeferred;
+    ULONG                       OneRetry;
+    ULONG                       MoreThanOneRetry;
+    ULONG                       TotalRetries;
+    ULONG                       TransmitFailuresOther;
 
     // Count of receive errors
-    ULONG                   RxCrcErrors;
-    ULONG                   RxAlignmentErrors;
-    ULONG                   RxResourceErrors;
-    ULONG                   RxDmaOverrunErrors;
-    ULONG                   RxCdtFrames;
-    ULONG                   RxRuntErrors;
+    ULONG                       RxCrcErrors;
+    ULONG                       RxAlignmentErrors;
+    ULONG                       RxResourceErrors;
+    ULONG                       RxDmaOverrunErrors;
+    ULONG                       RxCdtFrames;
+    ULONG                       RxRuntErrors;
 
   BOOLEAN m_InterfaceIsRunning;
   LONG m_Rx, m_Tx, m_RxErr, m_TxErr;
@@ -212,6 +258,45 @@ tapAdapterContextDereference(
     }
 
     return refCount;
+}
+
+FORCEINLINE
+VOID
+tapAdapterAcquireLock(
+    __in    PTAP_ADAPTER_CONTEXT    Adapter,
+    __in    BOOLEAN                 DispatchLevel
+    )
+{
+    ASSERT(!DispatchLevel || (DISPATCH_LEVEL == KeGetCurrentIrql()));
+   
+    if (DispatchLevel)
+    {
+        NdisDprAcquireSpinLock(&Adapter->AdapterLock);
+    }
+    else
+    {
+        NdisAcquireSpinLock(&Adapter->AdapterLock);
+    }
+}
+
+
+FORCEINLINE
+VOID
+tapAdapterReleaseLock(
+    __in    PTAP_ADAPTER_CONTEXT    Adapter,
+    __in    BOOLEAN                 DispatchLevel
+    )
+{
+    ASSERT(!DispatchLevel || (DISPATCH_LEVEL == KeGetCurrentIrql()));
+   
+    if (DispatchLevel)
+    {
+        NdisDprReleaseSpinLock(&Adapter->AdapterLock);
+    }
+    else
+    {
+        NdisReleaseSpinLock(&Adapter->AdapterLock);
+    }
 }
 
 // Returns with added reference on adapter context.
