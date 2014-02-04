@@ -421,8 +421,7 @@ Return Value:
             //else
             //    state[1] = 't';
 
-            // BUGBUG!!! Don't have NDIS 6 power state handled yet.
-            //state[2] = adapter->m_DeviceState;
+            state[2] = '0' + adapter->CurrentPowerState;
 
             if (adapter->MediaStateAlwaysConnected)
                 state[3] = 'C';

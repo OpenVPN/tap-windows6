@@ -133,7 +133,7 @@ InjectPacket, *InjectPacketPointer;
 //  BOOLEAN m_MediaState;
 //
 //  // Adapter power state
-//  char m_DeviceState;
+//  char CurrentPowerStateAsAscii;
 //
 //  // Info for point-to-point mode
 //  BOOLEAN m_tun;

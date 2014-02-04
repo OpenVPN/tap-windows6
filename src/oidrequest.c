@@ -291,6 +291,86 @@ tapSetPacketFilter(
 }
 
 NDIS_STATUS
+AdapterSetPowerD0(
+    __in PTAP_ADAPTER_CONTEXT   Adapter
+    )
+/*++
+Routine Description:
+
+    NIC power has been restored to the working power state (D0).
+    Prepare the NIC for normal operation:
+        - Restore hardware context (packet filters, multicast addresses, MAC address, etc.)
+        - Enable interrupts and the NIC's DMA engine.
+
+Arguments:
+
+    Adapter     - Pointer to adapter block
+
+Return Value:
+
+    NDIS_STATUS   
+
+--*/      
+{
+    NDIS_STATUS status = NDIS_STATUS_SUCCESS;
+
+    DEBUGP (("[TAP] PowerState: Fully powered\n"));
+
+    // Start data path...
+
+    return status;
+}
+
+NDIS_STATUS
+AdapterSetPowerLow(
+    __in PTAP_ADAPTER_CONTEXT       Adapter,
+    __in NDIS_DEVICE_POWER_STATE    PowerState
+    )
+/*++
+Routine Description:
+
+    The NIC is about to be transitioned to a low power state. 
+    Prepare the NIC for the sleeping state:
+        - Disable interrupts and the NIC's DMA engine, cancel timers.  
+        - Save any hardware context that the NIC cannot preserve in 
+          a sleeping state (packet filters, multicast addresses, 
+          the current MAC address, etc.)
+    A miniport driver cannot access the NIC hardware after 
+    the NIC has been set to the D3 state by the bus driver.
+
+    Miniport drivers NDIS v6.30 and above 
+        Do NOT wait for NDIS to return the ownership of all 
+        NBLs from outstanding receive indications
+        Retain ownership of all the receive descriptors and 
+        packet buffers previously owned by the hardware.
+
+Arguments:
+
+    Adapter         - Pointer to adapter block
+    PowerState      - New power state
+
+Return Value:
+
+    NDIS_STATUS   
+
+--*/      
+{
+    NDIS_STATUS status = NDIS_STATUS_SUCCESS;
+
+    DEBUGP (("[TAP] PowerState: Low-power\n"));
+
+    //
+    // Miniport drivers NDIS v6.20 and below are 
+    // paused prior the low power transition 
+    //
+
+    // Check for paused state...
+    // Verify data path stopped...
+
+    return status;
+}
+
+NDIS_STATUS
 tapSetInformation(
     __in PTAP_ADAPTER_CONTEXT   Adapter,
     __in PNDIS_OID_REQUEST      OidRequest
@@ -367,12 +447,48 @@ Return Value:
 
             status = tapSetPacketFilter(
                             Adapter,
-                            *((PULONG)OidRequest->DATA.SET_INFORMATION.InformationBuffer));
+                            *((PULONG)OidRequest->DATA.SET_INFORMATION.InformationBuffer)
+                            );
 
             break;
 
-        // TODO: Inplement these set information requests.
     case OID_PNP_SET_POWER:
+        {
+            // Sanity check.
+            if (OidRequest->DATA.SET_INFORMATION.InformationBufferLength
+                < sizeof(NDIS_DEVICE_POWER_STATE)
+                )
+            {
+                status = NDIS_STATUS_INVALID_LENGTH;
+            }
+            else
+            {
+                NDIS_DEVICE_POWER_STATE     PowerState;
+
+                PowerState = *(PNDIS_DEVICE_POWER_STATE UNALIGNED)OidRequest->DATA.SET_INFORMATION.InformationBuffer;
+                OidRequest->DATA.SET_INFORMATION.BytesRead = sizeof(NDIS_DEVICE_POWER_STATE);
+
+                if(PowerState < NdisDeviceStateD0  ||
+                    PowerState > NdisDeviceStateD3)
+                {
+                    status = NDIS_STATUS_INVALID_DATA;
+                }
+                else
+                {
+                    Adapter->CurrentPowerState = PowerState;
+
+                    if (PowerState == NdisDeviceStateD0)
+                    {
+                        status = AdapterSetPowerD0(Adapter);
+                    }
+                    else
+                    {
+                        status = AdapterSetPowerLow(Adapter, PowerState);
+                    }
+                }
+            }
+        }
+        break;
 
 #if (NDIS_SUPPORT_NDIS61)
     case OID_PNP_ADD_WAKE_UP_PATTERN:

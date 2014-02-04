@@ -117,6 +117,8 @@ typedef struct _TAP_ADAPTER_CONTEXT
     // TRUE if device is "connected"
     BOOLEAN                     MediaState;
 
+    NDIS_DEVICE_POWER_STATE     CurrentPowerState;
+
     BOOLEAN                     AllowNonAdmin;
 
     MACADDR                     PermanentAddress;   // From registry, if available
@@ -212,9 +214,6 @@ typedef struct _TAP_ADAPTER_CONTEXT
   LONG m_RxTrunc, m_TxTrunc;
 #endif
   NDIS_MEDIUM m_Medium;
-
-  // Adapter power state
-  char m_DeviceState;
 
   MACADDR m_MAC_Broadcast;
 
