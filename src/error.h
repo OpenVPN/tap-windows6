@@ -86,6 +86,12 @@ VOID DumpPacket2 (const char *prefix,
 #define DUMP_PACKET2(prefix, eth, data, len) \
   DumpPacket2 (prefix, eth, data, len)
 
+BOOLEAN
+GetDebugLine (
+    __in char *buf,
+    __in const int len
+    );
+
 #else 
 
 #define DEBUGP(fmt)

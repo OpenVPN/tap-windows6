@@ -402,9 +402,64 @@ Return Value:
         break;
 
     case TAP_WIN_IOCTL_GET_INFO:
-    case TAP_WIN_IOCTL_CONFIG_POINT_TO_POINT:
-    case TAP_WIN_IOCTL_SET_MEDIA_STATUS:
+        {
+            char state[16];
+
+            // Fetch adapter (miniport) state.
+            tapAdapterAcquireLock(adapter,FALSE);
+
+            if (adapter->Locked.AdapterState == MiniportRunning)
+                state[0] = 'A';
+            else
+                state[0] = 'a';
+
+            tapAdapterReleaseLock(adapter,FALSE);
+
+            // BUGBUG!!! Don't have NDIS 6 meaning for this yet...
+            //if (adapter->m_Extension.m_TapIsRunning)
+            //    state[1] = 'T';
+            //else
+            //    state[1] = 't';
+
+            // BUGBUG!!! Don't have NDIS 6 power state handled yet.
+            //state[2] = adapter->m_DeviceState;
+
+            if (adapter->MediaStateAlwaysConnected)
+                state[3] = 'C';
+            else
+                state[3] = 'c';
+
+            state[4] = '\0';
+
+            // BUGBUG!!! What follows, and is not yet implemented, is a real mess.
+            // BUGBUG!!! Tied closely to the NDIS 5 implementation. Need to map
+            //    as much as possible to the NDIS 6 implementation.
+
+            // BUGBUG!!! Fail because this is not completely implemented.
+            ntStatus = STATUS_INVALID_DEVICE_REQUEST;
+        }
+        break;
+
+#if DBG
     case TAP_WIN_IOCTL_GET_LOG_LINE:
+        {
+            if (GetDebugLine( (LPTSTR)Irp->AssociatedIrp.SystemBuffer,outBufLength))
+            {
+                Irp->IoStatus.Status = ntStatus = STATUS_SUCCESS;
+            }
+            else
+            {
+                Irp->IoStatus.Status = ntStatus = STATUS_UNSUCCESSFUL;
+            }
+
+            Irp->IoStatus.Information = outBufLength;
+
+            break;
+        }
+#endif
+
+    case TAP_WIN_IOCTL_CONFIG_POINT_TO_POINT:  // Obsoleted by TAP_WIN_IOCTL_CONFIG_TUN
+    case TAP_WIN_IOCTL_SET_MEDIA_STATUS:
     default:
 
         //

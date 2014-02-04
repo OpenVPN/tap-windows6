@@ -116,7 +116,10 @@ va_end (args);
 }
 
 BOOLEAN
-GetDebugLine (char *buf, const int len)
+GetDebugLine (
+    __in char *buf,
+    __in const int len
+    )
 {
   static const char *truncated = "[OUTPUT TRUNCATED]\n";
   BOOLEAN ret = FALSE;
