@@ -76,7 +76,6 @@ typedef struct _TAP_ADAPTER_CONTEXT
     MACADDR                 PermanentAddress;   // From registry, if available
     MACADDR                 CurrentAddress;
 
-
     // Device registration parameters from NdisRegisterDeviceEx.
     NDIS_STRING             DeviceName;
     WCHAR                   DeviceNameBuffer[TAP_MAX_NDIS_NAME_LENGTH];
@@ -86,6 +85,12 @@ typedef struct _TAP_ADAPTER_CONTEXT
 
     NDIS_HANDLE             DeviceHandle;
     PDEVICE_OBJECT          DeviceObject;
+
+    // Cancel-Safe read IRP queue.
+    KSPIN_LOCK              PendingReadCsqQueueLock;
+    IO_CSQ                  PendingReadCsqQueue;
+    LIST_ENTRY              PendingReadIrpQueue;
+
 
     // Multicast list. Fixed size.
     ULONG                   ulMCListSize;

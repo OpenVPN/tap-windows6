@@ -560,3 +560,177 @@ DestroyTapDevice(
 
     DEBUGP (("[TAP] <-- DestroyTapDevice\n"));
 }
+
+//======================================================================
+// TAP Cancel-Safe Queue Callbacks
+//======================================================================
+
+VOID
+tapCsqInsertReadIrp (
+    __in struct _IO_CSQ    *Csq,
+    __in PIRP              Irp
+    )
+{
+    PTAP_ADAPTER_CONTEXT    adapter;
+
+    adapter = CONTAINING_RECORD(
+                Csq,
+                TAP_ADAPTER_CONTEXT,
+                PendingReadCsqQueue
+                );
+
+    InsertTailList(
+        &adapter->PendingReadIrpQueue,
+        &Irp->Tail.Overlay.ListEntry
+        );
+}
+
+VOID
+tapCsqRemoveReadIrp(
+    __in PIO_CSQ Csq,
+    __in PIRP    Irp
+    )
+{
+    UNREFERENCED_PARAMETER(Csq);
+
+    RemoveEntryList(&Irp->Tail.Overlay.ListEntry);
+}
+
+
+PIRP
+tapCsqPeekNextReadIrp(
+    __in PIO_CSQ Csq,
+    __in PIRP    Irp,
+    __in PVOID   PeekContext
+    )
+{
+    PTAP_ADAPTER_CONTEXT    adapter;
+    PIRP                    nextIrp = NULL;
+    PLIST_ENTRY             nextEntry;
+    PLIST_ENTRY             listHead;
+    PIO_STACK_LOCATION     irpStack;
+
+    adapter = CONTAINING_RECORD(
+                Csq,
+                TAP_ADAPTER_CONTEXT,
+                PendingReadCsqQueue
+                );
+
+    listHead = &adapter->PendingReadIrpQueue;
+
+    //
+    // If the IRP is NULL, we will start peeking from the listhead, else
+    // we will start from that IRP onwards. This is done under the
+    // assumption that new IRPs are always inserted at the tail.
+    //
+
+    if (Irp == NULL) {
+        nextEntry = listHead->Flink;
+    } else {
+        nextEntry = Irp->Tail.Overlay.ListEntry.Flink;
+    }
+
+    while(nextEntry != listHead) {
+
+        nextIrp = CONTAINING_RECORD(nextEntry, IRP, Tail.Overlay.ListEntry);
+
+        irpStack = IoGetCurrentIrpStackLocation(nextIrp);
+
+        //
+        // If context is present, continue until you find a matching one.
+        // Else you break out as you got next one.
+        //
+
+        if (PeekContext) {
+            if (irpStack->FileObject == (PFILE_OBJECT) PeekContext) {
+                break;
+            }
+        } else {
+            break;
+        }
+        nextIrp = NULL;
+        nextEntry = nextEntry->Flink;
+    }
+
+    return nextIrp;
+
+}
+
+//
+// tapCsqAcquireReadQueueLock modifies the execution level of the current processor.
+// 
+// KeAcquireSpinLock raises the execution level to Dispatch Level and stores
+// the current execution level in the Irql parameter to be restored at a later
+// time.  KeAcqurieSpinLock also requires us to be running at no higher than
+// Dispatch level when it is called.
+//
+// The annotations reflect these changes and requirments.
+//
+
+VOID
+tapCsqAcquireReadQueueLock(
+     __in PIO_CSQ Csq,
+     __out PKIRQL  Irql
+    )
+{
+    PTAP_ADAPTER_CONTEXT    adapter;
+
+    adapter = CONTAINING_RECORD(
+                Csq,
+                TAP_ADAPTER_CONTEXT,
+                PendingReadCsqQueue
+                );
+
+    //
+    // Suppressing because the address below csq is valid since it's
+    // part of DEVICE_EXTENSION structure.
+    //
+#pragma prefast(suppress: __WARNING_BUFFER_UNDERFLOW, "Underflow using expression 'devExtension->QueueLock'")
+    KeAcquireSpinLock(&adapter->PendingReadCsqQueueLock, Irql);
+}
+
+//
+// tapCsqReleaseReadQueueLock modifies the execution level of the current processor.
+// 
+// KeReleaseSpinLock assumes we already hold the spin lock and are therefore
+// running at Dispatch level.  It will use the Irql parameter saved in a
+// previous call to KeAcquireSpinLock to return the thread back to it's original
+// execution level.
+//
+// The annotations reflect these changes and requirments.
+//
+
+VOID
+tapCsqReleaseReadQueueLock(
+     __in PIO_CSQ Csq,
+     __in KIRQL   Irql
+    )
+{
+    PTAP_ADAPTER_CONTEXT    adapter;
+
+    adapter = CONTAINING_RECORD(
+                Csq,
+                TAP_ADAPTER_CONTEXT,
+                PendingReadCsqQueue
+                );
+
+    //
+    // Suppressing because the address below csq is valid since it's
+    // part of DEVICE_EXTENSION structure.
+    //
+#pragma prefast(suppress: __WARNING_BUFFER_UNDERFLOW, "Underflow using expression 'devExtension->QueueLock'")
+    KeReleaseSpinLock(&adapter->PendingReadCsqQueueLock, Irql);
+}
+
+VOID
+tapCsqCompleteCanceledIrp(
+    __in  PIO_CSQ             pCsq,
+    __in  PIRP                Irp
+    )
+{
+    UNREFERENCED_PARAMETER(pCsq);
+
+    Irp->IoStatus.Status = STATUS_CANCELLED;
+    Irp->IoStatus.Information = 0;
+    IoCompleteRequest(Irp, IO_NO_INCREMENT);
+}

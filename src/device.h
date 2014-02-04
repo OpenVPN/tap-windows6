@@ -25,7 +25,10 @@
 #ifndef __TAP_DEVICE_H_
 #define __TAP_DEVICE_H_
 
-// Prototypes for standard Win32 device I/O entry points
+//======================================================================
+// TAP Prototypes for standard Win32 device I/O entry points
+//======================================================================
+
 __drv_dispatchType(IRP_MJ_CREATE)
 DRIVER_DISPATCH TapDeviceCreate;
 
@@ -43,5 +46,49 @@ DRIVER_DISPATCH TapDeviceCleanup;
 
 __drv_dispatchType(IRP_MJ_CLOSE)
 DRIVER_DISPATCH TapDeviceClose;
+
+//======================================================================
+// TAP Cancel-Safe Queue Callbacks
+//======================================================================
+
+VOID
+tapCsqInsertReadIrp (
+    __in struct _IO_CSQ    *Csq,
+    __in PIRP              Irp
+    );
+
+VOID
+tapCsqRemoveReadIrp(
+    __in PIO_CSQ Csq,
+    __in PIRP    Irp
+    );
+
+PIRP
+tapCsqPeekNextReadIrp(
+    __in PIO_CSQ Csq,
+    __in PIRP    Irp,
+    __in PVOID   PeekContext
+    );
+
+__drv_raisesIRQL(DISPATCH_LEVEL)
+__drv_maxIRQL(DISPATCH_LEVEL)
+VOID
+tapCsqAcquireReadQueueLock(
+     __in PIO_CSQ Csq,
+     __out PKIRQL  Irql
+    );
+
+__drv_requiresIRQL(DISPATCH_LEVEL)
+VOID
+tapCsqReleaseReadQueueLock(
+     __in PIO_CSQ Csq,
+     __in KIRQL   Irql
+    );
+
+VOID
+tapCsqCompleteCanceledIrp(
+    __in  PIO_CSQ             pCsq,
+    __in  PIRP                Irp
+    );
 
 #endif // __TAP_DEVICE_H_

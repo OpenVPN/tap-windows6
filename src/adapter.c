@@ -98,6 +98,21 @@ tapAdapterContextAllocate(
     {
         NdisZeroMemory(adapter,sizeof(TAP_ADAPTER_CONTEXT));
 
+        // Initialize cancel-safe IRP queue
+        KeInitializeSpinLock(&adapter->PendingReadCsqQueueLock);
+
+        NdisInitializeListHead(&adapter->PendingReadIrpQueue);
+
+        IoCsqInitialize(
+            &adapter->PendingReadCsqQueue,
+            tapCsqInsertReadIrp,
+            tapCsqRemoveReadIrp,
+            tapCsqPeekNextReadIrp,
+            tapCsqAcquireReadQueueLock,
+            tapCsqReleaseReadQueueLock,
+            tapCsqCompleteCanceledIrp
+            );
+
         // Add initial reference. Normally removed in AdapterHalt.
         adapter->RefCount = 1;
 
@@ -1318,3 +1333,4 @@ tapAdapterContextFree(
 
     DEBUGP (("[TAP] <-- tapAdapterContextFree\n"));
 }
+
