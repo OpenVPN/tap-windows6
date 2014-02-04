@@ -390,6 +390,61 @@ tapReadConfiguration(
     return status;
 }
 
+VOID
+tapAdapterContextAddToGlobalList(
+    __in PTAP_ADAPTER_CONTEXT       Adapter
+    )
+{
+    LOCK_STATE      lockState;
+    PLIST_ENTRY     listEntry = &Adapter->AdapterListLink;
+
+    // Acquire global adapter list lock.
+    NdisAcquireReadWriteLock(
+        &GlobalData.Lock,
+        TRUE,      // Acquire for write
+        &lockState
+        );
+
+    // Adapter context should NOT be in any list.
+    ASSERT( (listEntry->Flink == listEntry) && (listEntry->Blink == listEntry ) );
+
+    // Add reference to persist until after removal.
+    tapAdapterContextReference(Adapter);
+
+    // Add the adapter context to the global list.
+    InsertTailList(&GlobalData.AdapterList,&Adapter->AdapterListLink);
+
+    // Release global adapter list lock.
+    NdisReleaseReadWriteLock(&GlobalData.Lock,&lockState);
+}
+
+VOID
+tapAdapterContextRemoveFromGlobalList(
+    __in PTAP_ADAPTER_CONTEXT       Adapter
+    )
+{
+    LOCK_STATE              lockState;
+
+    // Acquire global adapter list lock.
+    NdisAcquireReadWriteLock(
+        &GlobalData.Lock,
+        TRUE,      // Acquire for write
+        &lockState
+        );
+
+    // Remove the adapter context from the global list.
+    RemoveEntryList(&Adapter->AdapterListLink);
+
+    // Safe for multiple removes.
+    NdisInitializeListHead(&Adapter->AdapterListLink);
+
+    // Remove reference added in tapAdapterContextAddToGlobalList.
+    tapAdapterContextDereference(Adapter);
+
+    // Release global adapter list lock.
+    NdisReleaseReadWriteLock(&GlobalData.Lock,&lockState);
+}
+
 // Returns with added reference on adapter context.
 PTAP_ADAPTER_CONTEXT
 tapAdapterContextFromDeviceObject(
@@ -671,7 +726,12 @@ AdapterCreate(
         //
         status = CreateTapDevice(adapter);
 
-        if (status != NDIS_STATUS_SUCCESS)
+        if (status == NDIS_STATUS_SUCCESS)
+        {
+            // Add this adapter to the global adapter list.
+            tapAdapterContextAddToGlobalList(adapter);
+        }
+        else
         {
             DEBUGP (("[TAP] CreateTapDevice failed; Status 0x%08x\n",status));
             break;
@@ -740,6 +800,9 @@ Return Value:
     UNREFERENCED_PARAMETER(HaltAction);
 
     DEBUGP (("[TAP] --> AdapterHalt\n"));
+
+    // Remove this adapter from the global adapter list.
+    tapAdapterContextRemoveFromGlobalList(adapter);
 
     //
     // Destroy the TAP Win32 device.
@@ -1227,7 +1290,7 @@ tapAdapterContextFree(
 
     DEBUGP (("[TAP] --> tapAdapterContextFree\n"));
 
-    // Adapter contrxt should already be removed.
+    // Adapter context should already be removed.
     ASSERT( (listEntry->Flink == listEntry) && (listEntry->Blink == listEntry ) );
 
     // Insure that adapter context has been removed from global adapter list.
