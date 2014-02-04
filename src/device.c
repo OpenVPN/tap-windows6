@@ -330,10 +330,53 @@ Return Value:
         }
         break;
 
+    case TAP_WIN_IOCTL_CONFIG_DHCP_MASQ:
+        {
+            if(inBufLength >= sizeof(IPADDR)*4)
+            {
+                adapter->m_dhcp_enabled = FALSE;
+                adapter->m_dhcp_server_arp = FALSE;
+                adapter->m_dhcp_user_supplied_options_buffer_len = 0;
+
+                // Adapter IP addr / netmask
+                adapter->m_dhcp_addr =
+                    ((IPADDR*) (Irp->AssociatedIrp.SystemBuffer))[0];
+                adapter->m_dhcp_netmask =
+                    ((IPADDR*) (Irp->AssociatedIrp.SystemBuffer))[1];
+
+                // IP addr of DHCP masq server
+                adapter->m_dhcp_server_ip =
+                    ((IPADDR*) (Irp->AssociatedIrp.SystemBuffer))[2];
+
+                // Lease time in seconds
+                adapter->m_dhcp_lease_time =
+                    ((IPADDR*) (Irp->AssociatedIrp.SystemBuffer))[3];
+
+                GenerateRelatedMAC(
+                    adapter->m_dhcp_server_mac,
+                    adapter->CurrentAddress,
+                    2
+                    );
+
+                adapter->m_dhcp_enabled = TRUE;
+                adapter->m_dhcp_server_arp = TRUE;
+
+                CheckIfDhcpAndTunMode (adapter);
+
+                Irp->IoStatus.Information = 1; // Simple boolean value
+            }
+            else
+            {
+                // BUGBUG!!! Fixme!!!
+                //NOTE_ERROR();
+                Irp->IoStatus.Status = ntStatus = STATUS_BUFFER_TOO_SMALL;
+            }
+        }
+        break;
+
     case TAP_WIN_IOCTL_GET_INFO:
     case TAP_WIN_IOCTL_CONFIG_POINT_TO_POINT:
     case TAP_WIN_IOCTL_SET_MEDIA_STATUS:
-    case TAP_WIN_IOCTL_CONFIG_DHCP_MASQ:
     case TAP_WIN_IOCTL_GET_LOG_LINE:
     case TAP_WIN_IOCTL_CONFIG_DHCP_SET_OPT:
     default:
