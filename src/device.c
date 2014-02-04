@@ -624,14 +624,17 @@ tapCsqPeekNextReadIrp(
     // assumption that new IRPs are always inserted at the tail.
     //
 
-    if (Irp == NULL) {
+    if (Irp == NULL)
+    {
         nextEntry = listHead->Flink;
-    } else {
+    }
+    else
+    {
         nextEntry = Irp->Tail.Overlay.ListEntry.Flink;
     }
 
-    while(nextEntry != listHead) {
-
+    while(nextEntry != listHead)
+    {
         nextIrp = CONTAINING_RECORD(nextEntry, IRP, Tail.Overlay.ListEntry);
 
         irpStack = IoGetCurrentIrpStackLocation(nextIrp);
@@ -640,20 +643,23 @@ tapCsqPeekNextReadIrp(
         // If context is present, continue until you find a matching one.
         // Else you break out as you got next one.
         //
-
-        if (PeekContext) {
-            if (irpStack->FileObject == (PFILE_OBJECT) PeekContext) {
+        if (PeekContext)
+        {
+            if (irpStack->FileObject == (PFILE_OBJECT) PeekContext)
+            {
                 break;
             }
-        } else {
+        }
+        else
+        {
             break;
         }
+
         nextIrp = NULL;
         nextEntry = nextEntry->Flink;
     }
 
     return nextIrp;
-
 }
 
 //
