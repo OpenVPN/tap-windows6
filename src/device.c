@@ -325,7 +325,7 @@ Return Value:
             {
                 // BUGBUG!!! Fixme!!!
                 //NOTE_ERROR();
-                Irp->IoStatus.Status = ntStatus = STATUS_BUFFER_TOO_SMALL;
+                Irp->IoStatus.Status = ntStatus = STATUS_INVALID_PARAMETER;
             }
         }
         break;
@@ -369,7 +369,34 @@ Return Value:
             {
                 // BUGBUG!!! Fixme!!!
                 //NOTE_ERROR();
-                Irp->IoStatus.Status = ntStatus = STATUS_BUFFER_TOO_SMALL;
+                Irp->IoStatus.Status = ntStatus = STATUS_INVALID_PARAMETER;
+            }
+        }
+        break;
+
+    case TAP_WIN_IOCTL_CONFIG_DHCP_SET_OPT:
+        {
+            if (inBufLength <=  DHCP_USER_SUPPLIED_OPTIONS_BUFFER_SIZE
+                && adapter->m_dhcp_enabled)
+            {
+                adapter->m_dhcp_user_supplied_options_buffer_len = 0;
+
+                NdisMoveMemory(
+                    adapter->m_dhcp_user_supplied_options_buffer,
+                    Irp->AssociatedIrp.SystemBuffer,
+                    inBufLength
+                    );
+
+                adapter->m_dhcp_user_supplied_options_buffer_len = 
+                    inBufLength;
+
+                Irp->IoStatus.Information = 1; // Simple boolean value
+            }
+            else
+            {
+                // BUGBUG!!! Fixme!!!
+                //NOTE_ERROR();
+                Irp->IoStatus.Status = ntStatus = STATUS_INVALID_PARAMETER;
             }
         }
         break;
@@ -378,7 +405,6 @@ Return Value:
     case TAP_WIN_IOCTL_CONFIG_POINT_TO_POINT:
     case TAP_WIN_IOCTL_SET_MEDIA_STATUS:
     case TAP_WIN_IOCTL_GET_LOG_LINE:
-    case TAP_WIN_IOCTL_CONFIG_DHCP_SET_OPT:
     default:
 
         //
