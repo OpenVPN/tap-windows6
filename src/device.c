@@ -689,9 +689,9 @@ tapCsqAcquireReadQueueLock(
 
     //
     // Suppressing because the address below csq is valid since it's
-    // part of DEVICE_EXTENSION structure.
+    // part of TAP_ADAPTER_CONTEXT structure.
     //
-#pragma prefast(suppress: __WARNING_BUFFER_UNDERFLOW, "Underflow using expression 'devExtension->QueueLock'")
+#pragma prefast(suppress: __WARNING_BUFFER_UNDERFLOW, "Underflow using expression 'adapter->PendingReadCsqQueueLock'")
     KeAcquireSpinLock(&adapter->PendingReadCsqQueueLock, Irql);
 }
 
@@ -722,9 +722,9 @@ tapCsqReleaseReadQueueLock(
 
     //
     // Suppressing because the address below csq is valid since it's
-    // part of DEVICE_EXTENSION structure.
+    // part of TAP_ADAPTER_CONTEXT structure.
     //
-#pragma prefast(suppress: __WARNING_BUFFER_UNDERFLOW, "Underflow using expression 'devExtension->QueueLock'")
+#pragma prefast(suppress: __WARNING_BUFFER_UNDERFLOW, "Underflow using expression 'adapter->PendingReadCsqQueueLock'")
     KeReleaseSpinLock(&adapter->PendingReadCsqQueueLock, Irql);
 }
 
