@@ -107,6 +107,8 @@ TapDeviceRead(
 {
     NTSTATUS    ntStatus;
 
+    PAGED_CODE();
+
     ntStatus = STATUS_NOT_SUPPORTED;
 
     return ntStatus;
@@ -120,6 +122,8 @@ TapDeviceWrite(
     )
 {
     NTSTATUS    ntStatus;
+
+    PAGED_CODE();
 
     ntStatus = STATUS_NOT_SUPPORTED;
 
@@ -945,6 +949,8 @@ tapCsqPeekNextReadIrp(
 // The annotations reflect these changes and requirments.
 //
 
+__drv_raisesIRQL(DISPATCH_LEVEL)
+__drv_maxIRQL(DISPATCH_LEVEL)
 VOID
 tapCsqAcquireReadQueueLock(
      __in PIO_CSQ Csq,
@@ -978,6 +984,7 @@ tapCsqAcquireReadQueueLock(
 // The annotations reflect these changes and requirments.
 //
 
+__drv_requiresIRQL(DISPATCH_LEVEL)
 VOID
 tapCsqReleaseReadQueueLock(
      __in PIO_CSQ Csq,

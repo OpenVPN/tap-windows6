@@ -1429,7 +1429,7 @@ tapAdapterContextFree(
     RemoveEntryList(&Adapter->AdapterListLink);
 
     // Free the adapter lock.
-    NdisFreeSpinLock(Adapter->AdapterLock);
+    NdisFreeSpinLock(&Adapter->AdapterLock);
 
     // Free the ANSI NetCfgInstanceId buffer.
     if(Adapter->NetCfgInstanceIdAnsi.Buffer != NULL)
