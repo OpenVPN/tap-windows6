@@ -126,6 +126,36 @@ TapDeviceWrite(
     return ntStatus;
 }
 
+//===================================================
+// Tell Windows whether the TAP device should be
+// considered "connected" or "disconnected".
+//
+// Allows application control of media connect state.
+//===================================================
+VOID
+tapSetMediaConnectStatus(
+    __in PTAP_ADAPTER_CONTEXT   Adapter,
+    __in BOOLEAN                MediaState
+    )
+{
+    if (Adapter->MediaState != MediaState && !Adapter->MediaStateAlwaysConnected)
+    {
+        ASSERT(FALSE);  // BUGBUG!!! Unimplemented. Can fail if adapter not ready...
+        if (MediaState)
+        {
+            //NdisMIndicateStatus (Adapter->MiniportAdapterHandle,
+            //NDIS_STATUS_MEDIA_CONNECT, NULL, 0);
+        }
+        else
+        {
+            //NdisMIndicateStatus (Adapter->MiniportAdapterHandle,
+            //NDIS_STATUS_MEDIA_DISCONNECT, NULL, 0);
+        }
+
+        Adapter->MediaState = MediaState;
+    }
+}
+
 //======================================================
 // If DHCP mode is used together with tun
 // mode, consider the fact that the P2P remote subnet
@@ -496,6 +526,22 @@ Return Value:
 #endif
 
     case TAP_WIN_IOCTL_SET_MEDIA_STATUS:
+        {
+            if(inBufLength >= sizeof(ULONG))
+            {
+                ULONG parm = ((PULONG) (Irp->AssociatedIrp.SystemBuffer))[0];
+                tapSetMediaConnectStatus (adapter, (BOOLEAN) parm);
+                Irp->IoStatus.Information = 1;
+            }
+            else
+            {
+                // BUGBUG!!! Fixme!!!
+                //NOTE_ERROR();
+                Irp->IoStatus.Status = ntStatus = STATUS_INVALID_PARAMETER;
+            }
+        }
+        break;
+
     default:
 
         //

@@ -109,9 +109,9 @@ typedef struct _TAP_ADAPTER_CONTEXT
 
     ULONG                       MtuSize;        // 1500 byte (typical)
 
-    // TRUE if adapter should always be
-    // "connected" even when device node
+    // TRUE if adapter should always be "connected" even when device node
     // is not open by a userspace process.
+    // FALSE if connection state is application controlled.
     BOOLEAN                     MediaStateAlwaysConnected;
 
     // TRUE if device is "connected"

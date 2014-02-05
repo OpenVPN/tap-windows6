@@ -355,8 +355,24 @@ tapReadConfiguration(
             {
                 if (configParameter->ParameterType == NdisParameterInteger)
                 {
-		          Adapter->MediaStateAlwaysConnected = TRUE;
-		          Adapter->MediaState = TRUE;
+                    if(configParameter->ParameterData.IntegerData == 0)
+                    {
+                        // Connect state is appplication controlled.
+                        DEBUGP(("[%s] Initial MediaConnectState: Application Controlled\n",
+                            MINIPORT_INSTANCE_ID (Adapter)));
+
+                        Adapter->MediaStateAlwaysConnected = FALSE;
+                        Adapter->MediaState = FALSE;
+                    }
+                    else
+                    {
+                        // Connect state is always connected.
+                        DEBUGP(("[%s] Initial MediaConnectState: Always Connected\n",
+                            MINIPORT_INSTANCE_ID (Adapter)));
+
+                        Adapter->MediaStateAlwaysConnected = TRUE;
+                        Adapter->MediaState = TRUE;
+                    }
                 }
             }
 
@@ -668,9 +684,20 @@ AdapterCreate(
         genAttributes.MaxRcvLinkSpeed = TAP_RECV_SPEED;
         genAttributes.RcvLinkSpeed = TAP_RECV_SPEED;
 
-        // BUGBUG!!! Implement me!!!
-        //genAttributes.MediaConnectState = HWGetMediaConnectStatus(adapter);
-        genAttributes.MediaConnectState = MediaConnectStateDisconnected;
+        if(adapter->MediaStateAlwaysConnected)
+        {
+            DEBUGP(("[%s] Initial MediaConnectState: Connected\n",
+                MINIPORT_INSTANCE_ID (adapter)));
+
+            genAttributes.MediaConnectState = MediaConnectStateConnected;
+        }
+        else
+        {
+            DEBUGP(("[%s] Initial MediaConnectState: Disconnected\n",
+                MINIPORT_INSTANCE_ID (adapter)));
+
+            genAttributes.MediaConnectState = MediaConnectStateDisconnected;
+        }
 
         genAttributes.MediaDuplexState = MediaDuplexStateFull;
 
