@@ -135,13 +135,13 @@ TapDeviceWrite(
 VOID
 tapSetMediaConnectStatus(
     __in PTAP_ADAPTER_CONTEXT   Adapter,
-    __in BOOLEAN                MediaState
+    __in BOOLEAN                LogicalMediaState
     )
 {
-    if (Adapter->MediaState != MediaState && !Adapter->MediaStateAlwaysConnected)
+    if ( (Adapter->LogicalMediaState != LogicalMediaState) && !Adapter->MediaStateAlwaysConnected)
     {
         ASSERT(FALSE);  // BUGBUG!!! Unimplemented. Can fail if adapter not ready...
-        if (MediaState)
+        if (LogicalMediaState)
         {
             //NdisMIndicateStatus (Adapter->MiniportAdapterHandle,
             //NDIS_STATUS_MEDIA_CONNECT, NULL, 0);
@@ -152,7 +152,7 @@ tapSetMediaConnectStatus(
             //NDIS_STATUS_MEDIA_DISCONNECT, NULL, 0);
         }
 
-        Adapter->MediaState = MediaState;
+        Adapter->LogicalMediaState = LogicalMediaState;
     }
 }
 

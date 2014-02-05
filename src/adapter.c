@@ -201,7 +201,7 @@ tapReadConfiguration(
     //
     Adapter->MtuSize = ETHERNET_MTU;
     Adapter->MediaStateAlwaysConnected = FALSE;
-    Adapter->MediaState = FALSE;
+    Adapter->LogicalMediaState = FALSE;
     Adapter->AllowNonAdmin = FALSE;
     //
     // Open the registry for this adapter to read advanced
@@ -362,7 +362,7 @@ tapReadConfiguration(
                             MINIPORT_INSTANCE_ID (Adapter)));
 
                         Adapter->MediaStateAlwaysConnected = FALSE;
-                        Adapter->MediaState = FALSE;
+                        Adapter->LogicalMediaState = FALSE;
                     }
                     else
                     {
@@ -371,7 +371,7 @@ tapReadConfiguration(
                             MINIPORT_INSTANCE_ID (Adapter)));
 
                         Adapter->MediaStateAlwaysConnected = TRUE;
-                        Adapter->MediaState = TRUE;
+                        Adapter->LogicalMediaState = TRUE;
                     }
                 }
             }
