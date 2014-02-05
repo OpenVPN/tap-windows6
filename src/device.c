@@ -330,6 +330,44 @@ Return Value:
         }
         break;
 
+    case TAP_WIN_IOCTL_CONFIG_POINT_TO_POINT:
+        {
+            if(inBufLength >= sizeof(IPADDR)*3)
+            {
+                MACADDR dest;
+
+                adapter->m_tun = FALSE;
+
+                GenerateRelatedMAC (dest, adapter->CurrentAddress, 1);
+
+                adapter->m_localIP =       ((IPADDR*) (Irp->AssociatedIrp.SystemBuffer))[0];
+                adapter->m_remoteNetwork = ((IPADDR*) (Irp->AssociatedIrp.SystemBuffer))[1];
+                adapter->m_remoteNetmask = ~0;
+
+                COPY_MAC (adapter->m_TapToUser.src, adapter->CurrentAddress);
+                COPY_MAC (adapter->m_TapToUser.dest, dest);
+                COPY_MAC (adapter->m_UserToTap.src, dest);
+                COPY_MAC (adapter->m_UserToTap.dest, adapter->CurrentAddress);
+
+                adapter->m_TapToUser.proto = adapter->m_UserToTap.proto = htons (ETH_P_IP);
+                adapter->m_UserToTap_IPv6 = adapter->m_UserToTap;
+                adapter->m_UserToTap_IPv6.proto = htons(ETH_P_IPV6);
+
+                adapter->m_tun = TRUE;
+
+                CheckIfDhcpAndTunMode (adapter);
+
+                Irp->IoStatus.Information = 1; // Simple boolean value
+            }
+            else
+            {
+                // BUGBUG!!! Fixme!!!
+                //NOTE_ERROR();
+                Irp->IoStatus.Status = ntStatus = STATUS_INVALID_PARAMETER;
+            }
+        }
+        break;
+
     case TAP_WIN_IOCTL_CONFIG_DHCP_MASQ:
         {
             if(inBufLength >= sizeof(IPADDR)*4)
@@ -457,7 +495,6 @@ Return Value:
         }
 #endif
 
-    case TAP_WIN_IOCTL_CONFIG_POINT_TO_POINT:  // Obsoleted by TAP_WIN_IOCTL_CONFIG_TUN
     case TAP_WIN_IOCTL_SET_MEDIA_STATUS:
     default:
 
