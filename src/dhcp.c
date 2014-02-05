@@ -29,51 +29,66 @@
 //=========================
 
 VOID
-SetDHCPOpt (DHCPMsg *m, void *data, unsigned int len)
+SetDHCPOpt(
+    __in DHCPMsg *m,
+    __in void *data,
+    __in unsigned int len
+    )
 {
-  if (!m->overflow)
+    if (!m->overflow)
     {
-      if (m->optlen + len <= DHCP_OPTIONS_BUFFER_SIZE)
-	{
-	  if (len)
-	    {
-	      NdisMoveMemory (m->msg.options + m->optlen, data, len);
-	      m->optlen += len;
-	    }
-	}
-      else
-	{
-	  m->overflow = TRUE;
-	}
+        if (m->optlen + len <= DHCP_OPTIONS_BUFFER_SIZE)
+        {
+            if (len)
+            {
+                NdisMoveMemory (m->msg.options + m->optlen, data, len);
+                m->optlen += len;
+            }
+        }
+        else
+        {
+            m->overflow = TRUE;
+        }
     }
 }
 
 VOID
-SetDHCPOpt0 (DHCPMsg *msg, int type)
+SetDHCPOpt0(
+    __in DHCPMsg *msg,
+    __in int type
+    )
 {
-  DHCPOPT0 opt;
-  opt.type = (UCHAR) type;
-  SetDHCPOpt (msg, &opt, sizeof (opt));
+    DHCPOPT0 opt;
+    opt.type = (UCHAR) type;
+    SetDHCPOpt (msg, &opt, sizeof (opt));
 }
 
 VOID
-SetDHCPOpt8 (DHCPMsg *msg, int type, ULONG data)
+SetDHCPOpt8(
+    __in DHCPMsg *msg,
+    __in int type,
+    __in ULONG data
+    )
 {
-  DHCPOPT8 opt;
-  opt.type = (UCHAR) type;
-  opt.len = sizeof (opt.data);
-  opt.data = (UCHAR) data;
-  SetDHCPOpt (msg, &opt, sizeof (opt));
+    DHCPOPT8 opt;
+    opt.type = (UCHAR) type;
+    opt.len = sizeof (opt.data);
+    opt.data = (UCHAR) data;
+    SetDHCPOpt (msg, &opt, sizeof (opt));
 }
 
 VOID
-SetDHCPOpt32 (DHCPMsg *msg, int type, ULONG data)
+SetDHCPOpt32(
+    __in DHCPMsg *msg,
+    __in int type,
+    __in ULONG data
+    )
 {
-  DHCPOPT32 opt;
-  opt.type = (UCHAR) type;
-  opt.len = sizeof (opt.data);
-  opt.data = data;
-  SetDHCPOpt (msg, &opt, sizeof (opt));
+    DHCPOPT32 opt;
+    opt.type = (UCHAR) type;
+    opt.len = sizeof (opt.data);
+    opt.data = data;
+    SetDHCPOpt (msg, &opt, sizeof (opt));
 }
 
 //==============
@@ -81,63 +96,77 @@ SetDHCPOpt32 (DHCPMsg *msg, int type, ULONG data)
 //==============
 
 USHORT
-ip_checksum (const UCHAR *buf, const int len_ip_header)
+ip_checksum(
+    __in const UCHAR *buf,
+    __in const int len_ip_header
+    )
 {
-  USHORT word16;
-  ULONG sum = 0;
-  int i;
-    
-  // make 16 bit words out of every two adjacent 8 bit words in the packet
-  // and add them up
-  for (i = 0; i < len_ip_header - 1; i += 2) {
-    word16 = ((buf[i] << 8) & 0xFF00) + (buf[i+1] & 0xFF);
-    sum += (ULONG) word16;
-  }
+    USHORT word16;
+    ULONG sum = 0;
+    int i;
 
-  // take only 16 bits out of the 32 bit sum and add up the carries
-  while (sum >> 16)
-    sum = (sum & 0xFFFF) + (sum >> 16);
+    // make 16 bit words out of every two adjacent 8 bit words in the packet
+    // and add them up
+    for (i = 0; i < len_ip_header - 1; i += 2)
+    {
+        word16 = ((buf[i] << 8) & 0xFF00) + (buf[i+1] & 0xFF);
+        sum += (ULONG) word16;
+    }
 
-  // one's complement the result
-  return ((USHORT) ~sum);
+    // take only 16 bits out of the 32 bit sum and add up the carries
+    while (sum >> 16)
+    {
+        sum = (sum & 0xFFFF) + (sum >> 16);
+    }
+
+    // one's complement the result
+    return ((USHORT) ~sum);
 }
 
 USHORT
-udp_checksum (const UCHAR *buf,
-	      const int len_udp,
-	      const UCHAR *src_addr,
-	      const UCHAR *dest_addr)
+udp_checksum (
+    __in const UCHAR *buf,
+    __in const int len_udp,
+    __in const UCHAR *src_addr,
+    __in const UCHAR *dest_addr
+    )
 {
-  USHORT word16;
-  ULONG sum = 0;
-  int i;
-	
-  // make 16 bit words out of every two adjacent 8 bit words and 
-  // calculate the sum of all 16 bit words
-  for (i = 0; i < len_udp; i += 2){
-    word16 = ((buf[i] << 8) & 0xFF00) + ((i + 1 < len_udp) ? (buf[i+1] & 0xFF) : 0);
-    sum += word16;
-  }
+    USHORT word16;
+    ULONG sum = 0;
+    int i;
 
-  // add the UDP pseudo header which contains the IP source and destination addresses
-  for (i = 0; i < 4; i += 2){
-    word16 =((src_addr[i] << 8) & 0xFF00) + (src_addr[i+1] & 0xFF);
-    sum += word16;
-  }
-  for (i = 0; i < 4; i += 2){
-    word16 =((dest_addr[i] << 8) & 0xFF00) + (dest_addr[i+1] & 0xFF);
-    sum += word16; 	
-  }
+    // make 16 bit words out of every two adjacent 8 bit words and 
+    // calculate the sum of all 16 bit words
+    for (i = 0; i < len_udp; i += 2)
+    {
+        word16 = ((buf[i] << 8) & 0xFF00) + ((i + 1 < len_udp) ? (buf[i+1] & 0xFF) : 0);
+        sum += word16;
+    }
 
-  // the protocol number and the length of the UDP packet
-  sum += (USHORT) IPPROTO_UDP + (USHORT) len_udp;
+    // add the UDP pseudo header which contains the IP source and destination addresses
+    for (i = 0; i < 4; i += 2)
+    {
+        word16 =((src_addr[i] << 8) & 0xFF00) + (src_addr[i+1] & 0xFF);
+        sum += word16;
+    }
 
-  // keep only the last 16 bits of the 32 bit calculated sum and add the carries
-  while (sum >> 16)
-    sum = (sum & 0xFFFF) + (sum >> 16);
-		
-  // Take the one's complement of sum
-  return ((USHORT) ~sum);
+    for (i = 0; i < 4; i += 2)
+    {
+        word16 =((dest_addr[i] << 8) & 0xFF00) + (dest_addr[i+1] & 0xFF);
+        sum += word16; 	
+    }
+
+    // the protocol number and the length of the UDP packet
+    sum += (USHORT) IPPROTO_UDP + (USHORT) len_udp;
+
+    // keep only the last 16 bits of the 32 bit calculated sum and add the carries
+    while (sum >> 16)
+    {
+        sum = (sum & 0xFFFF) + (sum >> 16);
+    }
+
+    // Take the one's complement of sum
+    return ((USHORT) ~sum);
 }
 
 //================================
@@ -145,16 +174,18 @@ udp_checksum (const UCHAR *buf,
 //================================
 
 VOID
-SetChecksumDHCPMsg (DHCPMsg *m)
+SetChecksumDHCPMsg(
+    __in DHCPMsg *m
+    )
 {
-  // Set IP checksum
-  m->msg.pre.ip.check = htons (ip_checksum ((UCHAR *) &m->msg.pre.ip, sizeof (IPHDR)));
+    // Set IP checksum
+    m->msg.pre.ip.check = htons (ip_checksum ((UCHAR *) &m->msg.pre.ip, sizeof (IPHDR)));
 
-  // Set UDP Checksum
-  m->msg.pre.udp.check = htons (udp_checksum ((UCHAR *) &m->msg.pre.udp, 
-					      sizeof (UDPHDR) + sizeof (DHCP) + m->optlen,
-					      (UCHAR *)&m->msg.pre.ip.saddr,
-					      (UCHAR *)&m->msg.pre.ip.daddr));
+    // Set UDP Checksum
+    m->msg.pre.udp.check = htons (udp_checksum ((UCHAR *) &m->msg.pre.udp, 
+        sizeof (UDPHDR) + sizeof (DHCP) + m->optlen,
+        (UCHAR *)&m->msg.pre.ip.saddr,
+        (UCHAR *)&m->msg.pre.ip.daddr));
 }
 
 //===================
@@ -162,74 +193,80 @@ SetChecksumDHCPMsg (DHCPMsg *m)
 //===================
 
 int
-GetDHCPMessageType (const DHCP *dhcp, const int optlen)
+GetDHCPMessageType(
+    __in const DHCP *dhcp,
+    __in const int optlen
+    )
 {
-  const UCHAR *p = (UCHAR *) (dhcp + 1);
-  int i;
+    const UCHAR *p = (UCHAR *) (dhcp + 1);
+    int i;
 
-  for (i = 0; i < optlen; ++i)
+    for (i = 0; i < optlen; ++i)
     {
-      const UCHAR type = p[i];
-      const int room = optlen - i - 1;
-      if (type == DHCP_END)           // didn't find what we were looking for
-	return -1;
-      else if (type == DHCP_PAD)      // no-operation
-	;
-      else if (type == DHCP_MSG_TYPE) // what we are looking for
-	{
-	  if (room >= 2)
-	    {
-	      if (p[i+1] == 1)        // message length should be 1
-		return p[i+2];        // return message type
-	    }
-	  return -1;
-	}
-      else                            // some other message
-	{
-	  if (room >= 1)
-	    {
-	      const int len = p[i+1]; // get message length
-	      i += (len + 1);         // advance to next message
-	    }
-	}
+        const UCHAR type = p[i];
+        const int room = optlen - i - 1;
+
+        if (type == DHCP_END)           // didn't find what we were looking for
+            return -1;
+        else if (type == DHCP_PAD)      // no-operation
+            ;
+        else if (type == DHCP_MSG_TYPE) // what we are looking for
+        {
+            if (room >= 2)
+            {
+                if (p[i+1] == 1)        // message length should be 1
+                    return p[i+2];        // return message type
+            }
+            return -1;
+        }
+        else                            // some other message
+        {
+            if (room >= 1)
+            {
+                const int len = p[i+1]; // get message length
+                i += (len + 1);         // advance to next message
+            }
+        }
     }
-  return -1;
+    return -1;
 }
 
 BOOLEAN
-DHCPMessageOurs (const PTAP_ADAPTER_CONTEXT p_Adapter,
-		 const ETH_HEADER *eth,
-		 const IPHDR *ip,
-		 const UDPHDR *udp,
-		 const DHCP *dhcp)
+DHCPMessageOurs (
+    __in const PTAP_ADAPTER_CONTEXT p_Adapter,
+    __in const ETH_HEADER *eth,
+    __in const IPHDR *ip,
+    __in const UDPHDR *udp,
+    __in const DHCP *dhcp
+    )
 {
-  // Must be UDPv4 protocol
-  if (!(eth->proto == htons (ETH_P_IP) && ip->protocol == IPPROTO_UDP))
-    return FALSE;
+    // Must be UDPv4 protocol
+    if (!(eth->proto == htons (ETH_P_IP) && ip->protocol == IPPROTO_UDP))
+        return FALSE;
 
-  // Source MAC must be our adapter
-  if (!MAC_EQUAL (eth->src, p_Adapter->CurrentAddress))
-    return FALSE;
+    // Source MAC must be our adapter
+    if (!MAC_EQUAL (eth->src, p_Adapter->CurrentAddress))
+        return FALSE;
 
-  // Dest MAC must be either broadcast or our virtual DHCP server
-  if (!(MAC_EQUAL (eth->dest, p_Adapter->m_MAC_Broadcast)
-	|| MAC_EQUAL (eth->dest, p_Adapter->m_dhcp_server_mac)))
-    return FALSE;
+    // Dest MAC must be either broadcast or our virtual DHCP server
+    if (!(MAC_EQUAL (eth->dest, p_Adapter->m_MAC_Broadcast)
+        || MAC_EQUAL (eth->dest, p_Adapter->m_dhcp_server_mac)))
+        return FALSE;
 
-  // Port numbers must be correct
-  if (!(udp->dest == htons (BOOTPS_PORT)
-	&& udp->source == htons (BOOTPC_PORT)))
-    return FALSE;
+    // Port numbers must be correct
+    if (!(udp->dest == htons (BOOTPS_PORT)
+        && udp->source == htons (BOOTPC_PORT)))
+        return FALSE;
 
-  // Hardware address must be MAC addr sized
-  if (!(dhcp->hlen == sizeof (MACADDR)))
-    return FALSE;
+    // Hardware address must be MAC addr sized
+    if (!(dhcp->hlen == sizeof (MACADDR)))
+        return FALSE;
 
-  // Hardware address must match our adapter
-  if (!MAC_EQUAL (eth->src, dhcp->chaddr))
-    return FALSE;
+    // Hardware address must match our adapter
+    if (!MAC_EQUAL (eth->src, dhcp->chaddr))
+        return FALSE;
 
-  return TRUE;
+    return TRUE;
 }
 
 
@@ -239,74 +276,76 @@ DHCPMessageOurs (const PTAP_ADAPTER_CONTEXT p_Adapter,
 //=====================================================
 
 VOID
-BuildDHCPPre (const PTAP_ADAPTER_CONTEXT a,
-	      DHCPPre *p,
-	      const ETH_HEADER *eth,
-	      const IPHDR *ip,
-	      const UDPHDR *udp,
-	      const DHCP *dhcp,
-	      const int optlen,
-	      const int type)
+BuildDHCPPre (
+    __in const PTAP_ADAPTER_CONTEXT a,
+    __inout DHCPPre *p,
+    __in const ETH_HEADER *eth,
+    __in const IPHDR *ip,
+    __in const UDPHDR *udp,
+    __in const DHCP *dhcp,
+    __in const int optlen,
+    __in const int type)
 {
-  // Should we broadcast or direct to a specific MAC / IP address?
-  const BOOLEAN broadcast = (type == DHCPNAK
-			     || MAC_EQUAL (eth->dest, a->m_MAC_Broadcast));
-  // Build ethernet header
+    // Should we broadcast or direct to a specific MAC / IP address?
+    const BOOLEAN broadcast = (type == DHCPNAK
+        || MAC_EQUAL (eth->dest, a->m_MAC_Broadcast));
+    // Build ethernet header
 
-  COPY_MAC (p->eth.src, a->m_dhcp_server_mac);
+    COPY_MAC (p->eth.src, a->m_dhcp_server_mac);
 
-  if (broadcast)
-    COPY_MAC (p->eth.dest, a->m_MAC_Broadcast);
-  else
-    COPY_MAC (p->eth.dest, eth->src);
+    if (broadcast)
+        COPY_MAC (p->eth.dest, a->m_MAC_Broadcast);
+    else
+        COPY_MAC (p->eth.dest, eth->src);
 
-  p->eth.proto = htons (ETH_P_IP);
+    p->eth.proto = htons (ETH_P_IP);
 
-  // Build IP header
+    // Build IP header
 
-  p->ip.version_len = (4 << 4) | (sizeof (IPHDR) >> 2);
-  p->ip.tos = 0;
-  p->ip.tot_len = htons (sizeof (IPHDR) + sizeof (UDPHDR) + sizeof (DHCP) + optlen);
-  p->ip.id = 0;
-  p->ip.frag_off = 0;
-  p->ip.ttl = 16;
-  p->ip.protocol = IPPROTO_UDP;
-  p->ip.check = 0;
-  p->ip.saddr = a->m_dhcp_server_ip;
+    p->ip.version_len = (4 << 4) | (sizeof (IPHDR) >> 2);
+    p->ip.tos = 0;
+    p->ip.tot_len = htons (sizeof (IPHDR) + sizeof (UDPHDR) + sizeof (DHCP) + optlen);
+    p->ip.id = 0;
+    p->ip.frag_off = 0;
+    p->ip.ttl = 16;
+    p->ip.protocol = IPPROTO_UDP;
+    p->ip.check = 0;
+    p->ip.saddr = a->m_dhcp_server_ip;
 
-  if (broadcast)
-    p->ip.daddr = ~0;
-  else
-    p->ip.daddr = a->m_dhcp_addr;
+    if (broadcast)
+        p->ip.daddr = ~0;
+    else
+        p->ip.daddr = a->m_dhcp_addr;
 
-  // Build UDP header
+    // Build UDP header
 
-  p->udp.source = htons (BOOTPS_PORT);
-  p->udp.dest = htons (BOOTPC_PORT);
-  p->udp.len = htons (sizeof (UDPHDR) + sizeof (DHCP) + optlen);
-  p->udp.check = 0;
+    p->udp.source = htons (BOOTPS_PORT);
+    p->udp.dest = htons (BOOTPC_PORT);
+    p->udp.len = htons (sizeof (UDPHDR) + sizeof (DHCP) + optlen);
+    p->udp.check = 0;
 
-  // Build DHCP response
+    // Build DHCP response
 
-  p->dhcp.op = BOOTREPLY;
-  p->dhcp.htype = 1;
-  p->dhcp.hlen = sizeof (MACADDR);
-  p->dhcp.hops = 0;
-  p->dhcp.xid = dhcp->xid;
-  p->dhcp.secs = 0;
-  p->dhcp.flags = 0;
-  p->dhcp.ciaddr = 0;
+    p->dhcp.op = BOOTREPLY;
+    p->dhcp.htype = 1;
+    p->dhcp.hlen = sizeof (MACADDR);
+    p->dhcp.hops = 0;
+    p->dhcp.xid = dhcp->xid;
+    p->dhcp.secs = 0;
+    p->dhcp.flags = 0;
+    p->dhcp.ciaddr = 0;
 
-  if (type == DHCPNAK)
-    p->dhcp.yiaddr = 0;
-  else
-    p->dhcp.yiaddr = a->m_dhcp_addr;
+    if (type == DHCPNAK)
+        p->dhcp.yiaddr = 0;
+    else
+        p->dhcp.yiaddr = a->m_dhcp_addr;
 
-  p->dhcp.siaddr = a->m_dhcp_server_ip;
-  p->dhcp.giaddr = 0;
-  COPY_MAC (p->dhcp.chaddr, eth->src);
-  p->dhcp.magic = htonl (0x63825363);
+    p->dhcp.siaddr = a->m_dhcp_server_ip;
+    p->dhcp.giaddr = 0;
+    COPY_MAC (p->dhcp.chaddr, eth->src);
+    p->dhcp.magic = htonl (0x63825363);
 }
+
 //=============================
 // Build specific DHCP messages
 //=============================
@@ -454,148 +493,162 @@ BuildDHCPPre (const PTAP_ADAPTER_CONTEXT a,
 #if DBG
 
 const char *
-message_op_text (int op)
+    message_op_text (int op)
 {
-  switch (op)
+    switch (op)
     {
     case BOOTREQUEST:
-      return "BOOTREQUEST";
+        return "BOOTREQUEST";
+
     case BOOTREPLY:
-      return "BOOTREPLY";
+        return "BOOTREPLY";
+
     default:
-      return "???";
+        return "???";
     }
 }
 
 const char *
-message_type_text (int type)
+    message_type_text (int type)
 {
-  switch (type)
+    switch (type)
     {
     case DHCPDISCOVER:
-      return "DHCPDISCOVER";
+        return "DHCPDISCOVER";
+
     case DHCPOFFER:
-      return "DHCPOFFER";
+        return "DHCPOFFER";
+
     case DHCPREQUEST:
-      return "DHCPREQUEST";
+        return "DHCPREQUEST";
+
     case DHCPDECLINE:
-      return "DHCPDECLINE";
+        return "DHCPDECLINE";
+
     case DHCPACK:
-      return "DHCPACK";
+        return "DHCPACK";
+
     case DHCPNAK:
-      return "DHCPNAK";
+        return "DHCPNAK";
+
     case DHCPRELEASE:
-      return "DHCPRELEASE";
+        return "DHCPRELEASE";
+
     case DHCPINFORM:
-      return "DHCPINFORM";
+        return "DHCPINFORM";
+
     default:
-      return "???";
+        return "???";
     }
 }
 
 const char *
 port_name (int port)
 {
-  switch (port)
+    switch (port)
     {
     case BOOTPS_PORT:
-      return "BOOTPS";
+        return "BOOTPS";
+
     case BOOTPC_PORT:
-      return "BOOTPC";
+        return "BOOTPC";
+
     default:
-      return "unknown";
+        return "unknown";
     }
 }
 
 VOID
-DumpDHCP (const ETH_HEADER *eth,
-	  const IPHDR *ip,
-	  const UDPHDR *udp,
-	  const DHCP *dhcp,
-	  const int optlen)
+DumpDHCP (
+    const ETH_HEADER *eth,
+    const IPHDR *ip,
+    const UDPHDR *udp,
+    const DHCP *dhcp,
+    const int optlen
+    )
 {
-  DEBUGP ((" %s", message_op_text (dhcp->op)));
-  DEBUGP ((" %s ", message_type_text (GetDHCPMessageType (dhcp, optlen))));
-  PrIP (ip->saddr);
-  DEBUGP ((":%s[", port_name (ntohs (udp->source))));
-  PrMac (eth->src);
-  DEBUGP (("] -> "));
-  PrIP (ip->daddr);
-  DEBUGP ((":%s[", port_name (ntohs (udp->dest))));
-  PrMac (eth->dest);
-  DEBUGP (("]"));
-  if (dhcp->ciaddr)
+    DEBUGP ((" %s", message_op_text (dhcp->op)));
+    DEBUGP ((" %s ", message_type_text (GetDHCPMessageType (dhcp, optlen))));
+    PrIP (ip->saddr);
+    DEBUGP ((":%s[", port_name (ntohs (udp->source))));
+    PrMac (eth->src);
+    DEBUGP (("] -> "));
+    PrIP (ip->daddr);
+    DEBUGP ((":%s[", port_name (ntohs (udp->dest))));
+    PrMac (eth->dest);
+    DEBUGP (("]"));
+    if (dhcp->ciaddr)
     {
-      DEBUGP ((" ci="));
-      PrIP (dhcp->ciaddr);
+        DEBUGP ((" ci="));
+        PrIP (dhcp->ciaddr);
     }
-  if (dhcp->yiaddr)
+    if (dhcp->yiaddr)
     {
-      DEBUGP ((" yi="));
-      PrIP (dhcp->yiaddr);
+        DEBUGP ((" yi="));
+        PrIP (dhcp->yiaddr);
     }
-  if (dhcp->siaddr)
+    if (dhcp->siaddr)
     {
-      DEBUGP ((" si="));
-      PrIP (dhcp->siaddr);
+        DEBUGP ((" si="));
+        PrIP (dhcp->siaddr);
     }
-  if (dhcp->hlen == sizeof (MACADDR))
+    if (dhcp->hlen == sizeof (MACADDR))
     {
-      DEBUGP ((" ch="));
-      PrMac (dhcp->chaddr);
+        DEBUGP ((" ch="));
+        PrMac (dhcp->chaddr);
     }
 
-  DEBUGP ((" xid=0x%08x", ntohl (dhcp->xid)));
+    DEBUGP ((" xid=0x%08x", ntohl (dhcp->xid)));
 
-  if (ntohl (dhcp->magic) != 0x63825363)
-    DEBUGP ((" ma=0x%08x", ntohl (dhcp->magic)));
-  if (dhcp->htype != 1)
-    DEBUGP ((" htype=%d", dhcp->htype));
-  if (dhcp->hops)
-    DEBUGP ((" hops=%d", dhcp->hops));
-  if (ntohs (dhcp->secs))
-    DEBUGP ((" secs=%d", ntohs (dhcp->secs)));
-  if (ntohs (dhcp->flags))
-    DEBUGP ((" flags=0x%04x", ntohs (dhcp->flags)));
+    if (ntohl (dhcp->magic) != 0x63825363)
+        DEBUGP ((" ma=0x%08x", ntohl (dhcp->magic)));
+    if (dhcp->htype != 1)
+        DEBUGP ((" htype=%d", dhcp->htype));
+    if (dhcp->hops)
+        DEBUGP ((" hops=%d", dhcp->hops));
+    if (ntohs (dhcp->secs))
+        DEBUGP ((" secs=%d", ntohs (dhcp->secs)));
+    if (ntohs (dhcp->flags))
+        DEBUGP ((" flags=0x%04x", ntohs (dhcp->flags)));
 
-  // extra stuff
-  
-  if (ip->version_len != 0x45)
-    DEBUGP ((" vl=0x%02x", ip->version_len));
-  if (ntohs (ip->tot_len) != sizeof (IPHDR) + sizeof (UDPHDR) + sizeof (DHCP) + optlen)
-    DEBUGP ((" tl=%d", ntohs (ip->tot_len)));
-  if (ntohs (udp->len) != sizeof (UDPHDR) + sizeof (DHCP) + optlen)
-    DEBUGP ((" ul=%d", ntohs (udp->len)));
+    // extra stuff
 
-  if (ip->tos)
-    DEBUGP ((" tos=0x%02x", ip->tos));
-  if (ntohs (ip->id))
-    DEBUGP ((" id=0x%04x", ntohs (ip->id)));
-  if (ntohs (ip->frag_off))
-    DEBUGP ((" frag_off=0x%04x", ntohs (ip->frag_off)));
-  
-  DEBUGP ((" ttl=%d", ip->ttl));
-  DEBUGP ((" ic=0x%04x [0x%04x]", ntohs (ip->check),
-	    ip_checksum ((UCHAR*)ip, sizeof (IPHDR))));
-  DEBUGP ((" uc=0x%04x [0x%04x/%d]", ntohs (udp->check),
-	    udp_checksum ((UCHAR *) udp,
-			  sizeof (UDPHDR) + sizeof (DHCP) + optlen,
-			  (UCHAR *) &ip->saddr,
-			  (UCHAR *) &ip->daddr),
-	    optlen));
+    if (ip->version_len != 0x45)
+        DEBUGP ((" vl=0x%02x", ip->version_len));
+    if (ntohs (ip->tot_len) != sizeof (IPHDR) + sizeof (UDPHDR) + sizeof (DHCP) + optlen)
+        DEBUGP ((" tl=%d", ntohs (ip->tot_len)));
+    if (ntohs (udp->len) != sizeof (UDPHDR) + sizeof (DHCP) + optlen)
+        DEBUGP ((" ul=%d", ntohs (udp->len)));
 
-  // Options
-  {
-    const UCHAR *opt = (UCHAR *) (dhcp + 1);
-    int i;
+    if (ip->tos)
+        DEBUGP ((" tos=0x%02x", ip->tos));
+    if (ntohs (ip->id))
+        DEBUGP ((" id=0x%04x", ntohs (ip->id)));
+    if (ntohs (ip->frag_off))
+        DEBUGP ((" frag_off=0x%04x", ntohs (ip->frag_off)));
 
-    DEBUGP ((" OPT"));
-    for (i = 0; i < optlen; ++i)
-      {
-	const UCHAR data = opt[i];
-	DEBUGP ((".%d", data));
-      }
-  }
+    DEBUGP ((" ttl=%d", ip->ttl));
+    DEBUGP ((" ic=0x%04x [0x%04x]", ntohs (ip->check),
+        ip_checksum ((UCHAR*)ip, sizeof (IPHDR))));
+    DEBUGP ((" uc=0x%04x [0x%04x/%d]", ntohs (udp->check),
+        udp_checksum ((UCHAR *) udp,
+        sizeof (UDPHDR) + sizeof (DHCP) + optlen,
+        (UCHAR *) &ip->saddr,
+        (UCHAR *) &ip->daddr),
+        optlen));
+
+    // Options
+    {
+        const UCHAR *opt = (UCHAR *) (dhcp + 1);
+        int i;
+
+        DEBUGP ((" OPT"));
+        for (i = 0; i < optlen; ++i)
+        {
+            const UCHAR data = opt[i];
+            DEBUGP ((".%d", data));
+        }
+    }
 }
 
 #endif /* DBG */
