@@ -889,6 +889,10 @@ Return Value:
     // Remove this adapter from the global adapter list.
     tapAdapterContextRemoveFromGlobalList(adapter);
 
+    // BUGBUG!!! Call AdapterShutdownEx to do some of the work of stopping.
+
+    // TODO!!! More...
+
     //
     // Destroy the TAP Win32 device.
     //

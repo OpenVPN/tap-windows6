@@ -1092,6 +1092,13 @@ CreateTapDevice(
     return status;
 }
 
+//
+// DestroyTapDevice is called from AdapterHalt and NDIS miniport
+// is in Halted state. Prior to entering the Halted state the
+// miniport would have passed through the Pausing and Paused
+// states. These miniport states have responsibility for waiting
+// until NDIS network operations have completed.
+//
 VOID
 DestroyTapDevice(
     __in PTAP_ADAPTER_CONTEXT   Adapter
@@ -1100,7 +1107,33 @@ DestroyTapDevice(
     DEBUGP (("[TAP] --> DestroyTapDevice; Adapter: %wZ\n",
         &Adapter->NetCfgInstanceId));
 
+    //
+    // Let clients know we are shutting down
+    //
+    Adapter->m_TapIsRunning = FALSE;
+    //p_Extension->m_TapOpens = 0;
+    //p_Extension->m_Halt = TRUE;
+
+    //
     // Flush IRP queues. Wait for pending I/O. Etc.
+    // --------------------------------------------
+    // Exhaust IRP and packet queues.  Any pending IRPs will
+    // be cancelled, causing user-space to get this error
+    // on overlapped reads:
+    //
+    //   The I/O operation has been aborted because of either a
+    //   thread exit or an application request.   (code=995)
+    //
+    // It's important that user-space close the device handle
+    // when this code is returned, so that when we finally
+    // do a NdisMDeregisterDeviceEx, the device reference count
+    // is 0.  Otherwise the driver will not unload even if the
+    // the last adapter has been halted.
+    //
+    //FlushQueues(Adapter);
+    //FlushIrpQueues(Adapter);
+
+    //TapDeviceFreeResources (p_Extension);   // BUGBUG!!! These are in adapter context.
 
     // Deregister the Win32 device.
     if(Adapter->DeviceHandle)
