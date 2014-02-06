@@ -160,7 +160,7 @@ Return Value:
     }
     else
     {
-		status = STATUS_UNSUCCESSFUL;
+        status = STATUS_UNSUCCESSFUL;
     }
 
     // Release the lock.
