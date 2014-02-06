@@ -207,9 +207,22 @@ TapDeviceRead(
     PIRP Irp
     )
 {
-    NTSTATUS    ntStatus;
+    NTSTATUS                ntStatus = STATUS_SUCCESS;// Assume success
+    PIO_STACK_LOCATION      irpSp;// Pointer to current stack location
+    PTAP_ADAPTER_CONTEXT    adapter = NULL;
 
     PAGED_CODE();
+
+    irpSp = IoGetCurrentIrpStackLocation( Irp );
+
+    //
+    // Fetch adapter context for this device.
+    // --------------------------------------
+    // Adapter pointer was stashed in FsContext when handle was opened.
+    //
+    adapter = (PTAP_ADAPTER_CONTEXT )(irpSp->FileObject)->FsContext;
+
+    ASSERT(adapter);
 
     ntStatus = STATUS_NOT_SUPPORTED;
 
@@ -223,9 +236,22 @@ TapDeviceWrite(
     PIRP Irp
     )
 {
-    NTSTATUS    ntStatus;
+    NTSTATUS                ntStatus = STATUS_SUCCESS;// Assume success
+    PIO_STACK_LOCATION      irpSp;// Pointer to current stack location
+    PTAP_ADAPTER_CONTEXT    adapter = NULL;
 
     PAGED_CODE();
+
+    irpSp = IoGetCurrentIrpStackLocation( Irp );
+
+    //
+    // Fetch adapter context for this device.
+    // --------------------------------------
+    // Adapter pointer was stashed in FsContext when handle was opened.
+    //
+    adapter = (PTAP_ADAPTER_CONTEXT )(irpSp->FileObject)->FsContext;
+
+    ASSERT(adapter);
 
     ntStatus = STATUS_NOT_SUPPORTED;
 
@@ -351,32 +377,28 @@ Return Value:
 --*/
 
 {
-    PIO_STACK_LOCATION      irpSp;// Pointer to current stack location
-    NTSTATUS                ntStatus = STATUS_SUCCESS;// Assume success
+    NTSTATUS                ntStatus = STATUS_SUCCESS; // Assume success
+    PIO_STACK_LOCATION      irpSp; // Pointer to current stack location
+    PTAP_ADAPTER_CONTEXT    adapter = NULL;
     ULONG                   inBufLength; // Input buffer length
     ULONG                   outBufLength; // Output buffer length
     PCHAR                   inBuf, outBuf; // pointer to Input and output buffer
     PMDL                    mdl = NULL;
     PCHAR                   buffer = NULL;
-    PTAP_ADAPTER_CONTEXT    adapter = NULL;
 
     PAGED_CODE();
 
+    irpSp = IoGetCurrentIrpStackLocation( Irp );
+
     //
-    // Find adapter context for this device.
-    // -------------------------------------
-    // Returns with added reference on adapter context.
+    // Fetch adapter context for this device.
+    // --------------------------------------
+    // Adapter pointer was stashed in FsContext when handle was opened.
     //
-    adapter = tapAdapterContextFromDeviceObject(DeviceObject);
+    adapter = (PTAP_ADAPTER_CONTEXT )(irpSp->FileObject)->FsContext;
 
     ASSERT(adapter);
 
-    // BUGBUG!!! Also check for halt state!!!
-    if(adapter == NULL)
-    {
-    }
-
-    irpSp = IoGetCurrentIrpStackLocation( Irp );
     inBufLength = irpSp->Parameters.DeviceIoControl.InputBufferLength;
     outBufLength = irpSp->Parameters.DeviceIoControl.OutputBufferLength;
 
@@ -738,12 +760,6 @@ Return Value:
 
 End:
 
-    // Remove reference added by tapAdapterContextFromDeviceObject,
-    if(adapter != NULL)
-    {
-        tapAdapterContextDereference(adapter);
-    }
-
     //
     // Finish the I/O operation by simply completing the packet and returning
     // the same status as in the packet itself.
@@ -834,6 +850,8 @@ Return Value:
     DEBUGP (("[TAP] --> TapDeviceClose\n"));
 
     irpSp = IoGetCurrentIrpStackLocation(Irp);
+
+    // BUGBUG!!! Move some/most of this logic to Cleanup???
 
     //
     // Find adapter context for this device.
