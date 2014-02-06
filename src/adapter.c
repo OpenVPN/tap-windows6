@@ -1102,6 +1102,46 @@ tapSendNetBufferListsComplete(
         );
 }
 
+NDIS_STATUS
+tapIsAdapterReady(
+    __in PTAP_ADAPTER_CONTEXT     Adapter
+    )
+{
+    NDIS_STATUS status = NDIS_STATUS_SUCCESS;
+
+    //
+    // Check various state variables to insure adapter is ready.
+    //
+    if(!Adapter->LogicalMediaState)
+    {
+        status = NDIS_STATUS_MEDIA_DISCONNECTED;
+    }
+    else if(Adapter->CurrentPowerState != NdisDeviceStateD0)
+    {
+        status = NDIS_STATUS_LOW_POWER_STATE;
+    }
+    else if(Adapter->ResetInProgress)
+    {
+        status = NDIS_STATUS_RESET_IN_PROGRESS;
+    }
+    else
+    {
+        switch(Adapter->Locked.AdapterState)
+        {
+        case MiniportPausingState:
+        case MiniportPausedState:
+            status = NDIS_STATUS_PAUSED;
+            break;
+
+        default:
+            status = NDIS_STATUS_SUCCESS;
+            break;
+        }
+    }
+
+    return status;
+}
+
 VOID
 AdapterSendNetBufferLists(
     __in  NDIS_HANDLE             MiniportAdapterContext,
@@ -1145,7 +1185,9 @@ Return Value:
 
 --*/
 {
-    PTAP_ADAPTER_CONTEXT   adapter = (PTAP_ADAPTER_CONTEXT )MiniportAdapterContext;
+    NDIS_STATUS             status;
+    PTAP_ADAPTER_CONTEXT    adapter = (PTAP_ADAPTER_CONTEXT )MiniportAdapterContext;
+    BOOLEAN                 DispatchLevel = (SendFlags & NDIS_SEND_FLAGS_DISPATCH_LEVEL);
 
     UNREFERENCED_PARAMETER(NetBufferLists);
     UNREFERENCED_PARAMETER(PortNumber);
@@ -1153,12 +1195,32 @@ Return Value:
 
     ASSERT(PortNumber == 0); // Only the default port is supported
 
+    //
+    // Check Adapter Ready
+    //
+    status = tapIsAdapterReady(adapter);
+
+    if(status != NDIS_STATUS_SUCCESS)
+    {
+        //
+        // Complete all NBLs and return if adapter not ready.
+        //
+        tapSendNetBufferListsComplete(
+            adapter,
+            NetBufferLists,
+            status,
+            DispatchLevel
+            );
+
+        return;
+    }
+
     // For now just complete all NBLs...
     tapSendNetBufferListsComplete(
         adapter,
         NetBufferLists,
         NDIS_STATUS_SUCCESS,
-        (SendFlags & NDIS_SEND_FLAGS_DISPATCH_LEVEL)
+        DispatchLevel
         );
 }
 
@@ -1291,10 +1353,16 @@ Return Value:
 
     DEBUGP (("[TAP] --> AdapterReset\n"));
 
+    // Indicate that adapter reset is in progress.
+    adapter->ResetInProgress = TRUE;
+
     // See note above...
     *AddressingReset = FALSE;
 
     // BUGBUG!!! TODO!!! Lots of work here...
+
+    // Indicate that adapter reset has completed.
+    adapter->ResetInProgress = FALSE;
 
     status = NDIS_STATUS_SUCCESS;
 

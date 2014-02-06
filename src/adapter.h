@@ -89,6 +89,8 @@ typedef struct _TAP_ADAPTER_CONTEXT
         TAP_MINIPORT_ADAPTER_STATE  AdapterState;
     } Locked;
 
+    BOOLEAN                     ResetInProgress;
+
     //
     // NetCfgInstanceId as UNICODE_STRING
     // ----------------------------------
@@ -303,6 +305,11 @@ tapAdapterReleaseLock(
 PTAP_ADAPTER_CONTEXT
 tapAdapterContextFromDeviceObject(
     __in PDEVICE_OBJECT DeviceObject
+    );
+
+NDIS_STATUS
+tapIsAdapterReady(
+    __in PTAP_ADAPTER_CONTEXT     Adapter
     );
 
 // Prototypes for standard NDIS miniport entry points
