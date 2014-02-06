@@ -142,22 +142,63 @@ tapSetMediaConnectStatus(
     __in BOOLEAN                LogicalMediaState
     )
 {
+    NDIS_STATUS_INDICATION  statusIndication;
+    NDIS_LINK_STATE         linkState;
+
+    NdisZeroMemory(&statusIndication, sizeof(NDIS_STATUS_INDICATION));
+    NdisZeroMemory(&linkState, sizeof(NDIS_LINK_STATE));
+
+    //
+    // Fill in object headers
+    //
+    statusIndication.Header.Type = NDIS_OBJECT_TYPE_STATUS_INDICATION;
+    statusIndication.Header.Revision = NDIS_STATUS_INDICATION_REVISION_1;
+    statusIndication.Header.Size = sizeof(NDIS_STATUS_INDICATION);
+
+    linkState.Header.Revision = NDIS_LINK_STATE_REVISION_1;
+    linkState.Header.Type = NDIS_OBJECT_TYPE_DEFAULT;
+    linkState.Header.Size = sizeof(NDIS_LINK_STATE);
+
+    //
+    // Link state buffer
+    //
+    if(Adapter->LogicalMediaState == TRUE)
+    {
+        linkState.MediaConnectState = MediaConnectStateConnected;
+    }
+
+    linkState.MediaDuplexState = MediaDuplexStateFull;
+    linkState.RcvLinkSpeed = TAP_RECV_SPEED;
+    linkState.XmitLinkSpeed = TAP_XMIT_SPEED;
+
+    //
+    // Fill in the status buffer
+    // 
+    statusIndication.StatusCode = NDIS_STATUS_LINK_STATE;
+    statusIndication.SourceHandle = Adapter->MiniportAdapterHandle;
+    statusIndication.DestinationHandle = NULL;
+    statusIndication.RequestId = 0;
+
+    statusIndication.StatusBuffer = &linkState;
+    statusIndication.StatusBufferSize = sizeof(NDIS_LINK_STATE);
+
+    // Fill in new media connect state.
     if ( (Adapter->LogicalMediaState != LogicalMediaState) && !Adapter->MediaStateAlwaysConnected)
     {
-        ASSERT(FALSE);  // BUGBUG!!! Unimplemented. Can fail if adapter not ready...
-        if (LogicalMediaState)
+        Adapter->LogicalMediaState = LogicalMediaState;
+
+        if (LogicalMediaState == TRUE)
         {
-            //NdisMIndicateStatus (Adapter->MiniportAdapterHandle,
-            //NDIS_STATUS_MEDIA_CONNECT, NULL, 0);
+            linkState.MediaConnectState = MediaConnectStateConnected;
         }
         else
         {
-            //NdisMIndicateStatus (Adapter->MiniportAdapterHandle,
-            //NDIS_STATUS_MEDIA_DISCONNECT, NULL, 0);
+            linkState.MediaConnectState = MediaConnectStateDisconnected;
         }
-
-        Adapter->LogicalMediaState = LogicalMediaState;
     }
+
+    // Make the status indication.
+    NdisMIndicateStatusEx(Adapter->MiniportAdapterHandle, &statusIndication);
 }
 
 //======================================================
