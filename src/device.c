@@ -42,6 +42,36 @@
 #pragma alloc_text( PAGE, TapDeviceClose)
 #endif // ALLOC_PRAGMA
 
+//===================================================================
+// Go back to default TAP mode from Point-To-Point mode.
+// Also reset (i.e. disable) DHCP Masq mode.
+//===================================================================
+VOID tapResetAdapterState(
+    __in PTAP_ADAPTER_CONTEXT Adapter
+    )
+{
+  // Point-To-Point
+  Adapter->m_tun = FALSE;
+  Adapter->m_localIP = 0;
+  Adapter->m_remoteNetwork = 0;
+  Adapter->m_remoteNetmask = 0;
+  NdisZeroMemory (&Adapter->m_TapToUser, sizeof (Adapter->m_TapToUser));
+  NdisZeroMemory (&Adapter->m_UserToTap, sizeof (Adapter->m_UserToTap));
+  NdisZeroMemory (&Adapter->m_UserToTap_IPv6, sizeof (Adapter->m_UserToTap_IPv6));
+
+  // DHCP Masq
+  Adapter->m_dhcp_enabled = FALSE;
+  Adapter->m_dhcp_server_arp = FALSE;
+  Adapter->m_dhcp_user_supplied_options_buffer_len = 0;
+  Adapter->m_dhcp_addr = 0;
+  Adapter->m_dhcp_netmask = 0;
+  Adapter->m_dhcp_server_ip = 0;
+  Adapter->m_dhcp_lease_time = 0;
+  Adapter->m_dhcp_received_discover = FALSE;
+  Adapter->m_dhcp_bad_requests = 0;
+  NdisZeroMemory (Adapter->m_dhcp_server_mac, MACADDR_SIZE);
+}
+
 // IRP_MJ_CREATE
 NTSTATUS
 TapDeviceCreate(
@@ -69,9 +99,21 @@ Return Value:
 
 --*/
 {
+    NDIS_STATUS             status;
+    PIO_STACK_LOCATION      irpSp;// Pointer to current stack location
     PTAP_ADAPTER_CONTEXT    adapter = NULL;
 
     PAGED_CODE();
+
+    DEBUGP (("[TAP] --> TapDeviceCreate\n"));
+
+    irpSp = IoGetCurrentIrpStackLocation(Irp);
+
+    //
+    // Invalidate file context
+    //
+    irpSp->FileObject->FsContext = NULL;
+    irpSp->FileObject->FsContext2 = NULL;
 
     //
     // Find adapter context for this device.
@@ -80,22 +122,82 @@ Return Value:
     //
     adapter = tapAdapterContextFromDeviceObject(DeviceObject);
 
+    // Insure that adapter exists.
     ASSERT(adapter);
 
-    // BUGBUG!!! Also check for halt state!!!
-    if(adapter == NULL)
+    if(adapter == NULL )
     {
+        DEBUGP (("[TAP] release [%d.%d] open request; adapter not found\n",
+            TAP_DRIVER_MAJOR_VERSION,
+            TAP_DRIVER_MINOR_VERSION
+            ));
+
+        Irp->IoStatus.Status = STATUS_DEVICE_DOES_NOT_EXIST;
+        Irp->IoStatus.Information = 0;
+
+        IoCompleteRequest( Irp, IO_NO_INCREMENT );
+
+        return STATUS_DEVICE_DOES_NOT_EXIST;
     }
 
-    // BUGBUG!!! Just dereference for now...
-    tapAdapterContextDereference(adapter);
+	DEBUGP(("[%s] [TAP] release [%d.%d] open request (m_TapOpens=%d)\n",
+	    MINIPORT_INSTANCE_ID(adapter),
+        TAP_DRIVER_MAJOR_VERSION,
+	    TAP_DRIVER_MINOR_VERSION,
+        adapter->m_TapOpens
+        ));
 
-    Irp->IoStatus.Status = STATUS_SUCCESS;
+    // Hold lock while checking for existing open.
+    tapAdapterAcquireLock(adapter,FALSE);
+
+    if(adapter->Locked.OpenFileObject == NULL)
+    {
+        adapter->Locked.OpenFileObject = irpSp->FileObject;
+
+        irpSp->FileObject->FsContext = adapter; // Quick reference
+
+        status = STATUS_SUCCESS;
+    }
+    else
+    {
+		status = STATUS_UNSUCCESSFUL;
+    }
+
+    // Release the lock.
+    tapAdapterReleaseLock(adapter,FALSE);
+
+    if(status == STATUS_SUCCESS)
+    {
+        // Reset adapter state on successful open.
+        tapResetAdapterState(adapter);
+
+        adapter->m_TapOpens = 1;    // Legacy...
+
+        // NOTE!!! Reference added by tapAdapterContextFromDeviceObject
+        // will be removed when file is closed.
+    }
+    else
+    {
+        DEBUGP (("[%s] TAP is presently unavailable (m_TapOpens=%d)\n",
+            MINIPORT_INSTANCE_ID(adapter), adapter->m_TapOpens
+            ));
+
+        // BUGBUG!!! Fixme!!!
+        //NOTE_ERROR();
+
+        // Remove reference added by tapAdapterContextFromDeviceObject.
+        tapAdapterContextDereference(adapter);
+    }
+
+    // Complete the IRP.
+    Irp->IoStatus.Status = status;
     Irp->IoStatus.Information = 0;
 
     IoCompleteRequest( Irp, IO_NO_INCREMENT );
 
-    return STATUS_SUCCESS;
+    DEBUGP (("[TAP] <-- TapDeviceCreate; status = %8.8X\n",status));
+
+    return status;
 }
 
 // IRP_MJ_READ callback.
@@ -528,11 +630,10 @@ Return Value:
 
             tapAdapterReleaseLock(adapter,FALSE);
 
-            // BUGBUG!!! Don't have NDIS 6 meaning for this yet...
-            //if (adapter->m_Extension.m_TapIsRunning)
-            //    state[1] = 'T';
-            //else
-            //    state[1] = 't';
+            if (adapter->m_TapIsRunning)
+                state[1] = 'T';
+            else
+                state[1] = 't';
 
             state[2] = '0' + adapter->CurrentPowerState;
 
@@ -546,6 +647,45 @@ Return Value:
             // BUGBUG!!! What follows, and is not yet implemented, is a real mess.
             // BUGBUG!!! Tied closely to the NDIS 5 implementation. Need to map
             //    as much as possible to the NDIS 6 implementation.
+            /*
+            Irp->IoStatus.Status = ntStatus = RtlStringCchPrintfExA (
+                ((LPTSTR) (Irp->AssociatedIrp.SystemBuffer)),
+                outBufLength,
+                NULL,
+                NULL,
+                STRSAFE_FILL_BEHIND_NULL | STRSAFE_IGNORE_NULLS,
+#if PACKET_TRUNCATION_CHECK
+                "State=%s Err=[%s/%d] #O=%d Tx=[%d,%d,%d] Rx=[%d,%d,%d] IrpQ=[%d,%d,%d] PktQ=[%d,%d,%d] InjQ=[%d,%d,%d]",
+#else
+                "State=%s Err=[%s/%d] #O=%d Tx=[%d,%d] Rx=[%d,%d] IrpQ=[%d,%d,%d] PktQ=[%d,%d,%d] InjQ=[%d,%d,%d]",
+#endif
+                state,
+                g_LastErrorFilename,
+                g_LastErrorLineNumber,
+                (int)adapter->m_NumTapOpens,
+                (int)adapter->m_Tx,
+                (int)adapter->m_TxErr,
+#if PACKET_TRUNCATION_CHECK
+                (int)adapter->m_TxTrunc,
+#endif
+                (int)adapter->m_Rx,
+                (int)adapter->m_RxErr,
+#if PACKET_TRUNCATION_CHECK
+                (int)adapter->m_RxTrunc,
+#endif
+                (int)adapter->m_Extension.m_IrpQueue->size,
+                (int)adapter->m_Extension.m_IrpQueue->max_size,
+                (int)IRP_QUEUE_SIZE,
+                (int)adapter->m_Extension.m_PacketQueue->size,
+                (int)adapter->m_Extension.m_PacketQueue->max_size,
+                (int)PACKET_QUEUE_SIZE,
+                (int)adapter->m_Extension.m_InjectQueue->size,
+                (int)adapter->m_Extension.m_InjectQueue->max_size,
+                (int)INJECT_QUEUE_SIZE
+                );
+
+            Irp->IoStatus.Information = outBufLength;
+            */
 
             // BUGBUG!!! Fail because this is not completely implemented.
             ntStatus = STATUS_INVALID_DEVICE_REQUEST;
@@ -685,16 +825,83 @@ Return Value:
 --*/
 
 {
-    UNREFERENCED_PARAMETER(DeviceObject);
+    NDIS_STATUS             status = NDIS_STATUS_SUCCESS;   // Always succeed.
+    PIO_STACK_LOCATION      irpSp;  // Pointer to current stack location
+    PTAP_ADAPTER_CONTEXT    adapter = NULL;
 
     PAGED_CODE();
 
-    Irp->IoStatus.Status = STATUS_SUCCESS;
+    DEBUGP (("[TAP] --> TapDeviceClose\n"));
+
+    irpSp = IoGetCurrentIrpStackLocation(Irp);
+
+    //
+    // Find adapter context for this device.
+    // -------------------------------------
+    // Returns with added reference on adapter context.
+    //
+    adapter = tapAdapterContextFromDeviceObject(DeviceObject);
+
+    // Insure that adapter exists.
+    ASSERT(adapter);
+
+    if(adapter == NULL )
+    {
+        DEBUGP (("[TAP] release [%d.%d] close request; adapter not found\n",
+            TAP_DRIVER_MAJOR_VERSION,
+            TAP_DRIVER_MINOR_VERSION
+            ));
+    }
+
+    if(adapter != NULL )
+    {
+        adapter->m_TapOpens = 0;    // Legacy...
+
+        // Hold lock while removing file object
+        tapAdapterAcquireLock(adapter,FALSE);
+
+        if(adapter->Locked.OpenFileObject == NULL)
+        {
+            // Should never happen!!!
+            ASSERT(FALSE);
+        }
+        else
+        {
+            ASSERT(irpSp->FileObject->FsContext == adapter);
+
+            ASSERT(adapter->Locked.OpenFileObject == irpSp->FileObject);
+        }
+
+        adapter->Locked.OpenFileObject = NULL;
+
+        // Release the lock.
+        tapAdapterReleaseLock(adapter,FALSE);
+
+        // Disconnect from media.
+        tapSetMediaConnectStatus(adapter,FALSE);
+
+        // Reset TAP state.
+        tapResetAdapterState(adapter);
+
+        // BUGBUG!!! Implement NDIS 6 equivalent!!!
+	    //FlushQueues (&adapter->m_Extension);
+
+        // Remove extra reference added by tapAdapterContextFromDeviceObject.
+        tapAdapterContextDereference(adapter);
+
+        // Remove reference added by when handle was opened.
+        tapAdapterContextDereference(adapter);
+    }
+
+    // Complete the IRP.
+    Irp->IoStatus.Status = status;
     Irp->IoStatus.Information = 0;
 
     IoCompleteRequest( Irp, IO_NO_INCREMENT );
 
-    return STATUS_SUCCESS;
+    DEBUGP (("[TAP] <-- TapDeviceClose; status = %8.8X\n",status));
+
+    return status;
 }
 
 NTSTATUS
@@ -849,6 +1056,17 @@ CreateTapDevice(
         // Set TAP device flags.
         (Adapter->DeviceObject)->Flags &= ~DO_BUFFERED_IO;
         (Adapter->DeviceObject)->Flags |= DO_DIRECT_IO;;
+
+      //========================
+      // Finalize initialization
+      //========================
+
+      Adapter->m_TapIsRunning = TRUE;
+
+      DEBUGP (("[%wZ] successfully created TAP device [%wZ]\n",
+	        &Adapter->NetCfgInstanceId,
+            &Adapter->DeviceName
+            ));
     }
 
     DEBUGP (("[TAP] <-- CreateTapDevice; status = %8.8X\n",status));
