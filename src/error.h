@@ -26,6 +26,9 @@
 // DEBUGGING OUTPUT
 //-----------------
 
+extern const char *g_LastErrorFilename;
+extern int g_LastErrorLineNumber;
+
 // Debug info output
 #define ALSO_DBGPRINT           1
 #define DEBUGP_AT_DISPATCH      0

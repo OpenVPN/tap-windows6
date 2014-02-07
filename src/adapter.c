@@ -1591,7 +1591,7 @@ Return Value:
     tapAdapterReleaseLock(adapter,FALSE);
 
     //
-    // We don't have any hardware to reset.
+    // BUGBUG!!! FlushIrpQueues???
     //
 
     DEBUGP (("[TAP] <-- AdapterShutdownEx\n"));

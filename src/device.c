@@ -182,8 +182,7 @@ Return Value:
             MINIPORT_INSTANCE_ID(adapter), adapter->TapFileIsOpen
             ));
 
-        // BUGBUG!!! Fixme!!!
-        //NOTE_ERROR();
+        NOTE_ERROR();
 
         // Remove reference added by tapAdapterContextFromDeviceObject.
         tapAdapterContextDereference(adapter);
@@ -232,8 +231,7 @@ TapDeviceRead(
         DEBUGP (("[%s] Interface is down in IRP_MJ_READ\n",
             MINIPORT_INSTANCE_ID (adapter)));
 
-        // BUGBUG!!! Fixme!!!
-        //NOTE_ERROR();
+        NOTE_ERROR();
         Irp->IoStatus.Status = ntStatus = STATUS_UNSUCCESSFUL;
         Irp->IoStatus.Information = 0;
         IoCompleteRequest (Irp, IO_NO_INCREMENT);
@@ -249,8 +247,7 @@ TapDeviceRead(
         DEBUGP (("[%s] MdlAddress is NULL for IRP_MJ_READ\n",
             MINIPORT_INSTANCE_ID (adapter)));
 
-        // BUGBUG!!! Fixme!!!
-        //NOTE_ERROR();
+        NOTE_ERROR();
         Irp->IoStatus.Status = ntStatus = STATUS_INVALID_PARAMETER;
         Irp->IoStatus.Information = 0;
         IoCompleteRequest (Irp, IO_NO_INCREMENT);
@@ -268,8 +265,7 @@ TapDeviceRead(
         DEBUGP (("[%s] Could not map address in IRP_MJ_READ\n",
             MINIPORT_INSTANCE_ID (adapter)));
 
-        // BUGBUG!!! Fixme!!!
-        //NOTE_ERROR();
+        NOTE_ERROR();
         Irp->IoStatus.Status = ntStatus = STATUS_INSUFFICIENT_RESOURCES;
         Irp->IoStatus.Information = 0;
         IoCompleteRequest (Irp, IO_NO_INCREMENT);
@@ -490,8 +486,7 @@ Return Value:
             }
             else
             {
-                // BUGBUG!!! Fixme!!!
-                //NOTE_ERROR();
+                NOTE_ERROR();
                 Irp->IoStatus.Status = ntStatus = STATUS_BUFFER_TOO_SMALL;
             }
         }
@@ -519,8 +514,7 @@ Return Value:
             }
             else
             {
-                // BUGBUG!!! Fixme!!!
-                //NOTE_ERROR();
+                NOTE_ERROR();
                 Irp->IoStatus.Status = ntStatus = STATUS_BUFFER_TOO_SMALL;
             }
         }
@@ -539,8 +533,7 @@ Return Value:
             }
             else
             {
-                // BUGBUG!!! Fixme!!!
-                //NOTE_ERROR();
+                NOTE_ERROR();
                 Irp->IoStatus.Status = ntStatus = STATUS_BUFFER_TOO_SMALL;
             }
         }
@@ -563,8 +556,7 @@ Return Value:
                 // Sanity check on network/netmask
                 if ((adapter->m_remoteNetwork & adapter->m_remoteNetmask) != adapter->m_remoteNetwork)
                 {
-                    // BUGBUG!!! Fixme!!!
-                    //NOTE_ERROR();
+                    NOTE_ERROR();
                     Irp->IoStatus.Status = ntStatus = STATUS_INVALID_PARAMETER;
                     break;
                 }
@@ -586,8 +578,7 @@ Return Value:
             }
             else
             {
-                // BUGBUG!!! Fixme!!!
-                //NOTE_ERROR();
+                NOTE_ERROR();
                 Irp->IoStatus.Status = ntStatus = STATUS_INVALID_PARAMETER;
             }
         }
@@ -624,8 +615,7 @@ Return Value:
             }
             else
             {
-                // BUGBUG!!! Fixme!!!
-                //NOTE_ERROR();
+                NOTE_ERROR();
                 Irp->IoStatus.Status = ntStatus = STATUS_INVALID_PARAMETER;
             }
         }
@@ -668,8 +658,7 @@ Return Value:
             }
             else
             {
-                // BUGBUG!!! Fixme!!!
-                //NOTE_ERROR();
+                NOTE_ERROR();
                 Irp->IoStatus.Status = ntStatus = STATUS_INVALID_PARAMETER;
             }
         }
@@ -695,8 +684,7 @@ Return Value:
             }
             else
             {
-                // BUGBUG!!! Fixme!!!
-                //NOTE_ERROR();
+                NOTE_ERROR();
                 Irp->IoStatus.Status = ntStatus = STATUS_INVALID_PARAMETER;
             }
         }
@@ -729,7 +717,6 @@ Return Value:
             // BUGBUG!!! What follows, and is not yet implemented, is a real mess.
             // BUGBUG!!! Tied closely to the NDIS 5 implementation. Need to map
             //    as much as possible to the NDIS 6 implementation.
-            /*
             Irp->IoStatus.Status = ntStatus = RtlStringCchPrintfExA (
                 ((LPTSTR) (Irp->AssociatedIrp.SystemBuffer)),
                 outBufLength,
@@ -755,19 +742,19 @@ Return Value:
 #if PACKET_TRUNCATION_CHECK
                 (int)adapter->m_RxTrunc,
 #endif
-                (int)adapter->m_Extension.m_IrpQueue->size,
-                (int)adapter->m_Extension.m_IrpQueue->max_size,
+                // BUGBUG!!! Some dummied out for initial testing...
+                (int)0,//(int)adapter->m_Extension.m_IrpQueue->size,
+                (int)0,//(int)adapter->m_Extension.m_IrpQueue->max_size,
                 (int)IRP_QUEUE_SIZE,
-                (int)adapter->m_Extension.m_PacketQueue->size,
-                (int)adapter->m_Extension.m_PacketQueue->max_size,
+                (int)0,//(int)adapter->m_Extension.m_PacketQueue->size,
+                (int)0,//(int)adapter->m_Extension.m_PacketQueue->max_size,
                 (int)PACKET_QUEUE_SIZE,
-                (int)adapter->m_Extension.m_InjectQueue->size,
-                (int)adapter->m_Extension.m_InjectQueue->max_size,
+                (int)0,//(int)adapter->m_Extension.m_InjectQueue->size,
+                (int)0,//(int)adapter->m_Extension.m_InjectQueue->max_size,
                 (int)INJECT_QUEUE_SIZE
                 );
 
             Irp->IoStatus.Information = outBufLength;
-            */
 
             // BUGBUG!!! Fail because this is not completely implemented.
             ntStatus = STATUS_INVALID_DEVICE_REQUEST;
@@ -802,8 +789,7 @@ Return Value:
             }
             else
             {
-                // BUGBUG!!! Fixme!!!
-                //NOTE_ERROR();
+                NOTE_ERROR();
                 Irp->IoStatus.Status = ntStatus = STATUS_INVALID_PARAMETER;
             }
         }
