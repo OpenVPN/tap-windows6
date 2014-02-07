@@ -1106,16 +1106,103 @@ tapSendNetBufferListsComplete(
         );
 }
 
-NDIS_STATUS
-tapIsAdapterReady(
+BOOLEAN
+tapAdapterReadAndWriteReady(
     __in PTAP_ADAPTER_CONTEXT     Adapter
     )
+/*++
+
+Routine Description:
+
+    This routine determines whether the adapter device interface can
+    accept read and write operations.
+
+Arguments:
+
+    Adapter              Pointer to our adapter context
+
+Return Value:
+
+    Returns TRUE if the adapter state allows it to queue IRPs passed to
+    the device read and write callbacks.
+--*/
+{
+    if(!Adapter->TapDeviceCreated)
+    {
+        // TAP device not created or is being destroyed.
+        return FALSE;
+    }
+
+    if(Adapter->TapFileObject == NULL)
+    {
+        // TAP application file object not open.
+        return FALSE;
+    }
+
+    if(!Adapter->TapFileIsOpen)
+    {
+        // TAP application file object may be closing.
+        return FALSE;
+    }
+
+    if(!Adapter->LogicalMediaState)
+    {
+        // Don't handle read/write if media not connected.
+        return FALSE;
+    }
+
+    if(Adapter->CurrentPowerState != NdisDeviceStateD0)
+    {
+        // Don't handle read/write if device is not fully powered.
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+NDIS_STATUS
+tapAdapterSendAndReceiveReady(
+    __in PTAP_ADAPTER_CONTEXT     Adapter
+    )
+/*++
+
+Routine Description:
+
+    This routine determines whether the adapter NDIS send and receive
+    paths are ready.
+
+    This routine examines various adapter state variables and returns
+    a value that indicates whether the adapter NDIS interfaces can
+    accept send packets or indicate receive packets.
+
+    In normal operation the adapter may temporarily enter and then exit
+    a not-ready condition. In particular, the adapter becomes not-ready
+    when in the Pausing/Paused states, but may become ready again when
+    Restarted.
+
+    Runs at IRQL <= DISPATCH_LEVEL
+
+Arguments:
+
+    Adapter              Pointer to our adapter context
+
+Return Value:
+
+    Returns NDIS_STATUS_SUCCESS if the adapter state allows it to
+    accept send packets and indicate receive packets.
+
+    Otherwise it returns a NDIS_STATUS value other than NDIS_STATUS_SUCCESS.
+    These status values can be used directly as the completion status for
+    packets that must be completed immediatly in the send path.
+--*/
 {
     NDIS_STATUS status = NDIS_STATUS_SUCCESS;
 
     //
     // Check various state variables to insure adapter is ready.
     //
+    tapAdapterAcquireLock(Adapter,FALSE);
+
     if(!Adapter->LogicalMediaState)
     {
         status = NDIS_STATUS_MEDIA_DISCONNECTED;
@@ -1137,11 +1224,17 @@ tapIsAdapterReady(
             status = NDIS_STATUS_PAUSED;
             break;
 
+        case MiniportHaltedState:
+            status = NDIS_STATUS_INVALID_STATE;
+            break;
+
         default:
             status = NDIS_STATUS_SUCCESS;
             break;
         }
     }
+
+    tapAdapterReleaseLock(Adapter,FALSE);
 
     return status;
 }
@@ -1200,9 +1293,30 @@ Return Value:
     ASSERT(PortNumber == 0); // Only the default port is supported
 
     //
-    // Check Adapter Ready
+    // Can't process sends if TAP device is not open.
+    // ----------------------------------------------
+    // Just perform a "lying send" and return packets as if they
+    // were successfully sent.
     //
-    status = tapIsAdapterReady(adapter);
+    if(adapter->TapFileObject == NULL)
+    {
+        //
+        // Complete all NBLs and return if adapter not ready.
+        //
+        tapSendNetBufferListsComplete(
+            adapter,
+            NetBufferLists,
+            NDIS_STATUS_SUCCESS,
+            DispatchLevel
+            );
+
+        return;
+    }
+
+    //
+    // Check Adapter send/receive ready state.
+    //
+    status = tapAdapterSendAndReceiveReady(adapter);
 
     if(status != NDIS_STATUS_SUCCESS)
     {

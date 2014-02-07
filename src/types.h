@@ -55,7 +55,7 @@ typedef struct _TapExtension
   Queue *m_PacketQueue, *m_IrpQueue;
   PDEVICE_OBJECT m_TapDevice;
   NDIS_HANDLE m_TapDeviceHandle;
-  ULONG m_TapOpens;
+  ULONG TapFileIsOpen;
 
   // Used to lock packet queues
   NDIS_SPIN_LOCK m_QueueLock;
@@ -76,10 +76,10 @@ typedef struct _TapExtension
   // Used for device status ioctl only
   const char *m_LastErrorFilename;
   int m_LastErrorLineNumber;
-  LONG m_NumTapOpens;
+  LONG TapFileOpenCount;
 
   // Flags
-  BOOLEAN m_TapIsRunning;
+  BOOLEAN TapDeviceCreated;
   BOOLEAN m_CalledTapDeviceFreeResources;
 
   // DPC queue for deferred packet injection

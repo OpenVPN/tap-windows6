@@ -87,7 +87,6 @@ typedef struct _TAP_ADAPTER_CONTEXT
     struct
     {
         TAP_MINIPORT_ADAPTER_STATE  AdapterState;
-        PFILE_OBJECT                OpenFileObject; // Exclusive access
     } Locked;
 
     BOOLEAN                     ResetInProgress;
@@ -137,17 +136,16 @@ typedef struct _TAP_ADAPTER_CONTEXT
 
     NDIS_HANDLE                 DeviceHandle;
     PDEVICE_OBJECT              DeviceObject;
+    BOOLEAN                     TapDeviceCreated;   // WAS: m_TapIsRunning
+
+    PFILE_OBJECT                TapFileObject;      // Exclusive access
+    BOOLEAN                     TapFileIsOpen;      // WAS: m_TapOpens
+    LONG                        TapFileOpenCount;   // WAS: m_NumTapOpens
 
     // Cancel-Safe read IRP queue.
     KSPIN_LOCK                  PendingReadCsqQueueLock;
     IO_CSQ                      PendingReadCsqQueue;
     LIST_ENTRY                  PendingReadIrpQueue;
-
-    // Kept in TapExtension structure in NDIS 5 implementation.
-    BOOLEAN                     m_TapIsRunning; // Basically: TAP device has been created.
-
-    ULONG                       m_TapOpens;     // These two are confusing...
-    LONG                        m_NumTapOpens;
 
     // Info for point-to-point mode
     BOOLEAN                     m_tun;
@@ -314,8 +312,13 @@ tapAdapterContextFromDeviceObject(
     __in PDEVICE_OBJECT DeviceObject
     );
 
+BOOLEAN
+tapAdapterReadAndWriteReady(
+    __in PTAP_ADAPTER_CONTEXT     Adapter
+    );
+
 NDIS_STATUS
-tapIsAdapterReady(
+tapAdapterSendAndReceiveReady(
     __in PTAP_ADAPTER_CONTEXT     Adapter
     );
 

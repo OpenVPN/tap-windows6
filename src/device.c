@@ -140,19 +140,19 @@ Return Value:
         return STATUS_DEVICE_DOES_NOT_EXIST;
     }
 
-	DEBUGP(("[%s] [TAP] release [%d.%d] open request (m_TapOpens=%d)\n",
+	DEBUGP(("[%s] [TAP] release [%d.%d] open request (TapFileIsOpen=%d)\n",
 	    MINIPORT_INSTANCE_ID(adapter),
         TAP_DRIVER_MAJOR_VERSION,
 	    TAP_DRIVER_MINOR_VERSION,
-        adapter->m_TapOpens
+        adapter->TapFileIsOpen
         ));
 
     // Hold lock while checking for existing open.
     tapAdapterAcquireLock(adapter,FALSE);
 
-    if(adapter->Locked.OpenFileObject == NULL)
+    if(adapter->TapFileObject == NULL)
     {
-        adapter->Locked.OpenFileObject = irpSp->FileObject;
+        adapter->TapFileObject = irpSp->FileObject;
 
         irpSp->FileObject->FsContext = adapter; // Quick reference
 
@@ -171,15 +171,15 @@ Return Value:
         // Reset adapter state on successful open.
         tapResetAdapterState(adapter);
 
-        adapter->m_TapOpens = 1;    // Legacy...
+        adapter->TapFileIsOpen = 1;    // Legacy...
 
         // NOTE!!! Reference added by tapAdapterContextFromDeviceObject
         // will be removed when file is closed.
     }
     else
     {
-        DEBUGP (("[%s] TAP is presently unavailable (m_TapOpens=%d)\n",
-            MINIPORT_INSTANCE_ID(adapter), adapter->m_TapOpens
+        DEBUGP (("[%s] TAP is presently unavailable (TapFileIsOpen=%d)\n",
+            MINIPORT_INSTANCE_ID(adapter), adapter->TapFileIsOpen
             ));
 
         // BUGBUG!!! Fixme!!!
@@ -226,22 +226,8 @@ TapDeviceRead(
 
     //
     // Sanity checks on state variables
-    // --------------------------------
-    // This check will fail if adapter is Pausing, Paused or
-    // Reset in progress. These events can occur during normal
-    // operation. For example, when new NDIS filters are added
-    // on the interface stack.
     //
-    // These are, however, the states where it is necessary
-    // to refuse new NDIS send operations and to supress
-    // making new NDIS receive indications.
-    //
-    // This might cause user-mode application to close the
-    // device handle when it is not really necessary.
-    //
-    // May deserve further thought...
-    //
-    if (tapIsAdapterReady(adapter) != NDIS_STATUS_SUCCESS )
+    if (tapAdapterReadAndWriteReady(adapter) != NDIS_STATUS_SUCCESS )
     {
         DEBUGP (("[%s] Interface is down in IRP_MJ_READ\n",
             MINIPORT_INSTANCE_ID (adapter)));
@@ -721,16 +707,12 @@ Return Value:
             char state[16];
 
             // Fetch adapter (miniport) state.
-            tapAdapterAcquireLock(adapter,FALSE);
-
-            if (tapIsAdapterReady(adapter) == NDIS_STATUS_SUCCESS)
+            if (tapAdapterSendAndReceiveReady(adapter) == NDIS_STATUS_SUCCESS)
                 state[0] = 'A';
             else
                 state[0] = 'a';
 
-            tapAdapterReleaseLock(adapter,FALSE);
-
-            if (adapter->m_TapIsRunning)
+            if (tapAdapterReadAndWriteReady(adapter))
                 state[1] = 'T';
             else
                 state[1] = 't';
@@ -762,7 +744,7 @@ Return Value:
                 state,
                 g_LastErrorFilename,
                 g_LastErrorLineNumber,
-                (int)adapter->m_NumTapOpens,
+                (int)adapter->TapFileOpenCount,
                 (int)adapter->m_Tx,
                 (int)adapter->m_TxErr,
 #if PACKET_TRUNCATION_CHECK
@@ -862,7 +844,7 @@ tapFlushIrpQueues(
     pendingIrp = IoCsqRemoveNextIrp(
                     &Adapter->PendingReadCsqQueue,
                     NULL
-                    //Adapter->Locked.OpenFileObject
+                    //Adapter->Locked.TapFileObject
                     );
 
     while(pendingIrp) 
@@ -875,7 +857,7 @@ tapFlushIrpQueues(
         pendingIrp = IoCsqRemoveNextIrp(
                         &Adapter->PendingReadCsqQueue,
                         NULL
-                        //Adapter->Locked.OpenFileObject
+                        //Adapter->Locked.TapFileObject
                         );
     }
 
@@ -951,7 +933,7 @@ Return Value:
 
     if(adapter != NULL )
     {
-        adapter->m_TapOpens = 0;    // Legacy...
+        adapter->TapFileIsOpen = 0;    // Legacy...
 
         // BUGBUG!!! Use RemoveLock???
 
@@ -1037,7 +1019,7 @@ Return Value:
         // Hold lock while removing file object
         tapAdapterAcquireLock(adapter,FALSE);
 
-        if(adapter->Locked.OpenFileObject == NULL)
+        if(adapter->TapFileObject == NULL)
         {
             // Should never happen!!!
             ASSERT(FALSE);
@@ -1046,10 +1028,10 @@ Return Value:
         {
             ASSERT(irpSp->FileObject->FsContext == adapter);
 
-            ASSERT(adapter->Locked.OpenFileObject == irpSp->FileObject);
+            ASSERT(adapter->TapFileObject == irpSp->FileObject);
         }
 
-        adapter->Locked.OpenFileObject = NULL;
+        adapter->TapFileObject = NULL;
         irpSp->FileObject = NULL;
 
         // Release the lock.
@@ -1227,7 +1209,7 @@ CreateTapDevice(
       // Finalize initialization
       //========================
 
-      Adapter->m_TapIsRunning = TRUE;
+      Adapter->TapDeviceCreated = TRUE;
 
       DEBUGP (("[%wZ] successfully created TAP device [%wZ]\n",
 	        &Adapter->NetCfgInstanceId,
@@ -1258,7 +1240,7 @@ DestroyTapDevice(
     //
     // Let clients know we are shutting down
     //
-    Adapter->m_TapIsRunning = FALSE;
+    Adapter->TapDeviceCreated = FALSE;
 
     //
     // Flush IRP queues. Wait for pending I/O. Etc.
@@ -1487,3 +1469,4 @@ tapCsqCompleteCanceledIrp(
     Irp->IoStatus.Information = 0;
     IoCompleteRequest(Irp, IO_NO_INCREMENT);
 }
+
