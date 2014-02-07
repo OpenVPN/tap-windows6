@@ -1303,7 +1303,7 @@ tapCsqInsertReadIrp (
         &Irp->Tail.Overlay.ListEntry
         );
 
-    // Update counts
+    // Update pending read counts
     ++adapter->PendingReadIrpCount;
 
     if(adapter->PendingReadIrpCount > adapter->PendingReadIrpMaxCount)
@@ -1326,6 +1326,7 @@ tapCsqRemoveReadIrp(
                 PendingReadCsqQueue
                 );
 
+    // Update pending read counts
     --adapter->PendingReadIrpCount;
 
     RemoveEntryList(&Irp->Tail.Overlay.ListEntry);
