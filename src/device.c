@@ -224,7 +224,26 @@ TapDeviceRead(
 
     ASSERT(adapter);
 
-    ntStatus = STATUS_NOT_SUPPORTED;
+    // BUGBUG!!! Add sanity checks on read IRP!!!
+
+    // BUGBUG!!! Sanity checks on state variables!!!
+    if (tapIsAdapterReady(adapter) != NDIS_STATUS_SUCCESS )
+    {
+        // Adapter not ready...
+    }
+
+    // BUGBUG!!! Use RemoveLock???
+
+    // BUGBUG!!! Service IRP immediately??? Queue if unable to do so.
+
+    //
+    // Queue the IRP and return STATUS_PENDING.
+    // ----------------------------------------
+    // Note: IoCsqInsertIrp marks the IRP pending.
+    //
+    IoCsqInsertIrp(&adapter->PendingReadCsqQueue, Irp, NULL);
+
+    ntStatus = STATUS_PENDING;
 
     return ntStatus;
 }
@@ -645,7 +664,7 @@ Return Value:
             // Fetch adapter (miniport) state.
             tapAdapterAcquireLock(adapter,FALSE);
 
-            if (adapter->Locked.AdapterState == MiniportRunning)
+            if (tapIsAdapterReady(adapter) == NDIS_STATUS_SUCCESS)
                 state[0] = 'A';
             else
                 state[0] = 'a';
@@ -771,6 +790,39 @@ End:
     return ntStatus;
 }
 
+VOID
+tapFlushIrpQueues(
+    __in PTAP_ADAPTER_CONTEXT   Adapter
+    )
+{
+    PIRP    pendingIrp;
+
+    //
+    // Flush the pending read IRP queue.
+    //
+    pendingIrp = IoCsqRemoveNextIrp(
+                    &Adapter->PendingReadCsqQueue,
+                    NULL
+                    //Adapter->Locked.OpenFileObject
+                    );
+
+    while(pendingIrp) 
+    {
+        // Cancel the IRP
+        pendingIrp->IoStatus.Information = 0;
+        pendingIrp->IoStatus.Status = STATUS_CANCELLED;
+        IoCompleteRequest(pendingIrp, IO_NO_INCREMENT);
+
+        pendingIrp = IoCsqRemoveNextIrp(
+                        &Adapter->PendingReadCsqQueue,
+                        NULL
+                        //Adapter->Locked.OpenFileObject
+                        );
+    }
+
+    ASSERT(IsListEmpty(&Adapter->PendingReadIrpQueue));
+}
+
 // IRP_MJ_CLEANUP
 NTSTATUS
 TapDeviceCleanup(
@@ -784,6 +836,17 @@ Routine Description:
     Receipt of this request indicates that the last handle for a file
     object that is associated with the target device object has been closed
     (but, due to outstanding I/O requests, might not have been released).
+
+    A driver that holds pending IRPs internally must implement a routine for
+    IRP_MJ_CLEANUP. When the routine is called, the driver should cancel all
+    the pending IRPs that belong to the file object identified by the IRP_MJ_CLEANUP
+    call.
+    
+    In other words, it should cancel all the IRPs that have the same file-object
+    pointer as the one supplied in the current I/O stack location of the IRP for the
+    IRP_MJ_CLEANUP call. Of course, IRPs belonging to other file objects should
+    not be canceled. Also, if an outstanding IRP is completed immediately, the
+    driver does not have to cancel it.
 
 Arguments:
 
@@ -799,16 +862,57 @@ Return Value:
 --*/
 
 {
-    UNREFERENCED_PARAMETER(DeviceObject);
+    NDIS_STATUS             status = NDIS_STATUS_SUCCESS;   // Always succeed.
+    PIO_STACK_LOCATION      irpSp;  // Pointer to current stack location
+    PTAP_ADAPTER_CONTEXT    adapter = NULL;
 
     PAGED_CODE();
 
-    Irp->IoStatus.Status = STATUS_SUCCESS;
+    DEBUGP (("[TAP] --> TapDeviceCleanup\n"));
+
+    irpSp = IoGetCurrentIrpStackLocation(Irp);
+
+    //
+    // Fetch adapter context for this device.
+    // --------------------------------------
+    // Adapter pointer was stashed in FsContext when handle was opened.
+    //
+    adapter = (PTAP_ADAPTER_CONTEXT )(irpSp->FileObject)->FsContext;
+
+    // Insure that adapter exists.
+    ASSERT(adapter);
+
+    if(adapter == NULL )
+    {
+        DEBUGP (("[TAP] release [%d.%d] cleanup request; adapter not found\n",
+            TAP_DRIVER_MAJOR_VERSION,
+            TAP_DRIVER_MINOR_VERSION
+            ));
+    }
+
+    if(adapter != NULL )
+    {
+        adapter->m_TapOpens = 0;    // Legacy...
+
+        // BUGBUG!!! Use RemoveLock???
+
+        //
+        // Flush the pending IRP queues.
+        // -----------------------------
+        // The queues should have been flushed already by DestroyTapDevice.
+        //
+        tapFlushIrpQueues(adapter);
+    }
+
+    // Complete the IRP.
+    Irp->IoStatus.Status = status;
     Irp->IoStatus.Information = 0;
 
     IoCompleteRequest( Irp, IO_NO_INCREMENT );
 
-    return STATUS_SUCCESS;
+    DEBUGP (("[TAP] <-- TapDeviceCleanup; status = %8.8X\n",status));
+
+    return status;
 }
 
 // IRP_MJ_CLOSE
@@ -851,14 +955,12 @@ Return Value:
 
     irpSp = IoGetCurrentIrpStackLocation(Irp);
 
-    // BUGBUG!!! Move some/most of this logic to Cleanup???
-
     //
-    // Find adapter context for this device.
-    // -------------------------------------
-    // Returns with added reference on adapter context.
+    // Fetch adapter context for this device.
+    // --------------------------------------
+    // Adapter pointer was stashed in FsContext when handle was opened.
     //
-    adapter = tapAdapterContextFromDeviceObject(DeviceObject);
+    adapter = (PTAP_ADAPTER_CONTEXT )(irpSp->FileObject)->FsContext;
 
     // Insure that adapter exists.
     ASSERT(adapter);
@@ -873,8 +975,6 @@ Return Value:
 
     if(adapter != NULL )
     {
-        adapter->m_TapOpens = 0;    // Legacy...
-
         // Hold lock while removing file object
         tapAdapterAcquireLock(adapter,FALSE);
 
@@ -891,21 +991,10 @@ Return Value:
         }
 
         adapter->Locked.OpenFileObject = NULL;
+        irpSp->FileObject = NULL;
 
         // Release the lock.
         tapAdapterReleaseLock(adapter,FALSE);
-
-        // Disconnect from media.
-        tapSetMediaConnectStatus(adapter,FALSE);
-
-        // Reset TAP state.
-        tapResetAdapterState(adapter);
-
-        // BUGBUG!!! Implement NDIS 6 equivalent!!!
-	    //FlushQueues (&adapter->m_Extension);
-
-        // Remove extra reference added by tapAdapterContextFromDeviceObject.
-        tapAdapterContextDereference(adapter);
 
         // Remove reference added by when handle was opened.
         tapAdapterContextDereference(adapter);
@@ -1111,18 +1200,18 @@ DestroyTapDevice(
     // Let clients know we are shutting down
     //
     Adapter->m_TapIsRunning = FALSE;
-    //p_Extension->m_TapOpens = 0;
-    //p_Extension->m_Halt = TRUE;
 
     //
     // Flush IRP queues. Wait for pending I/O. Etc.
     // --------------------------------------------
-    // Exhaust IRP and packet queues.  Any pending IRPs will
+    // Exhaust IRP and packet queues. Any pending IRPs will
     // be cancelled, causing user-space to get this error
     // on overlapped reads:
     //
-    //   The I/O operation has been aborted because of either a
-    //   thread exit or an application request.   (code=995)
+    //   ERROR_OPERATION_ABORTED, code=995
+    //
+    //   "The I/O operation has been aborted because of either a
+    //   thread exit or an application request."
     //
     // It's important that user-space close the device handle
     // when this code is returned, so that when we finally
@@ -1130,12 +1219,22 @@ DestroyTapDevice(
     // is 0.  Otherwise the driver will not unload even if the
     // the last adapter has been halted.
     //
-    //FlushQueues(Adapter);
-    //FlushIrpQueues(Adapter);
+    // The act of flushing the queues at this point should result in the user-mode
+    // application closing the adapter's device handle. Closing the handle will
+    // result in the TapDeviceCleanup call being made, followed by the a call to
+    // the TapDeviceClose callback.
+    //
+    tapFlushIrpQueues(Adapter);
 
-    //TapDeviceFreeResources (p_Extension);   // BUGBUG!!! These are in adapter context.
-
+    //
     // Deregister the Win32 device.
+    // ----------------------------
+    // When a driver calls NdisDeregisterDeviceEx, the I/O manager deletes the
+    // target device object if there are no outstanding references to it. However,
+    // if any outstanding references remain, the I/O manager marks the device
+    // object as "delete pending" and deletes the device object when the references
+    // are finally released.
+    //
     if(Adapter->DeviceHandle)
     {
         DEBUGP (("[TAP] Calling NdisDeregisterDeviceEx\n"));
