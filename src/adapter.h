@@ -146,6 +146,8 @@ typedef struct _TAP_ADAPTER_CONTEXT
     KSPIN_LOCK                  PendingReadCsqQueueLock;
     IO_CSQ                      PendingReadCsqQueue;
     LIST_ENTRY                  PendingReadIrpQueue;
+    ULONG                       PendingReadIrpCount;   // Count of currently queued items
+    ULONG                       PendingReadIrpMaxCount;
 
     // Info for point-to-point mode
     BOOLEAN                     m_tun;

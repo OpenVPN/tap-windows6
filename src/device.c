@@ -282,6 +282,12 @@ TapDeviceRead(
     // ----------------------------------------
     // Note: IoCsqInsertIrp marks the IRP pending.
     //
+
+    // BUGBUG!!! NDIS 5 implementation has IRP_QUEUE_SIZE of 16 and 
+    // does not queue IRP if this capacity is exceeded.
+    //
+    // Is this needed???
+    //
     IoCsqInsertIrp(&adapter->PendingReadCsqQueue, Irp, NULL);
 
     ntStatus = STATUS_PENDING;
@@ -742,10 +748,11 @@ Return Value:
 #if PACKET_TRUNCATION_CHECK
                 (int)adapter->m_RxTrunc,
 #endif
-                // BUGBUG!!! Some dummied out for initial testing...
-                (int)0,//(int)adapter->m_Extension.m_IrpQueue->size,
-                (int)0,//(int)adapter->m_Extension.m_IrpQueue->max_size,
+                (int)adapter->PendingReadIrpCount,
+                (int)adapter->PendingReadIrpCount,
                 (int)IRP_QUEUE_SIZE,
+
+                // BUGBUG!!! Some dummied out for initial testing...
                 (int)0,//(int)adapter->m_Extension.m_PacketQueue->size,
                 (int)0,//(int)adapter->m_Extension.m_PacketQueue->max_size,
                 (int)PACKET_QUEUE_SIZE,
@@ -1295,6 +1302,14 @@ tapCsqInsertReadIrp (
         &adapter->PendingReadIrpQueue,
         &Irp->Tail.Overlay.ListEntry
         );
+
+    // Update counts
+    ++adapter->PendingReadIrpCount;
+
+    if(adapter->PendingReadIrpCount > adapter->PendingReadIrpMaxCount)
+    {
+        adapter->PendingReadIrpMaxCount = adapter->PendingReadIrpCount;
+    }
 }
 
 VOID
@@ -1303,7 +1318,15 @@ tapCsqRemoveReadIrp(
     __in PIRP    Irp
     )
 {
-    UNREFERENCED_PARAMETER(Csq);
+    PTAP_ADAPTER_CONTEXT    adapter;
+
+    adapter = CONTAINING_RECORD(
+                Csq,
+                TAP_ADAPTER_CONTEXT,
+                PendingReadCsqQueue
+                );
+
+    --adapter->PendingReadIrpCount;
 
     RemoveEntryList(&Irp->Tail.Overlay.ListEntry);
 }
