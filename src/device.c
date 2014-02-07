@@ -224,12 +224,71 @@ TapDeviceRead(
 
     ASSERT(adapter);
 
-    // BUGBUG!!! Add sanity checks on read IRP!!!
-
-    // BUGBUG!!! Sanity checks on state variables!!!
+    //
+    // Sanity checks on state variables
+    // --------------------------------
+    // This check will fail if adapter is Pausing, Paused or
+    // Reset in progress. These events can occur during normal
+    // operation. For example, when new NDIS filters are added
+    // on the interface stack.
+    //
+    // These are, however, the states where it is necessary
+    // to refuse new NDIS send operations and to supress
+    // making new NDIS receive indications.
+    //
+    // This might cause user-mode application to close the
+    // device handle when it is not really necessary.
+    //
+    // May deserve further thought...
+    //
     if (tapIsAdapterReady(adapter) != NDIS_STATUS_SUCCESS )
     {
-        // Adapter not ready...
+        DEBUGP (("[%s] Interface is down in IRP_MJ_READ\n",
+            MINIPORT_INSTANCE_ID (adapter)));
+
+        // BUGBUG!!! Fixme!!!
+        //NOTE_ERROR();
+        Irp->IoStatus.Status = ntStatus = STATUS_UNSUCCESSFUL;
+        Irp->IoStatus.Information = 0;
+        IoCompleteRequest (Irp, IO_NO_INCREMENT);
+
+        return ntStatus;
+    }
+
+    // Save IRP-accessible copy of buffer length
+    Irp->IoStatus.Information = irpSp->Parameters.Read.Length;
+
+    if (Irp->MdlAddress == NULL)
+    {
+        DEBUGP (("[%s] MdlAddress is NULL for IRP_MJ_READ\n",
+            MINIPORT_INSTANCE_ID (adapter)));
+
+        // BUGBUG!!! Fixme!!!
+        //NOTE_ERROR();
+        Irp->IoStatus.Status = ntStatus = STATUS_INVALID_PARAMETER;
+        Irp->IoStatus.Information = 0;
+        IoCompleteRequest (Irp, IO_NO_INCREMENT);
+
+        return ntStatus;
+    }
+
+    if ((Irp->AssociatedIrp.SystemBuffer
+            = MmGetSystemAddressForMdlSafe(
+                Irp->MdlAddress,
+                NormalPagePriority
+                ) ) == NULL
+        )
+    {
+        DEBUGP (("[%s] Could not map address in IRP_MJ_READ\n",
+            MINIPORT_INSTANCE_ID (adapter)));
+
+        // BUGBUG!!! Fixme!!!
+        //NOTE_ERROR();
+        Irp->IoStatus.Status = ntStatus = STATUS_INSUFFICIENT_RESOURCES;
+        Irp->IoStatus.Information = 0;
+        IoCompleteRequest (Irp, IO_NO_INCREMENT);
+
+        return ntStatus;
     }
 
     // BUGBUG!!! Use RemoveLock???
