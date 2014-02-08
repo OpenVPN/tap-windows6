@@ -738,8 +738,8 @@ Return Value:
                 g_LastErrorFilename,
                 g_LastErrorLineNumber,
                 (int)adapter->TapFileOpenCount,
-                (int)adapter->m_Tx,
-                (int)adapter->m_TxErr,
+                (int)(adapter->FramesTxDirected + adapter->FramesTxMulticast + adapter->FramesTxBroadcast),
+                (int)adapter->TransmitFailuresOther,
 #if PACKET_TRUNCATION_CHECK
                 (int)adapter->m_TxTrunc,
 #endif
@@ -750,7 +750,7 @@ Return Value:
 #endif
                 (int)adapter->PendingReadIrpCount,
                 (int)adapter->PendingReadIrpCount,
-                (int)IRP_QUEUE_SIZE,
+                (int)IRP_QUEUE_SIZE,        // Ignored in NDIS 6 driver...
 
                 // BUGBUG!!! Some dummied out for initial testing...
                 (int)0,//(int)adapter->m_Extension.m_PacketQueue->size,

@@ -219,7 +219,7 @@ typedef struct _TAP_ADAPTER_CONTEXT
     ULONG                       RxRuntErrors;
 
   BOOLEAN m_InterfaceIsRunning;
-  LONG m_Rx, m_Tx, m_RxErr, m_TxErr;
+  LONG m_Rx, m_RxErr;
 #if PACKET_TRUNCATION_CHECK
   LONG m_RxTrunc, m_TxTrunc;
 #endif
