@@ -1068,29 +1068,178 @@ Return Value:
     return status;
 }
 
+ULONG
+tapGetNetBufferFrameType(
+    __in PNET_BUFFER       NetBuffer
+    )
+/*++
+
+Routine Description:
+
+    Reads the network frame's destination address to determine the type
+    (broadcast, multicast, etc)
+
+    Runs at IRQL <= DISPATCH_LEVEL.
+
+Arguments:
+
+    NetBuffer                 The NB to examine
+
+Return Value:
+
+    NDIS_PACKET_TYPE_BROADCAST
+    NDIS_PACKET_TYPE_MULTICAST
+    NDIS_PACKET_TYPE_DIRECTED
+
+--*/
+{
+    PETH_HEADER ethernetHeader;
+
+    ethernetHeader = (PETH_HEADER )NdisGetDataBuffer(
+                        NetBuffer,
+                        sizeof(ETH_HEADER),
+                        NULL,
+                        1,
+                        0
+                        );
+
+    ASSERT(ethernetHeader);
+
+    if (ETH_IS_BROADCAST(ethernetHeader->dest))
+    {
+        return NDIS_PACKET_TYPE_BROADCAST;
+    }
+    else if(ETH_IS_MULTICAST(ethernetHeader->dest))
+    {
+        return NDIS_PACKET_TYPE_MULTICAST;
+    }
+    else
+    {
+        return NDIS_PACKET_TYPE_DIRECTED;
+    }
+
+}
+
+ULONG
+tapGetNetBufferCountsFromNetBufferList(
+    __in PNET_BUFFER_LIST   NetBufferList,
+    __inout_opt PULONG      TotalByteCount      // Of all linked NBs
+    )
+/*++
+
+Routine Description:
+
+    Returns the number of net buffers linked to the net buffer list.
+
+    Optionally retuens the total byte count of all net buffers linked
+    to the net buffer list
+
+    Runs at IRQL <= DISPATCH_LEVEL.
+
+Arguments:
+
+    NetBufferList                 The NBL to examine
+
+Return Value:
+
+    The number of net buffers linked to the net buffer list.
+
+--*/
+{
+    ULONG       netBufferCount = 0;
+    PNET_BUFFER currentNetBuffer;
+
+    if(TotalByteCount)
+    {
+        *TotalByteCount = 0;
+    }
+
+    currentNetBuffer = NET_BUFFER_LIST_FIRST_NB(NetBufferList);
+
+    while(currentNetBuffer)
+    {
+        ++netBufferCount;
+
+        if(TotalByteCount)
+        {
+            *TotalByteCount += NET_BUFFER_DATA_LENGTH(currentNetBuffer);
+        }
+
+        // Move to next NB
+        currentNetBuffer = NET_BUFFER_NEXT_NB(currentNetBuffer);
+    }
+
+    return netBufferCount;
+}
+
 VOID
 tapSendNetBufferListsComplete(
-    __in PTAP_ADAPTER_CONTEXT       Adapter,
-    __in PNET_BUFFER_LIST   NetBufferLists,
-    __in NDIS_STATUS        SendCompletionStatus,
-    __in BOOLEAN            DispatchLevel
+    __in PTAP_ADAPTER_CONTEXT   Adapter,
+    __in PNET_BUFFER_LIST       NetBufferLists,
+    __in NDIS_STATUS            SendCompletionStatus,
+    __in BOOLEAN                DispatchLevel
     )
 {
-    PNET_BUFFER_LIST    netBufferList;
+    PNET_BUFFER_LIST    currentBufferList;
     PNET_BUFFER_LIST    nextNetBufferList = NULL;
     ULONG               sendCompleteFlags = 0;
 
     for (
-        netBufferList = NetBufferLists;
-        netBufferList!= NULL;
-        netBufferList = nextNetBufferList
+        currentBufferList = NetBufferLists;
+        currentBufferList != NULL;
+        currentBufferList = nextNetBufferList
         )
     {
-        nextNetBufferList = NET_BUFFER_LIST_NEXT_NBL(netBufferList);
+        ULONG       frameType;
+        ULONG       netBufferCount;
+        ULONG       byteCount;
 
-        NET_BUFFER_LIST_STATUS(netBufferList) = SendCompletionStatus;
+        nextNetBufferList = NET_BUFFER_LIST_NEXT_NBL(currentBufferList);
 
-        netBufferList = nextNetBufferList;
+        // Set NBL completion status.
+        NET_BUFFER_LIST_STATUS(currentBufferList) = SendCompletionStatus;
+
+        // Fetch first NBs frame type. All linked NBs will have same type.
+        frameType = tapGetNetBufferFrameType(NET_BUFFER_LIST_FIRST_NB(currentBufferList));
+
+        // Fetch statistics for all NBs linked to the NB.
+        netBufferCount = tapGetNetBufferCountsFromNetBufferList(
+                            currentBufferList,
+                            &byteCount
+                            );
+
+        // Update statistics by frame type
+        if(SendCompletionStatus == NDIS_STATUS_SUCCESS)
+        {
+            switch(frameType)
+            {
+            case NDIS_PACKET_TYPE_DIRECTED:
+                Adapter->FramesTxDirected += netBufferCount;
+                Adapter->BytesTxDirected += byteCount;
+                break;
+
+            case NDIS_PACKET_TYPE_BROADCAST:
+                Adapter->FramesTxBroadcast += netBufferCount;
+                Adapter->BytesTxBroadcast += byteCount;
+                break;
+
+            case NDIS_PACKET_TYPE_MULTICAST:
+                Adapter->FramesTxMulticast += netBufferCount;
+                Adapter->BytesTxMulticast += byteCount;
+                break;
+
+            default:
+                ASSERT(FALSE);
+                break;
+            }
+        }
+        else
+        {
+            // Transmit error.
+            Adapter->TransmitFailuresOther += netBufferCount;
+        }
+
+        currentBufferList = nextNetBufferList;
     }
 
     if(DispatchLevel)
