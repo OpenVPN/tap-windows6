@@ -1557,9 +1557,9 @@ Return Value:
 {
     PTAP_ADAPTER_CONTEXT   adapter = (PTAP_ADAPTER_CONTEXT )MiniportAdapterContext;
 
-    DEBUGP (("[TAP] --> AdapterCheckForHangEx\n"));
+    //DEBUGP (("[TAP] --> AdapterCheckForHangEx\n"));
 
-    DEBUGP (("[TAP] <-- AdapterCheckForHangEx; status = FALSE\n"));
+    //DEBUGP (("[TAP] <-- AdapterCheckForHangEx; status = FALSE\n"));
 
     return FALSE;   // Everything is fine
 }

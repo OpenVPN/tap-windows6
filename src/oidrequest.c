@@ -541,7 +541,11 @@ Return Value:
     PVOID                   pInfo=NULL;
     ULONG                   ulInfoLen = sizeof(ulInfo);
 
-    DBG_PRINT_OID_NAME(OidRequest->DATA.QUERY_INFORMATION.Oid);
+    // ATTENTION!!! OID_GEN_STATISTICS to noisy to print...
+    if(OidRequest->DATA.QUERY_INFORMATION.Oid != OID_GEN_STATISTICS)
+    {
+        DBG_PRINT_OID_NAME(OidRequest->DATA.QUERY_INFORMATION.Oid);
+    }
 
     // Dispatch based on object identifier (OID).
     switch(OidRequest->DATA.QUERY_INFORMATION.Oid)
