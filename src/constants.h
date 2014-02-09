@@ -72,6 +72,7 @@
 #define ETHERNET_MTU                1500
 #define ETHERNET_PACKET_SIZE        (ETHERNET_MTU + ETHERNET_HEADER_SIZE)
 #define DEFAULT_PACKET_LOOKAHEAD    (ETHERNET_PACKET_SIZE)
+#define VLAN_TAG_SIZE               4
 
 //===========================================================
 // Medium properties

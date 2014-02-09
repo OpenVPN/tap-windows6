@@ -1147,26 +1147,26 @@ Return Value:
 --*/
 {
     ULONG       netBufferCount = 0;
-    PNET_BUFFER currentNetBuffer;
+    PNET_BUFFER currentNb;
 
     if(TotalByteCount)
     {
         *TotalByteCount = 0;
     }
 
-    currentNetBuffer = NET_BUFFER_LIST_FIRST_NB(NetBufferList);
+    currentNb = NET_BUFFER_LIST_FIRST_NB(NetBufferList);
 
-    while(currentNetBuffer)
+    while(currentNb)
     {
         ++netBufferCount;
 
         if(TotalByteCount)
         {
-            *TotalByteCount += NET_BUFFER_DATA_LENGTH(currentNetBuffer);
+            *TotalByteCount += NET_BUFFER_DATA_LENGTH(currentNb);
         }
 
         // Move to next NB
-        currentNetBuffer = NET_BUFFER_NEXT_NB(currentNetBuffer);
+        currentNb = NET_BUFFER_NEXT_NB(currentNb);
     }
 
     return netBufferCount;
@@ -1180,31 +1180,31 @@ tapSendNetBufferListsComplete(
     __in BOOLEAN                DispatchLevel
     )
 {
-    PNET_BUFFER_LIST    currentBufferList;
-    PNET_BUFFER_LIST    nextNetBufferList = NULL;
+    PNET_BUFFER_LIST    currentNbl;
+    PNET_BUFFER_LIST    nextNbl = NULL;
     ULONG               sendCompleteFlags = 0;
 
     for (
-        currentBufferList = NetBufferLists;
-        currentBufferList != NULL;
-        currentBufferList = nextNetBufferList
+        currentNbl = NetBufferLists;
+        currentNbl != NULL;
+        currentNbl = nextNbl
         )
     {
         ULONG       frameType;
         ULONG       netBufferCount;
         ULONG       byteCount;
 
-        nextNetBufferList = NET_BUFFER_LIST_NEXT_NBL(currentBufferList);
+        nextNbl = NET_BUFFER_LIST_NEXT_NBL(currentNbl);
 
         // Set NBL completion status.
-        NET_BUFFER_LIST_STATUS(currentBufferList) = SendCompletionStatus;
+        NET_BUFFER_LIST_STATUS(currentNbl) = SendCompletionStatus;
 
         // Fetch first NBs frame type. All linked NBs will have same type.
-        frameType = tapGetNetBufferFrameType(NET_BUFFER_LIST_FIRST_NB(currentBufferList));
+        frameType = tapGetNetBufferFrameType(NET_BUFFER_LIST_FIRST_NB(currentNbl));
 
         // Fetch statistics for all NBs linked to the NB.
         netBufferCount = tapGetNetBufferCountsFromNetBufferList(
-                            currentBufferList,
+                            currentNbl,
                             &byteCount
                             );
 
@@ -1239,7 +1239,7 @@ tapSendNetBufferListsComplete(
             Adapter->TransmitFailuresOther += netBufferCount;
         }
 
-        currentBufferList = nextNetBufferList;
+        currentNbl = nextNbl;
     }
 
     if(DispatchLevel)
@@ -1388,6 +1388,96 @@ Return Value:
     return status;
 }
 
+BOOLEAN
+tapNetBufferListNetBufferLengthsValid(
+    __in PTAP_ADAPTER_CONTEXT   Adapter,
+    __in  PNET_BUFFER_LIST      NetBufferLists
+    )
+/*++
+
+Routine Description:
+
+    Scan all NBLs and their linked NBs for valid lengths.
+
+    Fairly absurd to find and packets with bogus lengths, but wise
+    to check anyway. If ANY packet has a bogus length, then abort the
+    entire send.
+
+    The only time that one might see this check fail might be during
+    HCK driver testing. The HKC test might send oversize packets to
+    determine if the miniport can gracefully deal with them.
+
+    This check is fairly fast. Unlike NDIS 5 packets, fetching NDIS 6
+    packets lengths do not require any computation.
+
+Arguments:
+
+    Adapter                 Pointer to our adapter context
+    NetBufferLists          Head of a list of NBLs to examine
+
+Return Value:
+
+    Returns TRUE if all NBs have reasonable lengths.
+    Otherwise, returns FALSE.
+
+--*/
+{
+    PNET_BUFFER_LIST        currentNbl;
+
+    currentNbl = NetBufferLists;
+
+    while (currentNbl)
+    {
+        PNET_BUFFER_LIST    nextNbl;
+        PNET_BUFFER         currentNb;
+
+        // Locate next NBL
+        nextNbl = NET_BUFFER_LIST_NEXT_NBL(currentNbl);
+
+        // Locate first NB (aka "packet")
+        currentNb = NET_BUFFER_LIST_FIRST_NB(currentNbl);
+
+        //
+        // Process all NBs linked to this NBL
+        //
+        while(currentNb)
+        {
+            PNET_BUFFER nextNb;
+            ULONG       packetLength;
+
+            // Locate next NB
+            nextNb = NET_BUFFER_NEXT_NB(currentNb);
+
+            packetLength = NET_BUFFER_DATA_LENGTH(currentNb);
+
+            // Minimum packet size is size of Ethernet plus IPv4 headers.
+            ASSERT(packetLength >= (ETHERNET_HEADER_SIZE + IP_HEADER_SIZE));
+
+            if(packetLength < (ETHERNET_HEADER_SIZE + IP_HEADER_SIZE))
+            {
+                return FALSE;
+            }
+
+            // Maximum size should be Ethernet header size plus MTU plus modest pad for
+            // VLAN tag.
+            ASSERT( packetLength <= (ETHERNET_HEADER_SIZE + VLAN_TAG_SIZE + Adapter->MtuSize));
+
+            if(packetLength > (ETHERNET_HEADER_SIZE + VLAN_TAG_SIZE + Adapter->MtuSize))
+            {
+                return FALSE;
+            }
+
+            // Move to next NB
+            currentNb = nextNb;
+        }
+
+        // Move to next NBL
+        currentNbl = nextNbl;
+    }
+
+    return TRUE;
+}
+
 VOID
 AdapterSendNetBufferLists(
     __in  NDIS_HANDLE             MiniportAdapterContext,
@@ -1434,6 +1524,8 @@ Return Value:
     NDIS_STATUS             status;
     PTAP_ADAPTER_CONTEXT    adapter = (PTAP_ADAPTER_CONTEXT )MiniportAdapterContext;
     BOOLEAN                 DispatchLevel = (SendFlags & NDIS_SEND_FLAGS_DISPATCH_LEVEL);
+    PNET_BUFFER_LIST        currentNbl;
+    BOOLEAN                 validNbLengths;
 
     UNREFERENCED_PARAMETER(NetBufferLists);
     UNREFERENCED_PARAMETER(PortNumber);
@@ -1480,6 +1572,84 @@ Return Value:
             );
 
         return;
+    }
+
+    //
+    // Scan all NBLs and linked packets for valid lengths.
+    // ---------------------------------------------------
+    // If _ANY_ NB length is invalid, then fail the entire send operation.
+    //
+    // If length check is valid, then TAP_PACKETS can be safely allocated
+    // and processed for all NBs being sent.
+    //
+    validNbLengths = tapNetBufferListNetBufferLengthsValid(
+                        adapter,
+                        NetBufferLists
+                        );
+
+    if(!validNbLengths)
+    {
+        //
+        // Complete all NBLs and return if and NB length is invalid.
+        //
+        tapSendNetBufferListsComplete(
+            adapter,
+            NetBufferLists,
+            NDIS_STATUS_INVALID_LENGTH,
+            DispatchLevel
+            );
+
+        return;
+    }
+
+    //
+    // Process each NBL individually
+    //
+    currentNbl = NetBufferLists;
+
+    while (currentNbl)
+    {
+        PNET_BUFFER_LIST    nextNbl;
+        PNET_BUFFER         currentNb;
+        ULONG               packetLength;
+
+        // Locate next NBL
+        nextNbl = NET_BUFFER_LIST_NEXT_NBL(currentNbl);
+
+        // Locate first NB (aka "packet")
+        currentNb = NET_BUFFER_LIST_FIRST_NB(currentNbl);
+
+        //
+        // Examine the first NB
+        // --------------------
+        // All NBs linked to a NBL share common common Ethernet, IP and TCP/UPC connection
+        // characteristics. Decisions based on examining the first NB apply to all NBs
+        // linked to this NBL.
+        //
+        // MSDN Ref: http://msdn.microsoft.com/en-us/library/windows/hardware/ff570756(v=vs.85).aspx
+        //
+        packetLength = NET_BUFFER_DATA_LENGTH(currentNb);
+
+        //
+        // Process all NBs linked to this NBL
+        //
+        while(currentNb)
+        {
+            PNET_BUFFER nextNb;
+
+            // Locate next NB
+            nextNb = NET_BUFFER_NEXT_NB(currentNb);
+
+            //
+            // Process the NB
+            //
+
+            // Move to next NB
+            currentNb = nextNb;
+        }
+
+        // Move to next NBL
+        currentNbl = nextNbl;
     }
 
     // For now just complete all NBLs...
