@@ -25,29 +25,17 @@
 #ifndef TAP_TYPES_DEFINED
 #define TAP_TYPES_DEFINED
 
-typedef struct _Queue
+typedef
+struct _Queue
 {
-  ULONG base;
-  ULONG size;
-  ULONG capacity;
-  ULONG max_size;
-  PVOID data[];
+    ULONG base;
+    ULONG size;
+    ULONG capacity;
+    ULONG max_size;
+    PVOID data[];
 } Queue;
 
-typedef struct _TapPacket;
-
-typedef union _TapAdapterQuery
-{
-  NDIS_HARDWARE_STATUS m_HardwareStatus;
-  NDIS_MEDIUM m_Medium;
-  NDIS_PHYSICAL_MEDIUM m_PhysicalMedium;
-  UCHAR m_MacAddress [6];
-  UCHAR m_Buffer [256];
-  ULONG m_Long;
-  USHORT m_Short;
-  UCHAR m_Byte;
-}
-TapAdapterQuery, *TapAdapterQueryPointer;
+typedef struct _TAP_PACKET;
 
 typedef struct _TapExtension
 {
@@ -90,15 +78,17 @@ typedef struct _TapExtension
 }
 TapExtension, *TapExtensionPointer;
 
-typedef struct _TapPacket
-   {
-#   define TAP_PACKET_SIZE(data_size) (sizeof (TapPacket) + (data_size))
+typedef
+struct _TAP_PACKET
+{
+#   define TAP_PACKET_SIZE(data_size) (sizeof (TAP_PACKET) + (data_size))
 #   define TP_TUN 0x80000000
 #   define TP_SIZE_MASK      (~TP_TUN)
     ULONG m_SizeFlags;
     UCHAR m_Data []; // m_Data must be the last struct member
-   }
-TapPacket, *TapPacketPointer;
+} TAP_PACKET, *PTAP_PACKET;
+
+#define TAP_PACKET_TAG      '6PAT'  // "TAP6"
 
 typedef struct _InjectPacket
    {
@@ -108,70 +98,5 @@ typedef struct _InjectPacket
     UCHAR m_Data []; // m_Data must be the last struct member
    }
 InjectPacket, *InjectPacketPointer;
-
-//typedef struct _TapAdapter
-//{
-//# define NAME(a) ((a)->MiniportNameAnsi.Buffer)
-//  ANSI_STRING MiniportNameAnsi;
-//  MACADDR m_MAC;
-//  BOOLEAN m_InterfaceIsRunning;
-//  NDIS_HANDLE m_MiniportAdapterHandle;
-//  LONG m_Rx, m_Tx, m_RxErr, m_TxErr;
-//#if PACKET_TRUNCATION_CHECK
-//  LONG m_RxTrunc, m_TxTrunc;
-//#endif
-//  NDIS_MEDIUM m_Medium;
-//  ULONG m_Lookahead;
-//  ULONG m_MTU;
-//
-//  // TRUE if adapter should always be
-//  // "connected" even when device node
-//  // is not open by a userspace process.
-//  BOOLEAN m_MediaStateAlwaysConnected;
-//
-//  // TRUE if device is "connected"
-//  BOOLEAN m_MediaState;
-//
-//  // Adapter power state
-//  char CurrentPowerStateAsAscii;
-//
-//  // Info for point-to-point mode
-//  BOOLEAN m_tun;
-//  IPADDR m_localIP;
-//  IPADDR m_remoteNetwork;
-//  IPADDR m_remoteNetmask;
-//  ETH_HEADER m_TapToUser;
-//  ETH_HEADER m_UserToTap;
-//  ETH_HEADER m_UserToTap_IPv6;		// same as UserToTap but proto=ipv6
-//  MACADDR m_MAC_Broadcast;
-//
-//  // Used for DHCP server masquerade
-//  BOOLEAN m_dhcp_enabled;
-//  IPADDR m_dhcp_addr;
-//  ULONG m_dhcp_netmask;
-//  IPADDR m_dhcp_server_ip;
-//  BOOLEAN m_dhcp_server_arp;
-//  MACADDR m_dhcp_server_mac;
-//  ULONG m_dhcp_lease_time;
-//  UCHAR m_dhcp_user_supplied_options_buffer[DHCP_USER_SUPPLIED_OPTIONS_BUFFER_SIZE];
-//  ULONG m_dhcp_user_supplied_options_buffer_len;
-//  BOOLEAN m_dhcp_received_discover;
-//  ULONG m_dhcp_bad_requests;
-//
-//  // Help to tear down the adapter by keeping
-//  // some state information on allocated
-//  // resources.
-//  BOOLEAN m_CalledAdapterFreeResources;
-//  BOOLEAN m_RegisteredAdapterShutdownHandler;
-//
-//  // Multicast list info
-//  NDIS_SPIN_LOCK m_MCLock;
-//  BOOLEAN m_MCLockAllocated;
-//  ULONG m_MCListSize;
-//  MC_LIST m_MCList;
-//
-//  // Information on the TAP device
-//  TapExtension m_Extension;
-//} TapAdapter, *TapAdapterPointer;
 
 #endif

@@ -59,7 +59,7 @@ DestroyTapDevice(
 //NTSTATUS CompleteIRP
 //   (
 //    IN PIRP p_IRP,
-//    IN TapPacketPointer p_PacketBuffer,
+//    IN PTAP_PACKET p_PacketBuffer,
 //    IN CCHAR PriorityBoost
 //   );
 //
