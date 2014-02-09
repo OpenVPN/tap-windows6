@@ -1479,6 +1479,133 @@ Return Value:
 }
 
 VOID
+tapAdapterTransmit(
+    __in PTAP_ADAPTER_CONTEXT   Adapter,
+    __in PNET_BUFFER            NetBuffer,
+    __in  BOOLEAN               DispatchLevel
+    )
+/*++
+
+Routine Description:
+
+    This routine is called to transmit an individual net buffer using a
+    style similar to the previous NDIS 5 AdapterTransmit function.
+
+    In this implementation adapter state and NB length checks have already
+    been done before this function has been called.
+
+    The net buffer will be completed by the calling routine after this
+    routine exits. So, under this design it is necessary to make a deep
+    copy of frame data in the net buffer.
+
+    Runs at IRQL <= DISPATCH_LEVEL
+
+Arguments:
+
+    Adapter                     Pointer to our adapter context
+    NetBuffer                   Pointer to the net buffer to transmit
+    SendFlags                   Additional flags for the send operation
+
+Return Value:
+
+    None.
+
+    In the Microsoft NDIS 6 architecture there is no per-packet status.
+
+--*/
+{
+    NDIS_STATUS     status;
+    ULONG           packetLength;
+    PTAP_PACKET     tapPacket;
+    PVOID           packetData;
+
+    packetLength = NET_BUFFER_DATA_LENGTH(NetBuffer);
+
+    // Allocate TAP packet memory
+    tapPacket = (PTAP_PACKET )NdisAllocateMemoryWithTagPriority(
+                    Adapter->MiniportAdapterHandle,
+                    TAP_PACKET_SIZE (packetLength),
+                    TAP_PACKET_TAG,
+                    NormalPoolPriority
+                    );
+
+    if(tapPacket == NULL)
+    {
+        DEBUGP (("[TAP] tapAdapterTransmit: TAP packet allocation failed\n"));
+        return;
+    }
+
+    tapPacket->m_SizeFlags = (packetLength & TP_SIZE_MASK);
+
+    //
+    // Reassemble packet contents
+    // --------------------------
+    // NdisGetDataBuffer does most of the work. There are two cases:
+    //
+    //    1.) If the NB data was not contiguous it will copy the entire
+    //        NB's data to m_data and return pointer to m_data.
+    //    2.) If the NB data was contiguous it returns a pointer to the
+    //        first byte of the contiguous data instead of a pointer to m_Data.
+    //        In this case the data will not have been copied to m_Data. Copy
+    //        to m_Data will need to be done in an extra step.
+    //
+    // Case 1.) is the most likely in normal operation.
+    //
+    packetData = NdisGetDataBuffer(NetBuffer,packetLength,tapPacket->m_Data,1,0);
+
+    if(packetData == NULL)
+    {
+        DEBUGP (("[TAP] tapAdapterTransmit: Could not get packet data\n"));
+
+        NdisFreeMemory(tapPacket,0,0);
+
+        return;
+    }
+
+    if(packetData != tapPacket->m_Data)
+    {
+        // Packet data was contiguous and not yet copied to m_Data.
+        NdisMoveMemory(tapPacket->m_Data,packetData,packetLength);
+    }
+    
+    DUMP_PACKET ("AdapterTransmit", tapPacket->m_Data, packetLength);
+
+    //=====================================================
+    // If IPv4 packet, check whether or not packet
+    // was truncated.
+    //=====================================================
+#if PACKET_TRUNCATION_CHECK
+    IPv4PacketSizeVerify (tapPacket->m_Data, packetLength, FALSE, "TX", &Adapter->m_TxTrunc);
+#endif
+
+    //=====================================================
+    // Are we running in DHCP server masquerade mode?
+    //
+    // If so, catch both DHCP requests and ARP queries
+    // to resolve the address of our virtual DHCP server.
+    //=====================================================
+    if (Adapter->m_dhcp_enabled)
+    {
+    }
+
+    //===============================================
+    // In Point-To-Point mode, check to see whether
+    // packet is ARP (handled) or IPv4 (sent to app).
+    // IPv6 packets are inspected for neighbour discovery
+    // (to be handled locally), and the rest is forwarded
+    // all other protocols are dropped
+    //===============================================
+    if (Adapter->m_tun)
+    {
+    }
+
+    //===============================================
+    // Push packet onto queue to wait for read from
+    // userspace.
+    //===============================================
+}
+
+VOID
 AdapterSendNetBufferLists(
     __in  NDIS_HANDLE             MiniportAdapterContext,
     __in  PNET_BUFFER_LIST        NetBufferLists,
@@ -1579,6 +1706,9 @@ Return Value:
     // ---------------------------------------------------
     // If _ANY_ NB length is invalid, then fail the entire send operation.
     //
+    //    BUGBUG!!! Perhaps this should be less agressive. Fail only individual
+    //    NBLs...
+    //    
     // If length check is valid, then TAP_PACKETS can be safely allocated
     // and processed for all NBs being sent.
     //
@@ -1611,7 +1741,6 @@ Return Value:
     {
         PNET_BUFFER_LIST    nextNbl;
         PNET_BUFFER         currentNb;
-        ULONG               packetLength;
 
         // Locate next NBL
         nextNbl = NET_BUFFER_LIST_NEXT_NBL(currentNbl);
@@ -1619,20 +1748,7 @@ Return Value:
         // Locate first NB (aka "packet")
         currentNb = NET_BUFFER_LIST_FIRST_NB(currentNbl);
 
-        //
-        // Examine the first NB
-        // --------------------
-        // All NBs linked to a NBL share common common Ethernet, IP and TCP/UPC connection
-        // characteristics. Decisions based on examining the first NB apply to all NBs
-        // linked to this NBL.
-        //
-        // MSDN Ref: http://msdn.microsoft.com/en-us/library/windows/hardware/ff570756(v=vs.85).aspx
-        //
-        packetLength = NET_BUFFER_DATA_LENGTH(currentNb);
-
-        //
-        // Process all NBs linked to this NBL
-        //
+        // Transmit all NBs linked to this NBL
         while(currentNb)
         {
             PNET_BUFFER nextNb;
@@ -1640,9 +1756,8 @@ Return Value:
             // Locate next NB
             nextNb = NET_BUFFER_NEXT_NB(currentNb);
 
-            //
-            // Process the NB
-            //
+            // Transmit the NB
+            tapAdapterTransmit(adapter,currentNb,DispatchLevel);
 
             // Move to next NB
             currentNb = nextNb;
@@ -1652,7 +1767,7 @@ Return Value:
         currentNbl = nextNbl;
     }
 
-    // For now just complete all NBLs...
+    // Complete all NBLs
     tapSendNetBufferListsComplete(
         adapter,
         NetBufferLists,

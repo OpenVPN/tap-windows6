@@ -218,11 +218,12 @@ typedef struct _TAP_ADAPTER_CONTEXT
     ULONG                       RxCdtFrames;
     ULONG                       RxRuntErrors;
 
+#if PACKET_TRUNCATION_CHECK
+    LONG                        m_RxTrunc, m_TxTrunc;
+#endif
+
   BOOLEAN m_InterfaceIsRunning;
   LONG m_Rx, m_RxErr;
-#if PACKET_TRUNCATION_CHECK
-  LONG m_RxTrunc, m_TxTrunc;
-#endif
   NDIS_MEDIUM m_Medium;
 
   MACADDR m_MAC_Broadcast;

@@ -49,6 +49,20 @@
 
 --*/
 
+
+//========================================================
+// Check for truncated IPv4 packets, log errors if found.
+//========================================================
+#define PACKET_TRUNCATION_CHECK 0
+
+//========================================================
+// EXPERIMENTAL -- Configure TAP device object to be
+// accessible from non-administrative accounts, based
+// on an advanced properties setting.
+//
+// Duplicates the functionality of OpenVPN's
+// --allow-nonadmin directive.
+//========================================================
 #define ENABLE_NONADMIN 1
 
 //
