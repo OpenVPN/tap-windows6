@@ -145,11 +145,12 @@ typedef struct _TAP_ADAPTER_CONTEXT
     // Cancel-Safe read IRP queue.
     TAP_IRP_CSQ                 PendingReadIrpQueue;
 
-    // Queue containing TAP packets representing packets waiting to
-    // be read by user-mode application. These are packets that were
-    // sent by the host and captured at AdapterSendNetBufferLists.
+    // Queue containing TAP packets representing host send NBs. These are
+    // waiting to be read by user-mode application.
     TAP_PACKET_QUEUE            SendPacketQueue;
 
+    // Queue containing TAP packets written by the TAP application. These
+    // are waiting to be indicated to the local host as receive NBs.
     TAP_PACKET_QUEUE            InjectPacketQueue;
 
     // Info for point-to-point mode
