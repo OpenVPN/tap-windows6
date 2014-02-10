@@ -752,12 +752,12 @@ Return Value:
                 (int)adapter->PendingReadIrpQueue.MaxCount,
                 (int)IRP_QUEUE_SIZE,        // Ignored in NDIS 6 driver...
 
-                // BUGBUG!!! Some dummied out for initial testing...
                 (int)adapter->SendPacketQueue.Count,
                 (int)adapter->SendPacketQueue.MaxCount,
                 (int)PACKET_QUEUE_SIZE,
-                (int)0,//(int)adapter->m_Extension.m_InjectQueue->size,
-                (int)0,//(int)adapter->m_Extension.m_InjectQueue->max_size,
+
+                (int)adapter->InjectPacketQueue.Count,
+                (int)adapter->InjectPacketQueue.MaxCount,
                 (int)INJECT_QUEUE_SIZE
                 );
 

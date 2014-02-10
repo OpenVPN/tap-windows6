@@ -104,6 +104,9 @@ tapAdapterContextAllocate(
         // Initialize TAP send packet queue.
         tapPacketQueueInitialize(&adapter->SendPacketQueue);
 
+        // Initialize TAP inject packet queue.
+        tapPacketQueueInitialize(&adapter->InjectPacketQueue);
+
         // Allocate the adapter lock.
         NdisAllocateSpinLock(&adapter->AdapterLock);
 
