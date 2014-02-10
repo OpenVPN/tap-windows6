@@ -99,12 +99,12 @@ tapAdapterContextAllocate(
         NdisZeroMemory(adapter,sizeof(TAP_ADAPTER_CONTEXT));
 
         // Initialize cancel-safe IRP queue
-        KeInitializeSpinLock(&adapter->PendingReadCsqQueueLock);
+        KeInitializeSpinLock(&adapter->PendingReadIrpQueue.CsqQueueLock);
 
-        NdisInitializeListHead(&adapter->PendingReadIrpQueue);
+        NdisInitializeListHead(&adapter->PendingReadIrpQueue.Queue);
 
         IoCsqInitialize(
-            &adapter->PendingReadCsqQueue,
+            &adapter->PendingReadIrpQueue.CsqQueue,
             tapCsqInsertReadIrp,
             tapCsqRemoveReadIrp,
             tapCsqPeekNextReadIrp,
@@ -1498,13 +1498,19 @@ Routine Description:
     routine exits. So, under this design it is necessary to make a deep
     copy of frame data in the net buffer.
 
+    This routine creates a flat buffer copy of NB frame data. This is an
+    unnecessary performance bottleneck. However, the bottleneck is probably
+    not significant or measurable except for adapters running at 1Gbps or
+    greater speeds. Since this adapter is currently running at 100Mbps this
+    defect can be ignored.
+
     Runs at IRQL <= DISPATCH_LEVEL
 
 Arguments:
 
     Adapter                     Pointer to our adapter context
     NetBuffer                   Pointer to the net buffer to transmit
-    SendFlags                   Additional flags for the send operation
+    DispatchLevel               TRUE if called at IRQL == DISPATCH_LEVEL
 
 Return Value:
 
@@ -1578,6 +1584,7 @@ Return Value:
     IPv4PacketSizeVerify (tapPacket->m_Data, packetLength, FALSE, "TX", &Adapter->m_TxTrunc);
 #endif
 
+/*
     //=====================================================
     // Are we running in DHCP server masquerade mode?
     //
@@ -1586,6 +1593,52 @@ Return Value:
     //=====================================================
     if (Adapter->m_dhcp_enabled)
     {
+        const ETH_HEADER *eth = (ETH_HEADER *) tapPacket->m_Data;
+        const IPHDR *ip = (IPHDR *) (tapPacket->m_Data + sizeof (ETH_HEADER));
+        const UDPHDR *udp = (UDPHDR *) (tapPacket->m_Data + sizeof (ETH_HEADER) + sizeof (IPHDR));
+
+        // ARP packet?
+        if (packetLength == sizeof (ARP_PACKET)
+            && eth->proto == htons (ETH_P_ARP)
+            && Adapter->m_dhcp_server_arp
+            )
+        {
+            if (ProcessARP (Adapter,
+                (PARP_PACKET) tapPacket->m_Data,
+                Adapter->m_dhcp_addr,
+                Adapter->m_dhcp_server_ip,
+                ~0,
+                Adapter->m_dhcp_server_mac))
+                goto no_queue;
+        }
+
+        // DHCP packet?
+        else if (packetLength >= sizeof (ETH_HEADER) + sizeof (IPHDR) + sizeof (UDPHDR) + sizeof (DHCP)
+            && eth->proto == htons (ETH_P_IP)
+            && ip->version_len == 0x45 // IPv4, 20 byte header
+            && ip->protocol == IPPROTO_UDP
+            && udp->dest == htons (BOOTPS_PORT)
+            )
+        {
+            const DHCP *dhcp = (DHCP *) (tapPacket->m_Data
+                + sizeof (ETH_HEADER)
+                + sizeof (IPHDR)
+                + sizeof (UDPHDR));
+
+            const int optlen = packetLength
+                - sizeof (ETH_HEADER)
+                - sizeof (IPHDR)
+                - sizeof (UDPHDR)
+                - sizeof (DHCP);
+
+            if (optlen > 0) // we must have at least one DHCP option
+            {
+                if (ProcessDHCP (Adapter, eth, ip, udp, dhcp, optlen))
+                    goto no_queue;
+            }
+            else
+                goto no_queue;
+        }
     }
 
     //===============================================
@@ -1597,12 +1650,88 @@ Return Value:
     //===============================================
     if (Adapter->m_tun)
     {
+        ETH_HEADER *e;
+
+        e = (ETH_HEADER *) tapPacket->m_Data;
+
+        switch (ntohs (e->proto))
+        {
+        case ETH_P_ARP:
+
+            // Make sure that packet is the right size for ARP.
+            if (packetLength != sizeof (ARP_PACKET))
+                goto no_queue;
+
+            ProcessARP (
+                Adapter,
+                (PARP_PACKET) tapPacket->m_Data,
+                Adapter->m_localIP,
+                Adapter->m_remoteNetwork,
+                Adapter->m_remoteNetmask,
+                Adapter->m_TapToUser.dest
+                );
+
+        default:
+            goto no_queue;
+
+        case ETH_P_IP:
+
+            // Make sure that packet is large enough to be IPv4.
+            if (packetLength < (ETHERNET_HEADER_SIZE + IP_HEADER_SIZE))
+            {
+                goto no_queue;
+            }
+
+            // Only accept directed packets, not broadcasts.
+            if (memcmp (e, &Adapter->m_TapToUser, ETHERNET_HEADER_SIZE))
+            {
+                goto no_queue;
+            }
+
+            // Packet looks like IPv4, queue it. :-)
+            tapPacket->m_SizeFlags |= TP_TUN;
+            break;
+
+        case ETH_P_IPV6:
+            // Make sure that packet is large enough to be IPv6.
+            if (packetLength < (ETHERNET_HEADER_SIZE + IPV6_HEADER_SIZE))
+            {
+                goto no_queue;
+            }
+
+            // Broadcasts and multicasts are handled specially
+            // (to be implemented)
+
+            // Neighbor discovery packets to fe80::8 are special
+            // OpenVPN sets this next-hop to signal "handled by tapdrv"
+            if ( HandleIPv6NeighborDiscovery(Adapter,tapPacket->m_Data) )
+            {
+                goto no_queue;
+            }
+
+            // Packet looks like IPv6, queue it. :-)
+            tapPacket->m_SizeFlags |= TP_TUN;
+        }
     }
+*/
 
     //===============================================
     // Push packet onto queue to wait for read from
     // userspace.
     //===============================================
+
+    // Return after queuing TAP packet.
+    return;
+
+    // Free TAP packet without queuing.
+no_queue:
+    if(tapPacket != NULL )
+    {
+        NdisFreeMemory(tapPacket,0,0);
+    }
+  
+exit_success:
+    return;
 }
 
 VOID

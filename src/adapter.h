@@ -143,11 +143,7 @@ typedef struct _TAP_ADAPTER_CONTEXT
     LONG                        TapFileOpenCount;   // WAS: m_NumTapOpens
 
     // Cancel-Safe read IRP queue.
-    KSPIN_LOCK                  PendingReadCsqQueueLock;
-    IO_CSQ                      PendingReadCsqQueue;
-    LIST_ENTRY                  PendingReadIrpQueue;
-    ULONG                       PendingReadIrpCount;   // Count of currently queued items
-    ULONG                       PendingReadIrpMaxCount;
+    TAP_IRP_QUEUE               PendingReadIrpQueue;
 
     // Info for point-to-point mode
     BOOLEAN                     m_tun;
