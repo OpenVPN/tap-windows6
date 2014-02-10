@@ -581,6 +581,8 @@ Return Value:
                 CheckIfDhcpAndTunMode (adapter);
 
                 Irp->IoStatus.Information = 1; // Simple boolean value
+
+                DEBUGP (("[TAP] Set TUN mode.\n"));
             }
             else
             {
@@ -618,6 +620,8 @@ Return Value:
                 CheckIfDhcpAndTunMode (adapter);
 
                 Irp->IoStatus.Information = 1; // Simple boolean value
+
+                DEBUGP (("[TAP] Set P2P mode.\n"));
             }
             else
             {
@@ -661,6 +665,8 @@ Return Value:
                 CheckIfDhcpAndTunMode (adapter);
 
                 Irp->IoStatus.Information = 1; // Simple boolean value
+
+                DEBUGP (("[TAP] Configured DHCP MASQ.\n"));
             }
             else
             {
@@ -687,6 +693,8 @@ Return Value:
                     inBufLength;
 
                 Irp->IoStatus.Information = 1; // Simple boolean value
+
+                DEBUGP (("[TAP] Set DHCP OPT.\n"));
             }
             else
             {
