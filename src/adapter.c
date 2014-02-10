@@ -103,15 +103,7 @@ tapAdapterContextAllocate(
 
         NdisInitializeListHead(&adapter->PendingReadIrpQueue.Queue);
 
-        IoCsqInitialize(
-            &adapter->PendingReadIrpQueue.CsqQueue,
-            tapCsqInsertReadIrp,
-            tapCsqRemoveReadIrp,
-            tapCsqPeekNextReadIrp,
-            tapCsqAcquireReadQueueLock,
-            tapCsqReleaseReadQueueLock,
-            tapCsqCompleteCanceledIrp
-            );
+        tapIrpCsqInitialize(&adapter->PendingReadIrpQueue);
 
         // Allocate the adapter lock.
         NdisAllocateSpinLock(&adapter->AdapterLock);

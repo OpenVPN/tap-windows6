@@ -192,14 +192,14 @@ QueueExtract (Queue *q, PVOID item)
 //======================================================================
 
 VOID
-tapCsqInsertReadIrp (
+tapIrpCsqInsert (
     __in struct _IO_CSQ    *Csq,
     __in PIRP              Irp
     )
 {
-    PTAP_IRP_QUEUE          tapIrpCsq;
+    PTAP_IRP_CSQ          tapIrpCsq;
 
-    tapIrpCsq = (PTAP_IRP_QUEUE )Csq;
+    tapIrpCsq = (PTAP_IRP_CSQ )Csq;
 
     InsertTailList(
         &tapIrpCsq->Queue,
@@ -216,14 +216,14 @@ tapCsqInsertReadIrp (
 }
 
 VOID
-tapCsqRemoveReadIrp(
+tapIrpCsqRemoveIrp(
     __in PIO_CSQ Csq,
     __in PIRP    Irp
     )
 {
-    PTAP_IRP_QUEUE          tapIrpCsq;
+    PTAP_IRP_CSQ          tapIrpCsq;
 
-    tapIrpCsq = (PTAP_IRP_QUEUE )Csq;
+    tapIrpCsq = (PTAP_IRP_CSQ )Csq;
 
     // Update pending read counts
     --tapIrpCsq->Count;
@@ -233,19 +233,19 @@ tapCsqRemoveReadIrp(
 
 
 PIRP
-tapCsqPeekNextReadIrp(
+tapIrpCsqPeekNextIrp(
     __in PIO_CSQ Csq,
     __in PIRP    Irp,
     __in PVOID   PeekContext
     )
 {
-    PTAP_IRP_QUEUE          tapIrpCsq;
+    PTAP_IRP_CSQ          tapIrpCsq;
     PIRP                    nextIrp = NULL;
     PLIST_ENTRY             nextEntry;
     PLIST_ENTRY             listHead;
     PIO_STACK_LOCATION      irpStack;
 
-    tapIrpCsq = (PTAP_IRP_QUEUE )Csq;
+    tapIrpCsq = (PTAP_IRP_CSQ )Csq;
 
     listHead = &tapIrpCsq->Queue;
 
@@ -294,7 +294,7 @@ tapCsqPeekNextReadIrp(
 }
 
 //
-// tapCsqAcquireReadQueueLock modifies the execution level of the current processor.
+// tapIrpCsqAcquireQueueLock modifies the execution level of the current processor.
 // 
 // KeAcquireSpinLock raises the execution level to Dispatch Level and stores
 // the current execution level in the Irql parameter to be restored at a later
@@ -307,14 +307,14 @@ tapCsqPeekNextReadIrp(
 __drv_raisesIRQL(DISPATCH_LEVEL)
 __drv_maxIRQL(DISPATCH_LEVEL)
 VOID
-tapCsqAcquireReadQueueLock(
+tapIrpCsqAcquireQueueLock(
      __in PIO_CSQ Csq,
      __out PKIRQL  Irql
     )
 {
-    PTAP_IRP_QUEUE          tapIrpCsq;
+    PTAP_IRP_CSQ          tapIrpCsq;
 
-    tapIrpCsq = (PTAP_IRP_QUEUE )Csq;
+    tapIrpCsq = (PTAP_IRP_CSQ )Csq;
 
     //
     // Suppressing because the address below csq is valid since it's
@@ -325,7 +325,7 @@ tapCsqAcquireReadQueueLock(
 }
 
 //
-// tapCsqReleaseReadQueueLock modifies the execution level of the current processor.
+// tapIrpCsqReleaseQueueLock modifies the execution level of the current processor.
 // 
 // KeReleaseSpinLock assumes we already hold the spin lock and are therefore
 // running at Dispatch level.  It will use the Irql parameter saved in a
@@ -337,14 +337,14 @@ tapCsqAcquireReadQueueLock(
 
 __drv_requiresIRQL(DISPATCH_LEVEL)
 VOID
-tapCsqReleaseReadQueueLock(
+tapIrpCsqReleaseQueueLock(
      __in PIO_CSQ Csq,
      __in KIRQL   Irql
     )
 {
-    PTAP_IRP_QUEUE          tapIrpCsq;
+    PTAP_IRP_CSQ          tapIrpCsq;
 
-    tapIrpCsq = (PTAP_IRP_QUEUE )Csq;
+    tapIrpCsq = (PTAP_IRP_CSQ )Csq;
 
     //
     // Suppressing because the address below csq is valid since it's
@@ -355,7 +355,7 @@ tapCsqReleaseReadQueueLock(
 }
 
 VOID
-tapCsqCompleteCanceledIrp(
+tapIrpCsqCompleteCanceledIrp(
     __in  PIO_CSQ             pCsq,
     __in  PIRP                Irp
     )
@@ -365,4 +365,51 @@ tapCsqCompleteCanceledIrp(
     Irp->IoStatus.Status = STATUS_CANCELLED;
     Irp->IoStatus.Information = 0;
     IoCompleteRequest(Irp, IO_NO_INCREMENT);
+}
+
+VOID
+tapIrpCsqInitialize(
+    __in PTAP_IRP_CSQ  TapIrpCsq
+    )
+{
+    IoCsqInitialize(
+        &TapIrpCsq->CsqQueue,
+        tapIrpCsqInsert,
+        tapIrpCsqRemoveIrp,
+        tapIrpCsqPeekNextIrp,
+        tapIrpCsqAcquireQueueLock,
+        tapIrpCsqReleaseQueueLock,
+        tapIrpCsqCompleteCanceledIrp
+        );
+}
+
+VOID
+tapIrpCsqFlush(
+    __in PTAP_IRP_CSQ  TapIrpCsq
+    )
+{
+    PIRP    pendingIrp;
+
+    //
+    // Flush the pending read IRP queue.
+    //
+    pendingIrp = IoCsqRemoveNextIrp(
+                    &TapIrpCsq->CsqQueue,
+                    NULL
+                    );
+
+    while(pendingIrp) 
+    {
+        // Cancel the IRP
+        pendingIrp->IoStatus.Information = 0;
+        pendingIrp->IoStatus.Status = STATUS_CANCELLED;
+        IoCompleteRequest(pendingIrp, IO_NO_INCREMENT);
+
+        pendingIrp = IoCsqRemoveNextIrp(
+                        &TapIrpCsq->CsqQueue,
+                        NULL
+                        );
+    }
+
+    ASSERT(IsListEmpty(&TapIrpCsq->Queue));
 }

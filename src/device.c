@@ -829,32 +829,8 @@ tapFlushIrpQueues(
     __in PTAP_ADAPTER_CONTEXT   Adapter
     )
 {
-    PIRP    pendingIrp;
-
-    //
     // Flush the pending read IRP queue.
-    //
-    pendingIrp = IoCsqRemoveNextIrp(
-                    &Adapter->PendingReadIrpQueue.CsqQueue,
-                    NULL
-                    //Adapter->Locked.TapFileObject
-                    );
-
-    while(pendingIrp) 
-    {
-        // Cancel the IRP
-        pendingIrp->IoStatus.Information = 0;
-        pendingIrp->IoStatus.Status = STATUS_CANCELLED;
-        IoCompleteRequest(pendingIrp, IO_NO_INCREMENT);
-
-        pendingIrp = IoCsqRemoveNextIrp(
-                        &Adapter->PendingReadIrpQueue.CsqQueue,
-                        NULL
-                        //Adapter->Locked.TapFileObject
-                        );
-    }
-
-    ASSERT(IsListEmpty(&Adapter->PendingReadIrpQueue.Queue));
+    tapIrpCsqFlush(&Adapter->PendingReadIrpQueue);
 }
 
 // IRP_MJ_CLEANUP
