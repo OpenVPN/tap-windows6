@@ -207,7 +207,9 @@ tapPacketQueueInsertTail(
 
     InsertTailList(&TapPacketQueue->Queue,&TapPacket->QueueLink);
 
-    // BUGBUG!!! Enforce queue count limit???
+    // BUGBUG!!! Enforce PACKET_QUEUE_SIZE queue count limit???
+    // For NDIS 6 there is no per-packet status, so this will need to
+    // be handled on per-NBL basis in AdapterSendNetBufferLists...
 
     // Update counts
     ++TapPacketQueue->Count;
