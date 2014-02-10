@@ -226,7 +226,7 @@ TapDeviceRead(
     //
     // Sanity checks on state variables
     //
-    if (tapAdapterReadAndWriteReady(adapter) != NDIS_STATUS_SUCCESS )
+    if (!tapAdapterReadAndWriteReady(adapter))
     {
         DEBUGP (("[%s] Interface is down in IRP_MJ_READ\n",
             MINIPORT_INSTANCE_ID (adapter)));

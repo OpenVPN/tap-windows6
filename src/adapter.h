@@ -143,7 +143,11 @@ typedef struct _TAP_ADAPTER_CONTEXT
     LONG                        TapFileOpenCount;   // WAS: m_NumTapOpens
 
     // Cancel-Safe read IRP queue.
-    TAP_IRP_CSQ               PendingReadIrpQueue;
+    TAP_IRP_CSQ                 PendingReadIrpQueue;
+
+    // Queue containing TAP packets representing packets sent from host.
+    // Waiting to be read by user-mode application.
+    TAP_PACKET_QUEUE            SendPacketQueue;
 
     // Info for point-to-point mode
     BOOLEAN                     m_tun;

@@ -25,70 +25,58 @@
 #ifndef TAP_TYPES_DEFINED
 #define TAP_TYPES_DEFINED
 
-typedef
-struct _Queue
-{
-    ULONG base;
-    ULONG size;
-    ULONG capacity;
-    ULONG max_size;
-    PVOID data[];
-} Queue;
+//typedef
+//struct _Queue
+//{
+//    ULONG base;
+//    ULONG size;
+//    ULONG capacity;
+//    ULONG max_size;
+//    PVOID data[];
+//} Queue;
 
-typedef struct _TAP_PACKET;
+//typedef struct _TAP_PACKET;
 
-typedef struct _TapExtension
-{
-  // TAP device object and packet queues
-  Queue *m_PacketQueue, *m_IrpQueue;
-  PDEVICE_OBJECT m_TapDevice;
-  NDIS_HANDLE m_TapDeviceHandle;
-  ULONG TapFileIsOpen;
-
-  // Used to lock packet queues
-  NDIS_SPIN_LOCK m_QueueLock;
-  BOOLEAN m_AllocatedSpinlocks;
-
-  // Used to bracket open/close
-  // state changes.
-  MUTEX m_OpenCloseMutex;
-
-  // True if device has been permanently halted
-  BOOLEAN m_Halt;
-
-  // TAP device name
-  unsigned char *m_TapName;
-  UNICODE_STRING m_UnicodeLinkName;
-  BOOLEAN m_CreatedUnicodeLinkName;
-
-  // Used for device status ioctl only
-  const char *m_LastErrorFilename;
-  int m_LastErrorLineNumber;
-  LONG TapFileOpenCount;
-
-  // Flags
-  BOOLEAN TapDeviceCreated;
-  BOOLEAN m_CalledTapDeviceFreeResources;
-
-  // DPC queue for deferred packet injection
-  BOOLEAN m_InjectDpcInitialized;
-  KDPC m_InjectDpc;
-  NDIS_SPIN_LOCK m_InjectLock;
-  Queue *m_InjectQueue;
-}
-TapExtension, *TapExtensionPointer;
-
-typedef
-struct _TAP_PACKET
-{
-#   define TAP_PACKET_SIZE(data_size) (sizeof (TAP_PACKET) + (data_size))
-#   define TP_TUN 0x80000000
-#   define TP_SIZE_MASK      (~TP_TUN)
-    ULONG m_SizeFlags;
-    UCHAR m_Data []; // m_Data must be the last struct member
-} TAP_PACKET, *PTAP_PACKET;
-
-#define TAP_PACKET_TAG      '6PAT'  // "TAP6"
+//typedef struct _TapExtension
+//{
+//  // TAP device object and packet queues
+//  Queue *m_PacketQueue, *m_IrpQueue;
+//  PDEVICE_OBJECT m_TapDevice;
+//  NDIS_HANDLE m_TapDeviceHandle;
+//  ULONG TapFileIsOpen;
+//
+//  // Used to lock packet queues
+//  NDIS_SPIN_LOCK m_QueueLock;
+//  BOOLEAN m_AllocatedSpinlocks;
+//
+//  // Used to bracket open/close
+//  // state changes.
+//  MUTEX m_OpenCloseMutex;
+//
+//  // True if device has been permanently halted
+//  BOOLEAN m_Halt;
+//
+//  // TAP device name
+//  unsigned char *m_TapName;
+//  UNICODE_STRING m_UnicodeLinkName;
+//  BOOLEAN m_CreatedUnicodeLinkName;
+//
+//  // Used for device status ioctl only
+//  const char *m_LastErrorFilename;
+//  int m_LastErrorLineNumber;
+//  LONG TapFileOpenCount;
+//
+//  // Flags
+//  BOOLEAN TapDeviceCreated;
+//  BOOLEAN m_CalledTapDeviceFreeResources;
+//
+//  // DPC queue for deferred packet injection
+//  BOOLEAN m_InjectDpcInitialized;
+//  KDPC m_InjectDpc;
+//  NDIS_SPIN_LOCK m_InjectLock;
+//  Queue *m_InjectQueue;
+//}
+//TapExtension, *TapExtensionPointer;
 
 typedef struct _InjectPacket
    {

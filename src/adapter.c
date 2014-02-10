@@ -99,11 +99,10 @@ tapAdapterContextAllocate(
         NdisZeroMemory(adapter,sizeof(TAP_ADAPTER_CONTEXT));
 
         // Initialize cancel-safe IRP queue
-        KeInitializeSpinLock(&adapter->PendingReadIrpQueue.CsqQueueLock);
-
-        NdisInitializeListHead(&adapter->PendingReadIrpQueue.Queue);
-
         tapIrpCsqInitialize(&adapter->PendingReadIrpQueue);
+
+        // Initialize TAP send packet queue.
+        tapPacketQueueInitialize(&adapter->SendPacketQueue);
 
         // Allocate the adapter lock.
         NdisAllocateSpinLock(&adapter->AdapterLock);
@@ -1711,8 +1710,19 @@ Return Value:
     // Push packet onto queue to wait for read from
     // userspace.
     //===============================================
+    if(tapAdapterReadAndWriteReady(Adapter))
+    {
+        tapPacketQueueInsertTail(&Adapter->SendPacketQueue,tapPacket);
+    }
+    else
+    {
+        //
+        // Tragedy. All this work and the packet is of no use... 
+        //
+        NdisFreeMemory(tapPacket,0,0);
+    }
 
-    // Return after queuing TAP packet.
+    // Return after queuing or freeing TAP packet.
     return;
 
     // Free TAP packet without queuing.

@@ -77,6 +77,8 @@ MemFree (PVOID p_Addr, ULONG p_Size)
  * Circular queue management routines.
  */
 
+/*
+
 #define QUEUE_BYTE_ALLOCATION(size) \
   (sizeof (Queue) + (size * sizeof (PVOID)))
 
@@ -187,8 +189,78 @@ QueueExtract (Queue *q, PVOID item)
 #undef QUEUE_SANITY_CHECK
 #undef UPDATE_MAX_SIZE
 
+*/
+
 //======================================================================
-// TAP Cancel-Safe Queue Callbacks
+// TAP Packet Queue Support
+//======================================================================
+
+VOID
+tapPacketQueueInsertTail(
+    __in PTAP_PACKET_QUEUE  TapPacketQueue,
+    __in PTAP_PACKET        TapPacket
+    )
+{
+    KIRQL  irql;
+
+    KeAcquireSpinLock(&TapPacketQueue->QueueLock,&irql);
+
+    InsertTailList(&TapPacketQueue->Queue,&TapPacket->QueueLink);
+
+    // BUGBUG!!! Enforce queue count limit???
+
+    // Update counts
+    ++TapPacketQueue->Count;
+
+    if(TapPacketQueue->Count > TapPacketQueue->MaxCount)
+    {
+        TapPacketQueue->MaxCount = TapPacketQueue->Count;
+
+        DEBUGP (("[TAP] tapPacketQueueInsertTail: New MAX queued packet count = %d\n",
+            TapPacketQueue->MaxCount));
+    }
+
+    KeReleaseSpinLock(&TapPacketQueue->QueueLock,irql);
+}
+
+PTAP_PACKET
+tapPacketRemoveHead(
+    __in PTAP_PACKET_QUEUE  TapPacketQueue
+    )
+{
+    PTAP_PACKET     tapPacket = NULL;
+    PLIST_ENTRY     listEntry;
+    KIRQL           irql;
+
+    KeAcquireSpinLock(&TapPacketQueue->QueueLock,&irql);
+
+    listEntry = RemoveHeadList(&TapPacketQueue->Queue);
+
+    if(listEntry != &TapPacketQueue->Queue)
+    {
+        tapPacket = CONTAINING_RECORD(listEntry, TAP_PACKET, QueueLink);
+
+        // Update counts
+        ++TapPacketQueue->Count;
+    }
+
+    KeReleaseSpinLock(&TapPacketQueue->QueueLock,irql);
+
+    return tapPacket;
+}
+
+VOID
+tapPacketQueueInitialize(
+    __in PTAP_PACKET_QUEUE  TapPacketQueue
+    )
+{
+    KeInitializeSpinLock(&TapPacketQueue->QueueLock);
+
+    NdisInitializeListHead(&TapPacketQueue->Queue);
+}
+
+//======================================================================
+// TAP Cancel-Safe Queue Support
 //======================================================================
 
 VOID
@@ -206,12 +278,15 @@ tapIrpCsqInsert (
         &Irp->Tail.Overlay.ListEntry
         );
 
-    // Update pending read counts
+    // Update counts
     ++tapIrpCsq->Count;
 
     if(tapIrpCsq->Count > tapIrpCsq->MaxCount)
     {
         tapIrpCsq->MaxCount = tapIrpCsq->Count;
+
+        DEBUGP (("[TAP] tapIrpCsqInsert: New MAX queued IRP count = %d\n",
+            tapIrpCsq->MaxCount));
     }
 }
 
@@ -225,7 +300,7 @@ tapIrpCsqRemoveIrp(
 
     tapIrpCsq = (PTAP_IRP_CSQ )Csq;
 
-    // Update pending read counts
+    // Update counts
     --tapIrpCsq->Count;
 
     RemoveEntryList(&Irp->Tail.Overlay.ListEntry);
@@ -321,7 +396,7 @@ tapIrpCsqAcquireQueueLock(
     // part of TAP_ADAPTER_CONTEXT structure.
     //
 #pragma prefast(suppress: __WARNING_BUFFER_UNDERFLOW, "Underflow using expression 'adapter->PendingReadCsqQueueLock'")
-    KeAcquireSpinLock(&tapIrpCsq->CsqQueueLock, Irql);
+    KeAcquireSpinLock(&tapIrpCsq->QueueLock, Irql);
 }
 
 //
@@ -351,7 +426,7 @@ tapIrpCsqReleaseQueueLock(
     // part of TAP_ADAPTER_CONTEXT structure.
     //
 #pragma prefast(suppress: __WARNING_BUFFER_UNDERFLOW, "Underflow using expression 'adapter->PendingReadCsqQueueLock'")
-    KeReleaseSpinLock(&tapIrpCsq->CsqQueueLock, Irql);
+    KeReleaseSpinLock(&tapIrpCsq->QueueLock, Irql);
 }
 
 VOID
@@ -372,6 +447,10 @@ tapIrpCsqInitialize(
     __in PTAP_IRP_CSQ  TapIrpCsq
     )
 {
+    KeInitializeSpinLock(&TapIrpCsq->QueueLock);
+
+    NdisInitializeListHead(&TapIrpCsq->Queue);
+
     IoCsqInitialize(
         &TapIrpCsq->CsqQueue,
         tapIrpCsqInsert,

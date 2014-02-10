@@ -32,6 +32,50 @@ MemAlloc (ULONG p_Size, BOOLEAN zero);
 VOID
 MemFree (PVOID p_Addr, ULONG p_Size);
 
+//======================================================================
+// TAP Packet Queue
+//======================================================================
+
+typedef
+struct _TAP_PACKET
+{
+    LIST_ENTRY                  QueueLink;
+
+#   define TAP_PACKET_SIZE(data_size) (sizeof (TAP_PACKET) + (data_size))
+#   define TP_TUN 0x80000000
+#   define TP_SIZE_MASK      (~TP_TUN)
+    ULONG                       m_SizeFlags;
+
+    // m_Data must be the last struct member
+    UCHAR                       m_Data [];
+} TAP_PACKET, *PTAP_PACKET;
+
+#define TAP_PACKET_TAG      '6PAT'  // "TAP6"
+
+typedef struct _TAP_PACKET_QUEUE
+{
+    KSPIN_LOCK      QueueLock;
+    LIST_ENTRY      Queue;
+    ULONG           Count;   // Count of currently queued items
+    ULONG           MaxCount;
+} TAP_PACKET_QUEUE, *PTAP_PACKET_QUEUE;
+
+VOID
+tapPacketQueueInsertTail(
+    __in PTAP_PACKET_QUEUE  TapPacketQueue,
+    __in PTAP_PACKET        TapPacket
+    );
+
+PTAP_PACKET
+tapPacketRemoveHead(
+    __in PTAP_PACKET_QUEUE  TapPacketQueue
+    );
+
+VOID
+tapPacketQueueInitialize(
+    __in PTAP_PACKET_QUEUE  TapPacketQueue
+    );
+
 //----------------------
 // Cancel-Safe IRP Queue
 //----------------------
@@ -39,7 +83,7 @@ MemFree (PVOID p_Addr, ULONG p_Size);
 typedef struct _TAP_IRP_CSQ
 {
     IO_CSQ          CsqQueue;
-    KSPIN_LOCK      CsqQueueLock;
+    KSPIN_LOCK      QueueLock;
     LIST_ENTRY      Queue;
     ULONG           Count;   // Count of currently queued items
     ULONG           MaxCount;
