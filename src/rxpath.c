@@ -201,7 +201,7 @@ TapDeviceWrite(
 			&adapter->m_RxTrunc
             );
 #endif
-        (Irp->MdlAddress)->Next = NULL; // No chained MDLs here!
+        (Irp->MdlAddress)->Next = NULL; // No next MDL
 
         //
         // Allocate the NBL
@@ -296,6 +296,7 @@ TapDeviceWrite(
 
             // Chain user's Ethernet payload behind Ethernet header.
             mdl->Next = Irp->MdlAddress;
+            (Irp->MdlAddress)->Next = NULL; // No next MDL
 
             //
             // Allocate the NBL
@@ -323,9 +324,6 @@ TapDeviceWrite(
 
                 //
                 // Indicate the packet
-                // -------------------
-                // Irp->AssociatedIrp.SystemBuffer with length irpSp->Parameters.Write.Length
-                // contains the complete packet including Ethernet header and payload.
                 //
                 NdisMIndicateReceiveNetBufferLists(
                     adapter->MiniportAdapterHandle,
