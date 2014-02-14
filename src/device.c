@@ -319,7 +319,145 @@ TapDeviceWrite(
 
     ASSERT(adapter);
 
-    ntStatus = STATUS_NOT_SUPPORTED;
+    //
+    // Sanity checks on state variables
+    //
+    if (!tapAdapterReadAndWriteReady(adapter))
+    {
+        DEBUGP (("[%s] Interface is down in IRP_MJ_WRITE\n",
+            MINIPORT_INSTANCE_ID (adapter)));
+
+        NOTE_ERROR();
+        Irp->IoStatus.Status = ntStatus = STATUS_UNSUCCESSFUL;
+        Irp->IoStatus.Information = 0;
+        IoCompleteRequest (Irp, IO_NO_INCREMENT);
+
+        return ntStatus;
+    }
+
+    // Save IRP-accessible copy of buffer length
+    Irp->IoStatus.Information = irpSp->Parameters.Read.Length;
+
+    if (Irp->MdlAddress == NULL)
+    {
+        DEBUGP (("[%s] MdlAddress is NULL for IRP_MJ_WRITE\n",
+            MINIPORT_INSTANCE_ID (adapter)));
+
+        NOTE_ERROR();
+        Irp->IoStatus.Status = ntStatus = STATUS_INVALID_PARAMETER;
+        Irp->IoStatus.Information = 0;
+        IoCompleteRequest (Irp, IO_NO_INCREMENT);
+
+        return ntStatus;
+    }
+
+    if ((Irp->AssociatedIrp.SystemBuffer
+            = MmGetSystemAddressForMdlSafe(
+                Irp->MdlAddress,
+                NormalPagePriority
+                ) ) == NULL
+        )
+    {
+        DEBUGP (("[%s] Could not map address in IRP_MJ_WRITE\n",
+            MINIPORT_INSTANCE_ID (adapter)));
+
+        NOTE_ERROR();
+        Irp->IoStatus.Status = ntStatus = STATUS_INSUFFICIENT_RESOURCES;
+        Irp->IoStatus.Information = 0;
+        IoCompleteRequest (Irp, IO_NO_INCREMENT);
+
+        return ntStatus;
+    }
+
+    if (!adapter->m_tun && ((irpSp->Parameters.Write.Length) >= ETHERNET_HEADER_SIZE))
+    {
+		Irp->IoStatus.Information = irpSp->Parameters.Write.Length;
+
+		DUMP_PACKET ("IRP_MJ_WRITE ETH",
+			     (unsigned char *) Irp->AssociatedIrp.SystemBuffer,
+			     irpSp->Parameters.Write.Length);
+
+        //=====================================================
+        // If IPv4 packet, check whether or not packet
+        // was truncated.
+        //=====================================================
+#if PACKET_TRUNCATION_CHECK
+		IPv4PacketSizeVerify (
+            (unsigned char *) Irp->AssociatedIrp.SystemBuffer,
+			irpSp->Parameters.Write.Length,
+			FALSE,
+			"RX",
+			&adapter->m_RxTrunc
+            );
+#endif
+
+        //
+        // Indicate the packet
+        // -------------------
+        // Irp->AssociatedIrp.SystemBuffer with length irpSp->Parameters.Write.Length
+        // contains the complete packet including Ethernet header and payload.
+        //
+
+        // BUGBUG!!! To Do!!!
+
+        // Complete the IRP with success.
+		Irp->IoStatus.Status = ntStatus = STATUS_SUCCESS;
+    }
+    else if (adapter->m_tun && ((irpSp->Parameters.Write.Length) >= IP_HEADER_SIZE))
+    {
+		ETH_HEADER * p_UserToTap = &adapter->m_UserToTap;
+
+		// For IPv6, need to use Ethernet header with IPv6 proto
+        if ( IPH_GET_VER( ((IPHDR*) Irp->AssociatedIrp.SystemBuffer)->version_len) == 6 )
+        {
+            p_UserToTap = &adapter->m_UserToTap_IPv6;
+        }
+
+		Irp->IoStatus.Information = irpSp->Parameters.Write.Length;
+
+		DUMP_PACKET2 ("IRP_MJ_WRITE P2P",
+			      p_UserToTap,
+			      (unsigned char *) Irp->AssociatedIrp.SystemBuffer,
+			      irpSp->Parameters.Write.Length);
+
+        //=====================================================
+        // If IPv4 packet, check whether or not packet
+        // was truncated.
+        //=====================================================
+#if PACKET_TRUNCATION_CHECK
+		IPv4PacketSizeVerify (
+            (unsigned char *) Irp->AssociatedIrp.SystemBuffer,
+			irpSp->Parameters.Write.Length,
+			FALSE,
+			"RX",
+			&adapter->m_RxTrunc
+            );
+#endif
+
+        //
+        // Indicate the packet
+        // -------------------
+        // Irp->AssociatedIrp.SystemBuffer with length irpSp->Parameters.Write.Length
+        // contains the only the Ethernet payload. Prepend the user-mode provided
+        // payload with the Ethernet header pointed to by p_UserToTap.
+        //
+
+        // BUGBUG!!! To Do!!!
+
+        // Complete the IRP with success.
+		Irp->IoStatus.Status = ntStatus = STATUS_SUCCESS;
+    }
+    else
+    {
+        DEBUGP (("[%s] Bad buffer size in IRP_MJ_WRITE, len=%d\n",
+            MINIPORT_INSTANCE_ID (adapter),
+            irpSp->Parameters.Write.Length));
+        NOTE_ERROR ();
+        Irp->IoStatus.Information = 0;	// ETHERNET_HEADER_SIZE;
+        Irp->IoStatus.Status = ntStatus = STATUS_BUFFER_TOO_SMALL;
+    }
+
+    IoCompleteRequest (Irp, IO_NO_INCREMENT);
 
     return ntStatus;
 }
