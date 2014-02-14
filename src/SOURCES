@@ -52,6 +52,8 @@ SOURCES=\
         tapdrvr.c \
         adapter.c \
         device.c \
+        rxpath.c \
+        txpath.c \
         oidrequest.c \
         mem.c \
         macinfo.c \
