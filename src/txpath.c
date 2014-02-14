@@ -33,7 +33,7 @@
 //======================================================================
 
 #ifdef ALLOC_PRAGMA
-#pragma alloc_text( PAGE, TapDeviceWrite)
+#pragma alloc_text( PAGE, TapDeviceRead)
 #endif // ALLOC_PRAGMA
 
 VOID

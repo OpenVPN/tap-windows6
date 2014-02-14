@@ -33,7 +33,7 @@
 //======================================================================
 
 #ifdef ALLOC_PRAGMA
-#pragma alloc_text( PAGE, TapDeviceRead)
+#pragma alloc_text( PAGE, TapDeviceWrite)
 #endif // ALLOC_PRAGMA
 
 VOID
@@ -59,6 +59,7 @@ TapDeviceWrite(
     NTSTATUS                ntStatus = STATUS_SUCCESS;// Assume success
     PIO_STACK_LOCATION      irpSp;// Pointer to current stack location
     PTAP_ADAPTER_CONTEXT    adapter = NULL;
+    ULONG                   dataLength;
 
     PAGED_CODE();
 
@@ -90,7 +91,7 @@ TapDeviceWrite(
     }
 
     // Save IRP-accessible copy of buffer length
-    Irp->IoStatus.Information = irpSp->Parameters.Read.Length;
+    Irp->IoStatus.Information = irpSp->Parameters.Write.Length;
 
     if (Irp->MdlAddress == NULL)
     {
@@ -105,12 +106,17 @@ TapDeviceWrite(
         return ntStatus;
     }
 
-    if ((Irp->AssociatedIrp.SystemBuffer
-            = MmGetSystemAddressForMdlSafe(
-                Irp->MdlAddress,
-                NormalPagePriority
-                ) ) == NULL
-        )
+    //
+    // Try to get a virtual address for the MDL.
+    //
+    NdisQueryMdl(
+        Irp->MdlAddress,
+        &Irp->AssociatedIrp.SystemBuffer,
+        &dataLength,
+        NormalPagePriority
+        );
+
+    if (Irp->AssociatedIrp.SystemBuffer == NULL)
     {
         DEBUGP (("[%s] Could not map address in IRP_MJ_WRITE\n",
             MINIPORT_INSTANCE_ID (adapter)));
@@ -123,8 +129,12 @@ TapDeviceWrite(
         return ntStatus;
     }
 
+    ASSERT(dataLength == irpSp->Parameters.Write.Length);
+
     if (!adapter->m_tun && ((irpSp->Parameters.Write.Length) >= ETHERNET_HEADER_SIZE))
     {
+        PNET_BUFFER_LIST    netBufferList;
+
 		Irp->IoStatus.Information = irpSp->Parameters.Write.Length;
 
 		DUMP_PACKET ("IRP_MJ_WRITE ETH",
@@ -144,18 +154,40 @@ TapDeviceWrite(
 			&adapter->m_RxTrunc
             );
 #endif
+        (Irp->MdlAddress)->Next = NULL; // No chained MDLs here!
 
         //
-        // Indicate the packet
-        // -------------------
-        // Irp->AssociatedIrp.SystemBuffer with length irpSp->Parameters.Write.Length
-        // contains the complete packet including Ethernet header and payload.
+        // Allocate the NBL
         //
+        netBufferList = NdisAllocateNetBufferAndNetBufferList(
+            adapter->ReceiveNblPool,
+            0,          // ContextSize
+            0,          // ContextBackFill
+            Irp->MdlAddress,
+            0,
+            dataLength
+            );
 
-        // BUGBUG!!! To Do!!!
+        if(netBufferList != NULL)
+        {
+            // BUGBUG!!! Increment in-flight statistics!!!
+            // BUGBUG!!! Queue the NBL if adapter paused!!!
+            // BUGBUG!!! Stash IRP pointer in NBL MiniportReserved fields!!!
 
-        // Complete the IRP with success.
-		Irp->IoStatus.Status = ntStatus = STATUS_SUCCESS;
+            //
+            // Indicate the packet
+            // -------------------
+            // Irp->AssociatedIrp.SystemBuffer with length irpSp->Parameters.Write.Length
+            // contains the complete packet including Ethernet header and payload.
+            //
+
+            ntStatus = STATUS_PENDING;
+        }
+        else
+        {
+            // Fail the IRP
+		    ntStatus = STATUS_INSUFFICIENT_RESOURCES;
+        }
     }
     else if (adapter->m_tun && ((irpSp->Parameters.Write.Length) >= IP_HEADER_SIZE))
     {
@@ -211,7 +243,11 @@ TapDeviceWrite(
         Irp->IoStatus.Status = ntStatus = STATUS_BUFFER_TOO_SMALL;
     }
 
-    IoCompleteRequest (Irp, IO_NO_INCREMENT);
+    if (ntStatus != STATUS_PENDING)
+    {
+        Irp->IoStatus.Status = ntStatus;
+        IoCompleteRequest(Irp, IO_NO_INCREMENT);
+    }
 
     return ntStatus;
 }

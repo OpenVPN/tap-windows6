@@ -25,7 +25,8 @@
 #define __TAP_ADAPTER_CONTEXT_H_
 
 // Memory allocation tags.
-#define TAP_TAG_ADAPTER     ((ULONG)'ApaT')     // "TapA
+#define TAP_ADAPTER_TAG     ((ULONG)'ApaT')     // "TapA
+#define TAP_RX_NBL_TAG      ((ULONG)'RpaT')     // "TapR
 
 #define TAP_MAX_NDIS_NAME_LENGTH     64     // 38 character GUID string plus extra..
 
@@ -148,6 +149,9 @@ typedef struct _TAP_ADAPTER_CONTEXT
     // Queue containing TAP packets representing host send NBs. These are
     // waiting to be read by user-mode application.
     TAP_PACKET_QUEUE            SendPacketQueue;
+
+    // NBL pool for making TAP receive indications.
+    NDIS_HANDLE                 ReceiveNblPool;
 
     // Queue containing TAP packets written by the TAP application. These
     // are waiting to be indicated to the local host as receive NBs.

@@ -90,13 +90,17 @@ tapAdapterContextAllocate(
     adapter = (PTAP_ADAPTER_CONTEXT )NdisAllocateMemoryWithTagPriority(
         GlobalData.NdisDriverHandle,
         sizeof(TAP_ADAPTER_CONTEXT),
-        TAP_TAG_ADAPTER,
+        TAP_ADAPTER_TAG,
         NormalPoolPriority
         );
 
     if(adapter)
     {
+        NET_BUFFER_LIST_POOL_PARAMETERS  nblPoolParameters = {0};
+
         NdisZeroMemory(adapter,sizeof(TAP_ADAPTER_CONTEXT));
+
+        adapter->MiniportAdapterHandle = MiniportAdapterHandle;
 
         // Initialize cancel-safe IRP queue
         tapIrpCsqInitialize(&adapter->PendingReadIrpQueue);
@@ -110,10 +114,31 @@ tapAdapterContextAllocate(
         // Allocate the adapter lock.
         NdisAllocateSpinLock(&adapter->AdapterLock);
 
+        // NBL pool for making TAP receive indications.
+        NdisZeroMemory(&nblPoolParameters, sizeof(NET_BUFFER_LIST_POOL_PARAMETERS));
+
+        nblPoolParameters.Header.Type = NDIS_OBJECT_TYPE_DEFAULT;
+        nblPoolParameters.Header.Revision = NET_BUFFER_LIST_POOL_PARAMETERS_REVISION_1;
+        nblPoolParameters.Header.Size = NDIS_SIZEOF_NET_BUFFER_LIST_POOL_PARAMETERS_REVISION_1;
+        nblPoolParameters.ProtocolId = NDIS_PROTOCOL_ID_DEFAULT;
+        nblPoolParameters.ContextSize = 0;
+        //nblPoolParameters.ContextSize = sizeof(RX_NETBUFLIST_RSVD);
+        nblPoolParameters.fAllocateNetBuffer = TRUE;
+        nblPoolParameters.PoolTag = TAP_RX_NBL_TAG;
+
+#pragma warning( suppress : 28197 )
+        adapter->ReceiveNblPool = NdisAllocateNetBufferListPool(
+            adapter->MiniportAdapterHandle,
+            &nblPoolParameters); 
+
+        if (adapter->ReceiveNblPool == NULL)
+        {
+            DEBUGP (("[TAP] Couldn't allocate adapter receive NBL pool\n"));
+            NdisFreeMemory(adapter,0,0);
+        }
+
         // Add initial reference. Normally removed in AdapterHalt.
         adapter->RefCount = 1;
-
-        adapter->MiniportAdapterHandle = MiniportAdapterHandle;
 
         // Safe for multiple removes.
         NdisInitializeListHead(&adapter->AdapterListLink);
@@ -1444,6 +1469,14 @@ tapAdapterContextFree(
     }
 
     Adapter->NetCfgInstanceIdAnsi.Buffer = NULL;
+
+    // Free the receive NBL pool.
+    if(Adapter->ReceiveNblPool != NULL )
+    {
+        NdisFreeNetBufferListPool(Adapter->ReceiveNblPool);
+    }
+
+    Adapter->ReceiveNblPool = NULL;
 
     NdisFreeMemory(Adapter,0,0);
 
