@@ -271,7 +271,7 @@ TapDeviceWrite(
 		IPv4PacketSizeVerify (
             (unsigned char *) Irp->AssociatedIrp.SystemBuffer,
 			irpSp->Parameters.Write.Length,
-			FALSE,
+			TRUE,
 			"RX",
 			&adapter->m_RxTrunc
             );

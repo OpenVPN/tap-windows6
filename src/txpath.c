@@ -139,7 +139,13 @@ Return Value:
     // was truncated.
     //=====================================================
 #if PACKET_TRUNCATION_CHECK
-    IPv4PacketSizeVerify (tapPacket->m_Data, packetLength, FALSE, "TX", &Adapter->m_TxTrunc);
+    IPv4PacketSizeVerify(
+        tapPacket->m_Data,
+        packetLength,
+        FALSE,
+        "TX",
+        &Adapter->m_TxTrunc
+        );
 #endif
 
 /*
