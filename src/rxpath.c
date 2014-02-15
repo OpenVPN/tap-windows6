@@ -117,7 +117,8 @@ IndicateReceivePacket(
 
             if(netBufferList != NULL)
             {
-                ULONG               receiveFlags = 0;
+                ULONG       receiveFlags = 0;
+                LONG        nblCount;
 
                 if(KeGetCurrentIrql() == DISPATCH_LEVEL)
                 {
@@ -130,6 +131,11 @@ IndicateReceivePacket(
 
                 netBufferList->MiniportReserved[0] = NULL;
                 netBufferList->MiniportReserved[1] = NULL;
+
+
+                // Increment in-flight receive NBL count.
+                nblCount = NdisInterlockedIncrement(&Adapter->ReceiveNblInFlightCount);
+                ASSERT(nblCount > 0 );
 
                 //
                 // Indicate the packet
@@ -183,6 +189,7 @@ tapCompleteIrpAndFreeReceiveNetBufferList(
 {
     PIRP    irp;
     ULONG   frameType, netBufferCount, byteCount;
+    LONG    nblCount;
 
     // Fetch NB frame type.
     frameType = tapGetNetBufferFrameType(NET_BUFFER_LIST_FIRST_NB(NetBufferList));
@@ -265,8 +272,19 @@ tapCompleteIrpAndFreeReceiveNetBufferList(
     //
     irp = (PIRP )NetBufferList->MiniportReserved[0];
 
-    irp->IoStatus.Status = IoCompletionStatus;
-    IoCompleteRequest(irp, IO_NO_INCREMENT);
+    if(irp)
+    {
+        irp->IoStatus.Status = IoCompletionStatus;
+        IoCompleteRequest(irp, IO_NO_INCREMENT);
+    }
+
+    // Decrement in-flight receive NBL count.
+    nblCount = NdisInterlockedDecrement(&Adapter->ReceiveNblInFlightCount);
+    ASSERT(nblCount >= 0 );
+    if (0 == nblCount)
+    {
+        NdisSetEvent(&Adapter->ReceiveNblInFlightCountZeroEvent);
+    }
 
     // Free the NBL
     NdisFreeNetBufferList(NetBufferList);
@@ -448,7 +466,7 @@ TapDeviceWrite(
 
             if(netBufferList != NULL)
             {
-                // BUGBUG!!! Increment in-flight statistics!!!
+                LONG    nblCount;
 
                 // Stash IRP pointer in NBL MiniportReserved[0] field.
                 netBufferList->MiniportReserved[0] = Irp;
@@ -457,6 +475,10 @@ TapDeviceWrite(
                 // BUGBUG!!! Setup for IRP cancel!!!
 
                 TAP_RX_NBL_FLAGS_CLEAR_ALL(netBufferList);
+
+                // Increment in-flight receive NBL count.
+                nblCount = NdisInterlockedIncrement(&adapter->ReceiveNblInFlightCount);
+                ASSERT(nblCount > 0 );
 
                 //
                 // Indicate the packet
@@ -550,7 +572,7 @@ TapDeviceWrite(
 
                 if(netBufferList != NULL)
                 {
-                    // BUGBUG!!! Increment in-flight statistics!!!
+                    LONG        nblCount;
 
                     // Stash IRP pointer in NBL MiniportReserved[0] field.
                     netBufferList->MiniportReserved[0] = Irp;
@@ -561,6 +583,11 @@ TapDeviceWrite(
                     // Set flag indicating that this is P2P packet
                     TAP_RX_NBL_FLAGS_CLEAR_ALL(netBufferList);
                     TAP_RX_NBL_FLAG_SET(netBufferList,TAP_RX_NBL_FLAGS_IS_P2P);
+
+
+                    // Increment in-flight receive NBL count.
+                    nblCount = NdisInterlockedIncrement(&adapter->ReceiveNblInFlightCount);
+                    ASSERT(nblCount > 0 );
 
                     //
                     // Indicate the packet

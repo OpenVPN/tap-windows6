@@ -114,6 +114,9 @@ tapAdapterContextAllocate(
         // NBL pool for making TAP receive indications.
         NdisZeroMemory(&nblPoolParameters, sizeof(NET_BUFFER_LIST_POOL_PARAMETERS));
 
+        // Initialize event used to determine when all receive NBLs have been returned.
+        NdisInitializeEvent(&adapter->ReceiveNblInFlightCountZeroEvent);
+
         nblPoolParameters.Header.Type = NDIS_OBJECT_TYPE_DEFAULT;
         nblPoolParameters.Header.Revision = NET_BUFFER_LIST_POOL_PARAMETERS_REVISION_1;
         nblPoolParameters.Header.Size = NDIS_SIZEOF_NET_BUFFER_LIST_POOL_PARAMETERS_REVISION_1;

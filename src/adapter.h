@@ -164,6 +164,9 @@ typedef struct _TAP_ADAPTER_CONTEXT
     // NBL pool for making TAP receive indications.
     NDIS_HANDLE                 ReceiveNblPool;
 
+    volatile LONG               ReceiveNblInFlightCount;
+    NDIS_EVENT                  ReceiveNblInFlightCountZeroEvent;
+
     // Info for point-to-point mode
     BOOLEAN                     m_tun;
     IPADDR                      m_localIP;
