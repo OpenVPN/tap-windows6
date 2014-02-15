@@ -120,6 +120,8 @@ IndicateReceivePacket(
                 ULONG       receiveFlags = 0;
                 LONG        nblCount;
 
+                NET_BUFFER_LIST_NEXT_NBL(netBufferList) = NULL; // Only one NBL
+
                 if(KeGetCurrentIrql() == DISPATCH_LEVEL)
                 {
                     receiveFlags |= NDIS_RECEIVE_FLAGS_DISPATCH_LEVEL;
@@ -468,6 +470,8 @@ TapDeviceWrite(
             {
                 LONG    nblCount;
 
+                NET_BUFFER_LIST_NEXT_NBL(netBufferList) = NULL; // Only one NBL
+
                 // Stash IRP pointer in NBL MiniportReserved[0] field.
                 netBufferList->MiniportReserved[0] = Irp;
                 netBufferList->MiniportReserved[1] = NULL;
@@ -574,6 +578,8 @@ TapDeviceWrite(
                 {
                     LONG        nblCount;
 
+                    NET_BUFFER_LIST_NEXT_NBL(netBufferList) = NULL; // Only one NBL
+
                     // Stash IRP pointer in NBL MiniportReserved[0] field.
                     netBufferList->MiniportReserved[0] = Irp;
                     netBufferList->MiniportReserved[1] = NULL;
@@ -583,7 +589,6 @@ TapDeviceWrite(
                     // Set flag indicating that this is P2P packet
                     TAP_RX_NBL_FLAGS_CLEAR_ALL(netBufferList);
                     TAP_RX_NBL_FLAG_SET(netBufferList,TAP_RX_NBL_FLAGS_IS_P2P);
-
 
                     // Increment in-flight receive NBL count.
                     nblCount = NdisInterlockedIncrement(&adapter->ReceiveNblInFlightCount);
