@@ -929,6 +929,63 @@ Return Value:
     DEBUGP (("[TAP] <-- AdapterHalt\n"));
 }
 
+VOID
+tapWaitForReceiveNblInFlightCountZeroEvent(
+    __in PTAP_ADAPTER_CONTEXT     Adapter
+    )
+{
+    LONG    nblCount;
+
+    //
+    // Wait until higher-level protocol has returned all NBLs
+    // to the driver.
+    //
+
+    // Add one NBL "bias" to insure allow event to be reset safely.
+    nblCount = NdisInterlockedIncrement(&Adapter->ReceiveNblInFlightCount);
+    ASSERT(nblCount > 0 );
+    NdisResetEvent(&Adapter->ReceiveNblInFlightCountZeroEvent);
+
+    //
+    // Now remove the bias and wait for the ReceiveNblInFlightCountZeroEvent
+    // if the count returned is not zero.
+    //
+    nblCount = NdisInterlockedDecrement(&Adapter->ReceiveNblInFlightCount);
+    ASSERT(nblCount >= 0);
+
+    if(nblCount)
+    {
+        LARGE_INTEGER   startTime, currentTime;
+
+        NdisGetSystemUpTimeEx(&startTime);
+
+        for (;;)
+        {
+            BOOLEAN waitResult = NdisWaitEvent(
+                &Adapter->ReceiveNblInFlightCountZeroEvent, 
+                TAP_WAIT_POLL_LOOP_TIMEOUT
+                );
+
+            NdisGetSystemUpTimeEx(&currentTime);
+
+            if (waitResult)
+            {
+                break;
+            }
+
+            DEBUGP (("[%s] Waiting for %d in-flight receive NBLs to be returned.\n",
+                MINIPORT_INSTANCE_ID (Adapter),
+                Adapter->ReceiveNblInFlightCount
+                ));
+        }
+
+        DEBUGP (("[%s] Waited %d ms for all in-flight NBLs to be returned.\n",
+            MINIPORT_INSTANCE_ID (Adapter),
+            (currentTime.LowPart - startTime.LowPart)
+            ));
+    }
+}
+
 NDIS_STATUS
 AdapterPause(
     __in  NDIS_HANDLE                       MiniportAdapterContext,
@@ -990,6 +1047,12 @@ Return Value:
     tapAdapterAcquireLock(adapter,FALSE);
     adapter->Locked.AdapterState = MiniportPausingState;
     tapAdapterReleaseLock(adapter,FALSE);
+
+    // Wait for all in-flight receive indications to be returned.
+    tapWaitForReceiveNblInFlightCountZeroEvent(adapter);
+
+    // Wait until driver has completed all send NBLs.
+    // BUGBUG!!! Add necessary checks!!!
 
     status = NDIS_STATUS_SUCCESS;
 
@@ -1446,7 +1509,7 @@ Return Value:
 // Free adapter context memory and associated resources.
 VOID
 tapAdapterContextFree(
-    IN PTAP_ADAPTER_CONTEXT     Adapter
+    __in PTAP_ADAPTER_CONTEXT     Adapter
     )
 {
     PLIST_ENTRY listEntry = &Adapter->AdapterListLink;

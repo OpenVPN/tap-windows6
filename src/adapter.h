@@ -165,6 +165,7 @@ typedef struct _TAP_ADAPTER_CONTEXT
     NDIS_HANDLE                 ReceiveNblPool;
 
     volatile LONG               ReceiveNblInFlightCount;
+#define TAP_WAIT_POLL_LOOP_TIMEOUT  3000    // 3 seconds
     NDIS_EVENT                  ReceiveNblInFlightCountZeroEvent;
 
     // Info for point-to-point mode
@@ -269,7 +270,7 @@ tapAdapterContextReference(
 
 VOID
 tapAdapterContextFree(
-    IN PTAP_ADAPTER_CONTEXT     Adapter
+    __in PTAP_ADAPTER_CONTEXT     Adapter
     );
 
 FORCEINLINE
