@@ -90,8 +90,8 @@ DestroyTapDevice(
 VOID
 IndicateReceivePacket(
     __in PTAP_ADAPTER_CONTEXT  Adapter,
-    __in PUCHAR packet,
-    __in const unsigned int len
+    __in PUCHAR packetData,
+    __in const unsigned int packetLength
     );
 
 BOOLEAN
