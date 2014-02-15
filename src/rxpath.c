@@ -36,6 +36,27 @@
 #pragma alloc_text( PAGE, TapDeviceWrite)
 #endif // ALLOC_PRAGMA
 
+//===============================================================
+// Used in cases where internally generated packets such as
+// ARP or DHCP replies must be returned to the kernel, to be
+// seen as an incoming packet "arriving" on the interface.
+//===============================================================
+
+// Defer packet injection till IRQL < DISPATCH_LEVEL
+VOID
+InjectPacketDeferred(
+    __in PTAP_ADAPTER_CONTEXT  Adapter,
+    __in UCHAR *packet,
+    __in const unsigned int len
+    )
+{
+    UNREFERENCED_PARAMETER(Adapter);
+    UNREFERENCED_PARAMETER(packet);
+    UNREFERENCED_PARAMETER(len);
+
+    ASSERT(FALSE);  // Unimplemented
+}
+
 VOID
 tapCompleteIrpAndFreeReceiveNetBufferList(
     __in  PTAP_ADAPTER_CONTEXT  Adapter,

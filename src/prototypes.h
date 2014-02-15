@@ -86,15 +86,34 @@ DestroyTapDevice(
 //    TapAdapterPointer p_Adapter
 //   );
 //
-//BOOLEAN ProcessARP
-//   (
-//    TapAdapterPointer p_Adapter,
-//    const PARP_PACKET src,
-//    const IPADDR adapter_ip,
-//    const IPADDR ip_network,
-//    const IPADDR ip_netmask,
-//    const MACADDR mac
-//   );
+
+VOID
+InjectPacketDeferred(
+    __in PTAP_ADAPTER_CONTEXT  Adapter,
+    __in UCHAR *packet,
+    __in const unsigned int len
+    );
+
+BOOLEAN
+ProcessDHCP(
+    __in PTAP_ADAPTER_CONTEXT   Adapter,
+    __in const ETH_HEADER *eth,
+    __in const IPHDR *ip,
+    __in const UDPHDR *udp,
+    __in const DHCP *dhcp,
+    __in int optlen
+    );
+
+BOOLEAN
+ProcessARP(
+    __in PTAP_ADAPTER_CONTEXT   Adapter,
+    __in const PARP_PACKET src,
+    __in const IPADDR adapter_ip,
+    __in const IPADDR ip_network,
+    __in const IPADDR ip_netmask,
+    __in const MACADDR mac
+   );
+
 //
 //VOID SetMediaStatus
 //   (

@@ -350,84 +350,90 @@ BuildDHCPPre (
 // Build specific DHCP messages
 //=============================
 
-//VOID
-//SendDHCPMsg (const TapAdapterPointer a,
-//	     const int type,
-//	     const ETH_HEADER *eth,
-//	     const IPHDR *ip,
-//	     const UDPHDR *udp,
-//	     const DHCP *dhcp)
-//{
-//  DHCPMsg *pkt;
-//
-//  if (!(type == DHCPOFFER || type == DHCPACK || type == DHCPNAK))
-//    {
-//      DEBUGP (("[TAP] SendDHCPMsg: Bad DHCP type: %d\n", type));
-//      return;
-//    }
-//
-//  pkt = (DHCPMsg *) MemAlloc (sizeof (DHCPMsg), TRUE);
-//
-//  if (pkt)
-//    {
-//      //-----------------------
-//      // Build DHCP options
-//      //-----------------------
-//
-//      // Message Type
-//      SetDHCPOpt8 (pkt, DHCP_MSG_TYPE, type);
-//
-//      // Server ID
-//      SetDHCPOpt32 (pkt, DHCP_SERVER_ID, a->m_dhcp_server_ip);
-//
-//      if (type == DHCPOFFER || type == DHCPACK)
-//	{
-//	  // Lease Time
-//	  SetDHCPOpt32 (pkt, DHCP_LEASE_TIME, htonl (a->m_dhcp_lease_time));
-//
-//	  // Netmask
-//	  SetDHCPOpt32 (pkt, DHCP_NETMASK, a->m_dhcp_netmask);
-//
-//	  // Other user-defined options
-//	  SetDHCPOpt (pkt,
-//		      a->m_dhcp_user_supplied_options_buffer,
-//		      a->m_dhcp_user_supplied_options_buffer_len);
-//	}
-//
-//      // End
-//      SetDHCPOpt0 (pkt, DHCP_END);
-//
-//      if (!DHCPMSG_OVERFLOW (pkt))
-//	{
-//	  // The initial part of the DHCP message (not including options) gets built here
-//	  BuildDHCPPre (a,
-//			&pkt->msg.pre,
-//			eth,
-//			ip,
-//			udp,
-//			dhcp,
-//			DHCPMSG_LEN_OPT (pkt),
-//			type);
-//
-//	  SetChecksumDHCPMsg (pkt);
-//
-//	  DUMP_PACKET ("DHCPMsg",
-//		       DHCPMSG_BUF (pkt),
-//		       DHCPMSG_LEN_FULL (pkt));
-//
-//	  // Return DHCP response to kernel
-//	  InjectPacketDeferred (a,
-//				DHCPMSG_BUF (pkt),
-//				DHCPMSG_LEN_FULL (pkt));
-//	}
-//      else
-//	{
-//	  DEBUGP (("[TAP] SendDHCPMsg: DHCP buffer overflow\n"));
-//	}
-//
-//      MemFree (pkt, sizeof (DHCPMsg));
-//    }
-//}
+VOID
+SendDHCPMsg(
+    __in PTAP_ADAPTER_CONTEXT   Adapter,
+    __in const int type,
+    __in const ETH_HEADER *eth,
+    __in const IPHDR *ip,
+    __in const UDPHDR *udp,
+    __in const DHCP *dhcp
+    )
+{
+    DHCPMsg *pkt;
+
+    if (!(type == DHCPOFFER || type == DHCPACK || type == DHCPNAK))
+    {
+        DEBUGP (("[TAP] SendDHCPMsg: Bad DHCP type: %d\n", type));
+        return;
+    }
+
+    pkt = (DHCPMsg *) MemAlloc (sizeof (DHCPMsg), TRUE);
+
+    if(pkt)
+    {
+        //-----------------------
+        // Build DHCP options
+        //-----------------------
+
+        // Message Type
+        SetDHCPOpt8 (pkt, DHCP_MSG_TYPE, type);
+
+        // Server ID
+        SetDHCPOpt32 (pkt, DHCP_SERVER_ID, Adapter->m_dhcp_server_ip);
+
+        if (type == DHCPOFFER || type == DHCPACK)
+        {
+            // Lease Time
+            SetDHCPOpt32 (pkt, DHCP_LEASE_TIME, htonl (Adapter->m_dhcp_lease_time));
+
+            // Netmask
+            SetDHCPOpt32 (pkt, DHCP_NETMASK, Adapter->m_dhcp_netmask);
+
+            // Other user-defined options
+            SetDHCPOpt (
+                pkt,
+                Adapter->m_dhcp_user_supplied_options_buffer,
+                Adapter->m_dhcp_user_supplied_options_buffer_len);
+        }
+
+        // End
+        SetDHCPOpt0 (pkt, DHCP_END);
+
+        if (!DHCPMSG_OVERFLOW (pkt))
+        {
+            // The initial part of the DHCP message (not including options) gets built here
+            BuildDHCPPre (
+                Adapter,
+                &pkt->msg.pre,
+                eth,
+                ip,
+                udp,
+                dhcp,
+                DHCPMSG_LEN_OPT (pkt),
+                type);
+
+            SetChecksumDHCPMsg (pkt);
+
+            DUMP_PACKET ("DHCPMsg",
+                DHCPMSG_BUF (pkt),
+                DHCPMSG_LEN_FULL (pkt));
+
+            // Return DHCP response to kernel
+            InjectPacketDeferred(
+                Adapter,
+                DHCPMSG_BUF (pkt),
+                DHCPMSG_LEN_FULL (pkt)
+                );
+        }
+        else
+        {
+            DEBUGP (("[TAP] SendDHCPMsg: DHCP buffer overflow\n"));
+        }
+
+        MemFree (pkt, sizeof (DHCPMsg));
+    }
+}
 
 //===================================================================
 // Handle a BOOTPS packet produced by the local system to
@@ -437,58 +443,80 @@ BuildDHCPPre (
 // message, so that downstream stages can ignore it.
 //===================================================================
 
-//BOOLEAN
-//ProcessDHCP (TapAdapterPointer p_Adapter,
-//	     const ETH_HEADER *eth,
-//	     const IPHDR *ip,
-//	     const UDPHDR *udp,
-//	     const DHCP *dhcp,
-//	     int optlen)
-//{
-//  int msg_type;
-//
-//  // Sanity check IP header
-//  if (!(ntohs (ip->tot_len) == sizeof (IPHDR) + sizeof (UDPHDR) + sizeof (DHCP) + optlen
-//	&& (ntohs (ip->frag_off) & IP_OFFMASK) == 0))
-//    return TRUE;
-//
-//  // Does this message belong to us?
-//  if (!DHCPMessageOurs (p_Adapter, eth, ip, udp, dhcp))
-//    return FALSE;
-//
-//  msg_type = GetDHCPMessageType (dhcp, optlen);
-//
-//  // Drop non-BOOTREQUEST messages
-//  if (dhcp->op != BOOTREQUEST)
-//    return TRUE;
-//
-//  // Drop any messages except DHCPDISCOVER or DHCPREQUEST
-//  if (!(msg_type == DHCPDISCOVER || msg_type == DHCPREQUEST))
-//    return TRUE;
-//
-//  // Should we reply with DHCPOFFER, DHCPACK, or DHCPNAK?
-//  if (msg_type == DHCPREQUEST
-//      && ((dhcp->ciaddr && dhcp->ciaddr != p_Adapter->m_dhcp_addr)
-//	  || !p_Adapter->m_dhcp_received_discover
-//	  || p_Adapter->m_dhcp_bad_requests >= BAD_DHCPREQUEST_NAK_THRESHOLD))
-//    SendDHCPMsg (p_Adapter,
-//		 DHCPNAK,
-//		 eth, ip, udp, dhcp);
-//  else
-//    SendDHCPMsg (p_Adapter,
-//		 (msg_type == DHCPDISCOVER ? DHCPOFFER : DHCPACK),
-//		 eth, ip, udp, dhcp);
-//
-//  // Remember if we received a DHCPDISCOVER
-//  if (msg_type == DHCPDISCOVER)
-//    p_Adapter->m_dhcp_received_discover = TRUE;
-//
-//  // Is this a bad DHCPREQUEST?
-//  if (msg_type == DHCPREQUEST && dhcp->ciaddr && dhcp->ciaddr != p_Adapter->m_dhcp_addr)
-//    ++p_Adapter->m_dhcp_bad_requests;
-//
-//  return TRUE;
-//}
+BOOLEAN
+ProcessDHCP(
+    __in PTAP_ADAPTER_CONTEXT   Adapter,
+    __in const ETH_HEADER *eth,
+    __in const IPHDR *ip,
+    __in const UDPHDR *udp,
+    __in const DHCP *dhcp,
+    __in int optlen
+    )
+{
+    int msg_type;
+
+    // Sanity check IP header
+    if (!(ntohs (ip->tot_len) == sizeof (IPHDR) + sizeof (UDPHDR) + sizeof (DHCP) + optlen
+        && (ntohs (ip->frag_off) & IP_OFFMASK) == 0))
+    {
+        return TRUE;
+    }
+
+    // Does this message belong to us?
+    if (!DHCPMessageOurs (Adapter, eth, ip, udp, dhcp))
+    {
+        return FALSE;
+    }
+
+    msg_type = GetDHCPMessageType (dhcp, optlen);
+
+    // Drop non-BOOTREQUEST messages
+    if (dhcp->op != BOOTREQUEST)
+    {
+        return TRUE;
+    }
+
+    // Drop any messages except DHCPDISCOVER or DHCPREQUEST
+    if (!(msg_type == DHCPDISCOVER || msg_type == DHCPREQUEST))
+    {
+        return TRUE;
+    }
+
+    // Should we reply with DHCPOFFER, DHCPACK, or DHCPNAK?
+    if (msg_type == DHCPREQUEST
+        && ((dhcp->ciaddr && dhcp->ciaddr != Adapter->m_dhcp_addr)
+        || !Adapter->m_dhcp_received_discover
+        || Adapter->m_dhcp_bad_requests >= BAD_DHCPREQUEST_NAK_THRESHOLD))
+    {
+        SendDHCPMsg(
+            Adapter,
+            DHCPNAK,
+            eth, ip, udp, dhcp
+            );
+    }
+    else
+    {
+        SendDHCPMsg(
+            Adapter,
+            (msg_type == DHCPDISCOVER ? DHCPOFFER : DHCPACK),
+            eth, ip, udp, dhcp
+            );
+    }
+
+    // Remember if we received a DHCPDISCOVER
+    if (msg_type == DHCPDISCOVER)
+    {
+        Adapter->m_dhcp_received_discover = TRUE;
+    }
+
+    // Is this a bad DHCPREQUEST?
+    if (msg_type == DHCPREQUEST && dhcp->ciaddr && dhcp->ciaddr != Adapter->m_dhcp_addr)
+    {
+        ++Adapter->m_dhcp_bad_requests;
+    }
+
+    return TRUE;
+}
 
 #if DBG
 
