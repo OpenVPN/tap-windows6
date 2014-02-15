@@ -39,41 +39,47 @@
 // checksum code for ICMPv6 packet, taken from dhcp.c / udp_checksum
 // see RFC 4443, 2.3, and RFC 2460, 8.1
 USHORT
-icmpv6_checksum (const UCHAR *buf,
-	         const int len_icmpv6,
-	         const UCHAR *saddr6,
-	         const UCHAR *daddr6)
+icmpv6_checksum(
+    __in const UCHAR *buf,
+    __in const int len_icmpv6,
+    __in const UCHAR *saddr6,
+    __in const UCHAR *daddr6
+    )
 {
-  USHORT word16;
-  ULONG sum = 0;
-  int i;
+    USHORT word16;
+    ULONG sum = 0;
+    int i;
 
-  // make 16 bit words out of every two adjacent 8 bit words and
-  // calculate the sum of all 16 bit words
-  for (i = 0; i < len_icmpv6; i += 2){
-    word16 = ((buf[i] << 8) & 0xFF00) + ((i + 1 < len_icmpv6) ? (buf[i+1] & 0xFF) : 0);
-    sum += word16;
-  }
+    // make 16 bit words out of every two adjacent 8 bit words and
+    // calculate the sum of all 16 bit words
+    for (i = 0; i < len_icmpv6; i += 2)
+    {
+        word16 = ((buf[i] << 8) & 0xFF00) + ((i + 1 < len_icmpv6) ? (buf[i+1] & 0xFF) : 0);
+        sum += word16;
+    }
 
-  // add the IPv6 pseudo header which contains the IP source and destination addresses
-  for (i = 0; i < 16; i += 2){
-    word16 =((saddr6[i] << 8) & 0xFF00) + (saddr6[i+1] & 0xFF);
-    sum += word16;
-  }
-  for (i = 0; i < 16; i += 2){
-    word16 =((daddr6[i] << 8) & 0xFF00) + (daddr6[i+1] & 0xFF);
-    sum += word16;
-  }
+    // add the IPv6 pseudo header which contains the IP source and destination addresses
+    for (i = 0; i < 16; i += 2)
+    {
+        word16 =((saddr6[i] << 8) & 0xFF00) + (saddr6[i+1] & 0xFF);
+        sum += word16;
+    }
 
-  // the next-header number and the length of the ICMPv6 packet
-  sum += (USHORT) IPPROTO_ICMPV6 + (USHORT) len_icmpv6;
+    for (i = 0; i < 16; i += 2)
+    {
+        word16 =((daddr6[i] << 8) & 0xFF00) + (daddr6[i+1] & 0xFF);
+        sum += word16;
+    }
 
-  // keep only the last 16 bits of the 32 bit calculated sum and add the carries
-  while (sum >> 16)
-    sum = (sum & 0xFFFF) + (sum >> 16);
+    // the next-header number and the length of the ICMPv6 packet
+    sum += (USHORT) IPPROTO_ICMPV6 + (USHORT) len_icmpv6;
 
-  // Take the one's complement of sum
-  return ((USHORT) ~sum);
+    // keep only the last 16 bits of the 32 bit calculated sum and add the carries
+    while (sum >> 16)
+        sum = (sum & 0xFFFF) + (sum >> 16);
+
+    // Take the one's complement of sum
+    return ((USHORT) ~sum);
 }
 
 // check IPv6 packet for "is this an IPv6 Neighbor Solicitation that
@@ -174,10 +180,13 @@ HandleIPv6NeighborDiscovery(
     COPY_MAC( na->icmpv6.target_macaddr, Adapter->m_TapToUser.dest );
 
     // calculate and set checksum
-    icmpv6_csum = icmpv6_checksum ( (UCHAR*) &(na->icmpv6),
-        icmpv6_len,
-        na->ipv6.saddr,
-        na->ipv6.daddr );
+    icmpv6_csum = icmpv6_checksum (
+                    (UCHAR*) &(na->icmpv6),
+                    icmpv6_len,
+                    na->ipv6.saddr,
+                    na->ipv6.daddr
+                    );
+
     na->icmpv6.checksum = htons( icmpv6_csum );
 
     DUMP_PACKET ("HandleIPv6NeighborDiscovery",

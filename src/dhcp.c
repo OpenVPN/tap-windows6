@@ -242,29 +242,41 @@ DHCPMessageOurs (
 {
     // Must be UDPv4 protocol
     if (!(eth->proto == htons (ETH_P_IP) && ip->protocol == IPPROTO_UDP))
+    {
         return FALSE;
+    }
 
     // Source MAC must be our adapter
     if (!MAC_EQUAL (eth->src, p_Adapter->CurrentAddress))
+    {
         return FALSE;
+    }
 
     // Dest MAC must be either broadcast or our virtual DHCP server
     if (!(MAC_EQUAL (eth->dest, p_Adapter->m_MAC_Broadcast)
         || MAC_EQUAL (eth->dest, p_Adapter->m_dhcp_server_mac)))
+    {
         return FALSE;
+    }
 
     // Port numbers must be correct
     if (!(udp->dest == htons (BOOTPS_PORT)
         && udp->source == htons (BOOTPC_PORT)))
+    {
         return FALSE;
+    }
 
     // Hardware address must be MAC addr sized
     if (!(dhcp->hlen == sizeof (MACADDR)))
+    {
         return FALSE;
+    }
 
     // Hardware address must match our adapter
     if (!MAC_EQUAL (eth->src, dhcp->chaddr))
+    {
         return FALSE;
+    }
 
     return TRUE;
 }
@@ -289,19 +301,26 @@ BuildDHCPPre (
     // Should we broadcast or direct to a specific MAC / IP address?
     const BOOLEAN broadcast = (type == DHCPNAK
         || MAC_EQUAL (eth->dest, a->m_MAC_Broadcast));
-    // Build ethernet header
 
+    //
+    // Build ethernet header
+    //
     COPY_MAC (p->eth.src, a->m_dhcp_server_mac);
 
     if (broadcast)
+    {
         COPY_MAC (p->eth.dest, a->m_MAC_Broadcast);
+    }
     else
+    {
         COPY_MAC (p->eth.dest, eth->src);
+    }
 
     p->eth.proto = htons (ETH_P_IP);
 
+    //
     // Build IP header
-
+    //
     p->ip.version_len = (4 << 4) | (sizeof (IPHDR) >> 2);
     p->ip.tos = 0;
     p->ip.tot_len = htons (sizeof (IPHDR) + sizeof (UDPHDR) + sizeof (DHCP) + optlen);
@@ -313,12 +332,17 @@ BuildDHCPPre (
     p->ip.saddr = a->m_dhcp_server_ip;
 
     if (broadcast)
+    {
         p->ip.daddr = ~0;
+    }
     else
+    {
         p->ip.daddr = a->m_dhcp_addr;
+    }
 
+    //
     // Build UDP header
-
+    //
     p->udp.source = htons (BOOTPS_PORT);
     p->udp.dest = htons (BOOTPC_PORT);
     p->udp.len = htons (sizeof (UDPHDR) + sizeof (DHCP) + optlen);
@@ -336,9 +360,13 @@ BuildDHCPPre (
     p->dhcp.ciaddr = 0;
 
     if (type == DHCPNAK)
+    {
         p->dhcp.yiaddr = 0;
+    }
     else
+    {
         p->dhcp.yiaddr = a->m_dhcp_addr;
+    }
 
     p->dhcp.siaddr = a->m_dhcp_server_ip;
     p->dhcp.giaddr = 0;
