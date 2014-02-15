@@ -342,6 +342,17 @@ tapAdapterSendAndReceiveReady(
     __in PTAP_ADAPTER_CONTEXT     Adapter
     );
 
+ULONG
+tapGetNetBufferFrameType(
+    __in PNET_BUFFER       NetBuffer
+    );
+
+ULONG
+tapGetNetBufferCountsFromNetBufferList(
+    __in PNET_BUFFER_LIST   NetBufferList,
+    __inout_opt PULONG      TotalByteCount      // Of all linked NBs
+    );
+
 // Prototypes for standard NDIS miniport entry points
 MINIPORT_SET_OPTIONS                AdapterSetOptions;
 MINIPORT_INITIALIZE                 AdapterCreate;

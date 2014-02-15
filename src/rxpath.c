@@ -37,6 +37,78 @@
 #endif // ALLOC_PRAGMA
 
 VOID
+tapCompleteIrpAndFreeReceiveNetBufferList(
+    __in  PTAP_ADAPTER_CONTEXT  Adapter,
+    __in  PNET_BUFFER_LIST      NetBufferList,  // Only one NB here...
+    __in  NTSTATUS              IoCompletionStatus
+    )
+{
+    PIRP    irp;
+    ULONG   frameType, netBufferCount, byteCount;
+
+    // Fetch NB frame type.
+    frameType = tapGetNetBufferFrameType(NET_BUFFER_LIST_FIRST_NB(NetBufferList));
+
+    // Fetch statistics for all NBs linked to the NB.
+    netBufferCount = tapGetNetBufferCountsFromNetBufferList(
+                        NetBufferList,
+                        &byteCount
+                        );
+
+    // Update statistics by frame type
+    if(IoCompletionStatus == STATUS_SUCCESS)
+    {
+        switch(frameType)
+        {
+        case NDIS_PACKET_TYPE_DIRECTED:
+            Adapter->FramesRxDirected += netBufferCount;
+            Adapter->BytesRxDirected += byteCount;
+            break;
+
+        case NDIS_PACKET_TYPE_BROADCAST:
+            Adapter->FramesRxBroadcast += netBufferCount;
+            Adapter->BytesRxBroadcast += byteCount;
+            break;
+
+        case NDIS_PACKET_TYPE_MULTICAST:
+            Adapter->FramesRxMulticast += netBufferCount;
+            Adapter->BytesRxMulticast += byteCount;
+            break;
+
+        default:
+            ASSERT(FALSE);
+            break;
+        }
+    }
+
+    //
+    // Free MDL allocated for P2P Ethernet header if necesary.
+    //
+    if(TAP_RX_NBL_FLAG_TEST(NetBufferList,TAP_RX_NBL_FLAGS_IS_P2P))
+    {
+        PNET_BUFFER     netBuffer;
+        PMDL            mdl;
+
+        netBuffer = NET_BUFFER_LIST_FIRST_NB(NetBufferList);
+        mdl = NET_BUFFER_FIRST_MDL(netBuffer);
+        mdl->Next = NULL;
+
+        NdisFreeMdl(mdl);
+    }
+
+    //
+    // Complete the IRP
+    //
+    irp = (PIRP )NetBufferList->MiniportReserved[0];
+
+    irp->IoStatus.Status = IoCompletionStatus;
+    IoCompleteRequest(irp, IO_NO_INCREMENT);
+
+    // Free the NBL
+    NdisFreeNetBufferList(NetBufferList);
+}
+
+VOID
 AdapterReturnNetBufferLists(
     __in  NDIS_HANDLE             MiniportAdapterContext,
     __in  PNET_BUFFER_LIST        NetBufferLists,
@@ -55,41 +127,16 @@ AdapterReturnNetBufferLists(
     while (currentNbl)
     {
         PNET_BUFFER_LIST    nextNbl;
-        PIRP                irp;
-        NTSTATUS            status;
 
         nextNbl = NET_BUFFER_LIST_NEXT_NBL(currentNbl);
         NET_BUFFER_LIST_NEXT_NBL(currentNbl) = NULL;
 
-        //
-        // Free MDL allocated for P2P Ethernet header if necesary.
-        //
-        if(TAP_RX_NBL_FLAG_TEST(currentNbl,TAP_RX_NBL_FLAGS_IS_P2P))
-        {
-            PNET_BUFFER     netBuffer;
-            PMDL            mdl;
-
-            netBuffer = NET_BUFFER_LIST_FIRST_NB(currentNbl);
-            mdl = NET_BUFFER_FIRST_MDL(netBuffer);
-            mdl->Next = NULL;
-
-            NdisFreeMdl(mdl);
-        }
-
-        //
-        // Complete the IRP
-        //
-        irp = (PIRP )currentNbl->MiniportReserved[0];
-
-        status = STATUS_SUCCESS;    // NET_BUFFER_LIST_STATUS is not meaningful here.
-
-        irp->IoStatus.Status = status;
-        IoCompleteRequest(irp, IO_NO_INCREMENT);
-
-        // Update in-flight statistics, etc.
-
-        // Free the NBL
-        NdisFreeNetBufferList(currentNbl);
+        // Complete write IRP and free NBL and associated resources.
+        tapCompleteIrpAndFreeReceiveNetBufferList(
+            adapter,
+            currentNbl,
+            STATUS_SUCCESS
+            );
 
         // Move to next NBL
         currentNbl = nextNbl;
