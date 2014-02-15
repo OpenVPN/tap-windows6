@@ -42,19 +42,136 @@
 // seen as an incoming packet "arriving" on the interface.
 //===============================================================
 
-// Defer packet injection till IRQL < DISPATCH_LEVEL
 VOID
-InjectPacketDeferred(
+IndicateReceivePacket(
     __in PTAP_ADAPTER_CONTEXT  Adapter,
-    __in UCHAR *packet,
-    __in const unsigned int len
+    __in PUCHAR packetData,
+    __in const unsigned int packetLength
     )
 {
-    UNREFERENCED_PARAMETER(Adapter);
-    UNREFERENCED_PARAMETER(packet);
-    UNREFERENCED_PARAMETER(len);
+    PUCHAR  injectBuffer;
 
-    ASSERT(FALSE);  // Unimplemented
+    //
+    // Handle miniport Pause
+    // ---------------------
+    // NDIS 6 miniports implement a temporary "Pause" state normally followed
+    // by the Restart. While in the Pause state it is forbidden for the miniport
+    // to indicate receive NBLs.
+    //
+    // That is: The device interface may be "up", but the NDIS miniport send/receive
+    // interface may be temporarily "down".
+    //
+    // BUGBUG!!! In the initial implementation of the NDIS 6 TapOas inject path
+    // the code below will simply ignore inject packets passed to the driver while
+    // the miniport is in the Paused state.
+    //
+    // The correct implementation is to go ahead and build the NBLs corresponding
+    // to the inject packet - but queue them. When Restart is entered the
+    // queued NBLs would be dequeued and indicated to the host.
+    //
+    if(tapAdapterSendAndReceiveReady(Adapter) != NDIS_STATUS_SUCCESS)
+    {
+        DEBUGP (("[%s] Lying send in IndicateReceivePacket while adapter paused\n",
+            MINIPORT_INSTANCE_ID (Adapter)));
+
+        return;
+    }
+
+    // Allocate flat buffer for packet data.
+    injectBuffer = (PUCHAR )NdisAllocateMemoryWithTagPriority(
+                        Adapter->MiniportAdapterHandle,
+                        packetLength,
+                        TAP_RX_INJECT_BUFFER_TAG,
+                        NormalPoolPriority
+                        );
+
+    if( injectBuffer)
+    {
+        PMDL    mdl;
+
+        // Copy packet data to flat buffer.
+        NdisMoveMemory (injectBuffer, packetData, packetLength);
+
+        // Allocate MDL for flat buffer.
+        mdl = NdisAllocateMdl(
+                Adapter->MiniportAdapterHandle,
+                injectBuffer,
+                packetLength
+                );
+
+        if( mdl )
+        {
+            PNET_BUFFER_LIST    netBufferList;
+
+            mdl->Next = NULL;   // No next MDL
+
+            // Allocate the NBL
+            netBufferList = NdisAllocateNetBufferAndNetBufferList(
+                                Adapter->ReceiveNblPool,
+                                0,                  // ContextSize
+                                0,                  // ContextBackFill
+                                mdl,                // MDL chain
+                                0,
+                                packetLength
+                                );
+
+            if(netBufferList != NULL)
+            {
+                ULONG               receiveFlags = 0;
+
+                if(KeGetCurrentIrql() == DISPATCH_LEVEL)
+                {
+                    receiveFlags |= NDIS_RECEIVE_FLAGS_DISPATCH_LEVEL;
+                }
+
+                // Set flag indicating that this is an injected packet
+                TAP_RX_NBL_FLAGS_CLEAR_ALL(netBufferList);
+                TAP_RX_NBL_FLAG_SET(netBufferList,TAP_RX_NBL_FLAGS_IS_INJECTED);
+
+                netBufferList->MiniportReserved[0] = NULL;
+                netBufferList->MiniportReserved[1] = NULL;
+
+                //
+                // Indicate the packet
+                // -------------------
+                // Irp->AssociatedIrp.SystemBuffer with length irpSp->Parameters.Write.Length
+                // contains the complete packet including Ethernet header and payload.
+                //
+                NdisMIndicateReceiveNetBufferLists(
+                    Adapter->MiniportAdapterHandle,
+                    netBufferList,
+                    NDIS_DEFAULT_PORT_NUMBER,
+                    1,      // NumberOfNetBufferLists
+                    receiveFlags
+                    );
+
+                return;
+            }
+            else
+            {
+                DEBUGP (("[%s] NdisAllocateNetBufferAndNetBufferList failed in IndicateReceivePacket\n",
+                    MINIPORT_INSTANCE_ID (Adapter)));
+                NOTE_ERROR ();
+
+                NdisFreeMdl(mdl);
+                NdisFreeMemory(injectBuffer,0,0);
+            }
+        }
+        else
+        {
+            DEBUGP (("[%s] NdisAllocateMdl failed in IndicateReceivePacket\n",
+                MINIPORT_INSTANCE_ID (Adapter)));
+            NOTE_ERROR ();
+
+            NdisFreeMemory(injectBuffer,0,0);
+        }
+    }
+    else
+    {
+        DEBUGP (("[%s] NdisAllocateMemoryWithTagPriority failed in IndicateReceivePacket\n",
+            MINIPORT_INSTANCE_ID (Adapter)));
+        NOTE_ERROR ();
+    }
 }
 
 VOID
@@ -103,7 +220,9 @@ tapCompleteIrpAndFreeReceiveNetBufferList(
     }
 
     //
-    // Free MDL allocated for P2P Ethernet header if necesary.
+    // Handle P2P Packet
+    // -----------------
+    // Free MDL allocated for P2P Ethernet header.
     //
     if(TAP_RX_NBL_FLAG_TEST(NetBufferList,TAP_RX_NBL_FLAGS_IS_P2P))
     {
@@ -113,6 +232,30 @@ tapCompleteIrpAndFreeReceiveNetBufferList(
         netBuffer = NET_BUFFER_LIST_FIRST_NB(NetBufferList);
         mdl = NET_BUFFER_FIRST_MDL(netBuffer);
         mdl->Next = NULL;
+
+        NdisFreeMdl(mdl);
+    }
+
+    //
+    // Handle Injected Packet
+    // -----------------------
+    // Free MDL and data buffer allocated for injected packet.
+    //
+    if(TAP_RX_NBL_FLAG_TEST(NetBufferList,TAP_RX_NBL_FLAGS_IS_INJECTED))
+    {
+        PNET_BUFFER     netBuffer;
+        PMDL            mdl;
+        PUCHAR          injectBuffer;
+
+        netBuffer = NET_BUFFER_LIST_FIRST_NB(NetBufferList);
+        mdl = NET_BUFFER_FIRST_MDL(netBuffer);
+
+        injectBuffer = (PUCHAR )MmGetSystemAddressForMdlSafe(mdl,NormalPagePriority);
+
+        if(injectBuffer)
+        {
+            NdisFreeMemory(injectBuffer,0,0);
+        }
 
         NdisFreeMdl(mdl);
     }
@@ -309,6 +452,9 @@ TapDeviceWrite(
 
                 // Stash IRP pointer in NBL MiniportReserved[0] field.
                 netBufferList->MiniportReserved[0] = Irp;
+                netBufferList->MiniportReserved[1] = NULL;
+
+                // BUGBUG!!! Setup for IRP cancel!!!
 
                 TAP_RX_NBL_FLAGS_CLEAR_ALL(netBufferList);
 
@@ -408,6 +554,9 @@ TapDeviceWrite(
 
                     // Stash IRP pointer in NBL MiniportReserved[0] field.
                     netBufferList->MiniportReserved[0] = Irp;
+                    netBufferList->MiniportReserved[1] = NULL;
+
+                    // BUGBUG!!! Setup for IRP cancel!!!
 
                     // Set flag indicating that this is P2P packet
                     TAP_RX_NBL_FLAGS_CLEAR_ALL(netBufferList);

@@ -448,7 +448,7 @@ SendDHCPMsg(
                 DHCPMSG_LEN_FULL (pkt));
 
             // Return DHCP response to kernel
-            InjectPacketDeferred(
+            IndicateReceivePacket(
                 Adapter,
                 DHCPMSG_BUF (pkt),
                 DHCPMSG_LEN_FULL (pkt)

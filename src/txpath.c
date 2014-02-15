@@ -193,7 +193,7 @@ HandleIPv6NeighborDiscovery(
         (unsigned char *) na,
         sizeof (ICMPV6_NA_PKT));
 
-    InjectPacketDeferred (Adapter, (UCHAR *) na, sizeof (ICMPV6_NA_PKT));
+    IndicateReceivePacket (Adapter, (UCHAR *) na, sizeof (ICMPV6_NA_PKT));
 
     MemFree (na, sizeof (ICMPV6_NA_PKT));
 
@@ -257,7 +257,7 @@ ProcessARP(
                 (unsigned char *) arp,
                 sizeof (ARP_PACKET));
 
-            InjectPacketDeferred (Adapter, (UCHAR *) arp, sizeof (ARP_PACKET));
+            IndicateReceivePacket (Adapter, (UCHAR *) arp, sizeof (ARP_PACKET));
 
             MemFree (arp, sizeof (ARP_PACKET));
         }

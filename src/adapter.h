@@ -25,8 +25,9 @@
 #define __TAP_ADAPTER_CONTEXT_H_
 
 // Memory allocation tags.
-#define TAP_ADAPTER_TAG     ((ULONG)'ApaT')     // "TapA
-#define TAP_RX_NBL_TAG      ((ULONG)'RpaT')     // "TapR
+#define TAP_ADAPTER_TAG             ((ULONG)'ApaT')     // "TapA
+#define TAP_RX_NBL_TAG              ((ULONG)'RpaT')     // "TapR
+#define TAP_RX_INJECT_BUFFER_TAG    ((ULONG)'IpaT')     // "TapI
 
 #define TAP_MAX_NDIS_NAME_LENGTH     64     // 38 character GUID string plus extra..
 
@@ -38,6 +39,7 @@
 #define TAP_RX_NBL_FLAG_TEST(_NBL, _F)      (((_NBL)->Flags & ((_F) & TAP_RX_NBL_FLAGS)) != 0)
 
 #define TAP_RX_NBL_FLAGS_IS_P2P             0x00001000
+#define TAP_RX_NBL_FLAGS_IS_INJECTED        0x00002000
 
 // MSDN Ref: http://msdn.microsoft.com/en-us/library/windows/hardware/ff560490(v=vs.85).aspx
 typedef

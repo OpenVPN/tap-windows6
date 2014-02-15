@@ -88,9 +88,9 @@ DestroyTapDevice(
 //
 
 VOID
-InjectPacketDeferred(
+IndicateReceivePacket(
     __in PTAP_ADAPTER_CONTEXT  Adapter,
-    __in UCHAR *packet,
+    __in PUCHAR packet,
     __in const unsigned int len
     );
 
@@ -113,102 +113,5 @@ ProcessARP(
     __in const IPADDR ip_netmask,
     __in const MACADDR mac
    );
-
-//
-//VOID SetMediaStatus
-//   (
-//    TapAdapterPointer p_Adapter,
-//    BOOLEAN state
-//   );
-//
-//VOID InjectPacketDeferred
-//   (
-//    TapAdapterPointer p_Adapter,
-//    UCHAR *packet,
-//    const unsigned int len
-//   );
-//
-//VOID InjectPacketNow
-//   (
-//    TapAdapterPointer p_Adapter,
-//    UCHAR *packet,
-//    const unsigned int len
-//   );
-//
-//// for KDEFERRED_ROUTINE and Static Driver Verifier
-////#include <wdm.h>
-////KDEFERRED_ROUTINE InjectPacketDpc;
-//
-//VOID InjectPacketDpc
-//   (
-//    KDPC *Dpc,
-//    PVOID DeferredContext,
-//    PVOID SystemArgument1,
-//    PVOID SystemArgument2
-//    );
-//
-//VOID CheckIfDhcpAndTunMode
-//   (
-//    TapAdapterPointer p_Adapter
-//   );
-//
-//VOID HookDispatchFunctions();
-//
-//#if ENABLE_NONADMIN
-//
-//#if defined(DDKVER_MAJOR) && DDKVER_MAJOR < 5600
-///*
-// * Better solution for use on Vista DDK, but possibly not compatible with
-// * earlier DDKs:
-// *
-// * Eliminate the definition of SECURITY_DESCRIPTOR (and even ZwSetSecurityObject),
-// * and at the top of tapdrv.c change:
-// *
-// * #include <ndis.h>
-// * #include <ntstrsafe.h>
-// * #include <ntddk.h>
-// *
-// * To
-// *
-// * #include <ntifs.h>
-// * #include <ndis.h>
-// * #include <ntstrsafe.h>
-// */
-//typedef struct _SECURITY_DESCRIPTOR {
-//  unsigned char opaque[64];
-//} SECURITY_DESCRIPTOR;
-//
-//NTSYSAPI
-//NTSTATUS
-//NTAPI
-//ZwSetSecurityObject (
-//  IN HANDLE  Handle,
-//  IN SECURITY_INFORMATION  SecurityInformation,
-//  IN PSECURITY_DESCRIPTOR  SecurityDescriptor);
-//
-//#endif
-//
-//VOID AllowNonAdmin (TapExtensionPointer p_Extension);
-//
-//#endif
-//
-//struct WIN2K_NDIS_MINIPORT_BLOCK
-//{
-//  unsigned char  opaque[16];
-//  UNICODE_STRING MiniportName;       // how mini-port refers to us
-//};
-//
-//#if PACKET_TRUNCATION_CHECK
-//
-//VOID IPv4PacketSizeVerify
-//   (
-//    const UCHAR *data,
-//    ULONG length,
-//    BOOLEAN tun,
-//    const char *prefix,
-//    LONG *counter
-//   );
-//
-//#endif
 
 #endif
