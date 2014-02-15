@@ -637,8 +637,8 @@ Return Value:
                 (int)adapter->SendPacketQueue.MaxCount,
                 (int)PACKET_QUEUE_SIZE,
 
-                (int)adapter->InjectPacketQueue.Count,
-                (int)adapter->InjectPacketQueue.MaxCount,
+                (int)0,         // adapter->InjectPacketQueue.Count - Unused
+                (int)0,         // adapter->InjectPacketQueue.MaxCount - Unused
                 (int)INJECT_QUEUE_SIZE
                 );
 

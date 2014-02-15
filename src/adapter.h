@@ -164,10 +164,6 @@ typedef struct _TAP_ADAPTER_CONTEXT
     // NBL pool for making TAP receive indications.
     NDIS_HANDLE                 ReceiveNblPool;
 
-    // Queue containing TAP packets written by the TAP application. These
-    // are waiting to be indicated to the local host as receive NBs.
-    TAP_PACKET_QUEUE            InjectPacketQueue;
-
     // Info for point-to-point mode
     BOOLEAN                     m_tun;
     IPADDR                      m_localIP;
