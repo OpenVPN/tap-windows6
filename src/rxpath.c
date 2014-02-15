@@ -227,122 +227,47 @@ TapDeviceWrite(
 
     Irp->IoStatus.Information = irpSp->Parameters.Write.Length;
 
-    if (!adapter->m_tun && ((irpSp->Parameters.Write.Length) >= ETHERNET_HEADER_SIZE))
+    //
+    // Handle miniport Pause
+    // ---------------------
+    // NDIS 6 miniports implement a temporary "Pause" state normally followed
+    // by the Restart. While in the Pause state it is forbidden for the miniport
+    // to indicate receive NBLs.
+    //
+    // That is: The device interface may be "up", but the NDIS miniport send/receive
+    // interface may be temporarily "down".
+    //
+    // BUGBUG!!! In the initial implementation of the NDIS 6 TapOas receive path
+    // the code below will perform a "lying send" for write IRPs passed to the
+    // driver while the miniport is in the Paused state.
+    //
+    // The correct implementation is to go ahead and build the NBLs corresponding
+    // to the user-mode write - but queue them. When Restart is entered the
+    // queued NBLs would be dequeued and indicated to the host.
+    //
+    if(tapAdapterSendAndReceiveReady(adapter) == NDIS_STATUS_SUCCESS)
     {
-        PNET_BUFFER_LIST    netBufferList;
-
-		DUMP_PACKET ("IRP_MJ_WRITE ETH",
-			     (unsigned char *) Irp->AssociatedIrp.SystemBuffer,
-			     irpSp->Parameters.Write.Length);
-
-        //=====================================================
-        // If IPv4 packet, check whether or not packet
-        // was truncated.
-        //=====================================================
-#if PACKET_TRUNCATION_CHECK
-		IPv4PacketSizeVerify (
-            (unsigned char *) Irp->AssociatedIrp.SystemBuffer,
-			irpSp->Parameters.Write.Length,
-			FALSE,
-			"RX",
-			&adapter->m_RxTrunc
-            );
-#endif
-        (Irp->MdlAddress)->Next = NULL; // No next MDL
-
-        //
-        // Allocate the NBL
-        //
-        netBufferList = NdisAllocateNetBufferAndNetBufferList(
-            adapter->ReceiveNblPool,
-            0,                  // ContextSize
-            0,                  // ContextBackFill
-            Irp->MdlAddress,    // MDL chain
-            0,
-            dataLength
-            );
-
-        if(netBufferList != NULL)
-        {
-            // BUGBUG!!! Increment in-flight statistics!!!
-            // BUGBUG!!! Queue the NBL if adapter paused!!!
-
-            // Stash IRP pointer in NBL MiniportReserved[0] field.
-            netBufferList->MiniportReserved[0] = Irp;
-
-            TAP_RX_NBL_FLAGS_CLEAR_ALL(netBufferList);
-
-            //
-            // Indicate the packet
-            // -------------------
-            // Irp->AssociatedIrp.SystemBuffer with length irpSp->Parameters.Write.Length
-            // contains the complete packet including Ethernet header and payload.
-            //
-            NdisMIndicateReceiveNetBufferLists(
-                adapter->MiniportAdapterHandle,
-                netBufferList,
-                NDIS_DEFAULT_PORT_NUMBER,
-                1,      // NumberOfNetBufferLists
-                0       // ReceiveFlags
-                );
-
-            ntStatus = STATUS_PENDING;
-        }
-        else
-        {
-            // Fail the IRP
-		    ntStatus = STATUS_INSUFFICIENT_RESOURCES;
-        }
-    }
-    else if (adapter->m_tun && ((irpSp->Parameters.Write.Length) >= IP_HEADER_SIZE))
-    {
-		PETH_HEADER         p_UserToTap = &adapter->m_UserToTap;
-        PMDL                mdl;    // Head of MDL chain.
-
-		// For IPv6, need to use Ethernet header with IPv6 proto
-        if ( IPH_GET_VER( ((IPHDR*) Irp->AssociatedIrp.SystemBuffer)->version_len) == 6 )
-        {
-            p_UserToTap = &adapter->m_UserToTap_IPv6;
-        }
-
-		DUMP_PACKET2 ("IRP_MJ_WRITE P2P",
-			      p_UserToTap,
-			      (unsigned char *) Irp->AssociatedIrp.SystemBuffer,
-			      irpSp->Parameters.Write.Length);
-
-        //=====================================================
-        // If IPv4 packet, check whether or not packet
-        // was truncated.
-        //=====================================================
-#if PACKET_TRUNCATION_CHECK
-		IPv4PacketSizeVerify (
-            (unsigned char *) Irp->AssociatedIrp.SystemBuffer,
-			irpSp->Parameters.Write.Length,
-			TRUE,
-			"RX",
-			&adapter->m_RxTrunc
-            );
-#endif
-
-        //
-        // Allocate MDL for Ethernet header
-        // --------------------------------
-        // Irp->AssociatedIrp.SystemBuffer with length irpSp->Parameters.Write.Length
-        // contains the only the Ethernet payload. Prepend the user-mode provided
-        // payload with the Ethernet header pointed to by p_UserToTap.
-        //
-        mdl = NdisAllocateMdl(
-                adapter->MiniportAdapterHandle,
-                p_UserToTap,
-                sizeof(ETH_HEADER)
-                );
-
-        if(mdl != NULL)
+        if (!adapter->m_tun && ((irpSp->Parameters.Write.Length) >= ETHERNET_HEADER_SIZE))
         {
             PNET_BUFFER_LIST    netBufferList;
 
-            // Chain user's Ethernet payload behind Ethernet header.
-            mdl->Next = Irp->MdlAddress;
+            DUMP_PACKET ("IRP_MJ_WRITE ETH",
+                (unsigned char *) Irp->AssociatedIrp.SystemBuffer,
+                irpSp->Parameters.Write.Length);
+
+            //=====================================================
+            // If IPv4 packet, check whether or not packet
+            // was truncated.
+            //=====================================================
+#if PACKET_TRUNCATION_CHECK
+            IPv4PacketSizeVerify (
+                (unsigned char *) Irp->AssociatedIrp.SystemBuffer,
+                irpSp->Parameters.Write.Length,
+                FALSE,
+                "RX",
+                &adapter->m_RxTrunc
+                );
+#endif
             (Irp->MdlAddress)->Next = NULL; // No next MDL
 
             //
@@ -350,27 +275,27 @@ TapDeviceWrite(
             //
             netBufferList = NdisAllocateNetBufferAndNetBufferList(
                 adapter->ReceiveNblPool,
-                0,          // ContextSize
-                0,          // ContextBackFill
-                mdl,        // MDL chain
+                0,                  // ContextSize
+                0,                  // ContextBackFill
+                Irp->MdlAddress,    // MDL chain
                 0,
-                sizeof(ETH_HEADER) + dataLength
+                dataLength
                 );
 
             if(netBufferList != NULL)
             {
                 // BUGBUG!!! Increment in-flight statistics!!!
-                // BUGBUG!!! Queue the NBL if adapter paused!!!
 
                 // Stash IRP pointer in NBL MiniportReserved[0] field.
                 netBufferList->MiniportReserved[0] = Irp;
 
-                // Set flag indicating that this is P2P packet
                 TAP_RX_NBL_FLAGS_CLEAR_ALL(netBufferList);
-                TAP_RX_NBL_FLAG_SET(netBufferList,TAP_RX_NBL_FLAGS_IS_P2P);
 
                 //
                 // Indicate the packet
+                // -------------------
+                // Irp->AssociatedIrp.SystemBuffer with length irpSp->Parameters.Write.Length
+                // contains the complete packet including Ethernet header and payload.
                 //
                 NdisMIndicateReceiveNetBufferLists(
                     adapter->MiniportAdapterHandle,
@@ -384,32 +309,148 @@ TapDeviceWrite(
             }
             else
             {
-                mdl->Next = NULL;
-                NdisFreeMdl(mdl);
+                DEBUGP (("[%s] NdisMIndicateReceiveNetBufferLists failed in IRP_MJ_WRITE\n",
+                    MINIPORT_INSTANCE_ID (adapter)));
+                NOTE_ERROR ();
 
                 // Fail the IRP
-		        ntStatus = STATUS_INSUFFICIENT_RESOURCES;
+                Irp->IoStatus.Information = 0;
+                ntStatus = STATUS_INSUFFICIENT_RESOURCES;
+            }
+        }
+        else if (adapter->m_tun && ((irpSp->Parameters.Write.Length) >= IP_HEADER_SIZE))
+        {
+            PETH_HEADER         p_UserToTap = &adapter->m_UserToTap;
+            PMDL                mdl;    // Head of MDL chain.
+
+            // For IPv6, need to use Ethernet header with IPv6 proto
+            if ( IPH_GET_VER( ((IPHDR*) Irp->AssociatedIrp.SystemBuffer)->version_len) == 6 )
+            {
+                p_UserToTap = &adapter->m_UserToTap_IPv6;
+            }
+
+            DUMP_PACKET2 ("IRP_MJ_WRITE P2P",
+                p_UserToTap,
+                (unsigned char *) Irp->AssociatedIrp.SystemBuffer,
+                irpSp->Parameters.Write.Length);
+
+            //=====================================================
+            // If IPv4 packet, check whether or not packet
+            // was truncated.
+            //=====================================================
+#if PACKET_TRUNCATION_CHECK
+            IPv4PacketSizeVerify (
+                (unsigned char *) Irp->AssociatedIrp.SystemBuffer,
+                irpSp->Parameters.Write.Length,
+                TRUE,
+                "RX",
+                &adapter->m_RxTrunc
+                );
+#endif
+
+            //
+            // Allocate MDL for Ethernet header
+            // --------------------------------
+            // Irp->AssociatedIrp.SystemBuffer with length irpSp->Parameters.Write.Length
+            // contains the only the Ethernet payload. Prepend the user-mode provided
+            // payload with the Ethernet header pointed to by p_UserToTap.
+            //
+            mdl = NdisAllocateMdl(
+                adapter->MiniportAdapterHandle,
+                p_UserToTap,
+                sizeof(ETH_HEADER)
+                );
+
+            if(mdl != NULL)
+            {
+                PNET_BUFFER_LIST    netBufferList;
+
+                // Chain user's Ethernet payload behind Ethernet header.
+                mdl->Next = Irp->MdlAddress;
+                (Irp->MdlAddress)->Next = NULL; // No next MDL
+
+                //
+                // Allocate the NBL
+                //
+                netBufferList = NdisAllocateNetBufferAndNetBufferList(
+                    adapter->ReceiveNblPool,
+                    0,          // ContextSize
+                    0,          // ContextBackFill
+                    mdl,        // MDL chain
+                    0,
+                    sizeof(ETH_HEADER) + dataLength
+                    );
+
+                if(netBufferList != NULL)
+                {
+                    // BUGBUG!!! Increment in-flight statistics!!!
+
+                    // Stash IRP pointer in NBL MiniportReserved[0] field.
+                    netBufferList->MiniportReserved[0] = Irp;
+
+                    // Set flag indicating that this is P2P packet
+                    TAP_RX_NBL_FLAGS_CLEAR_ALL(netBufferList);
+                    TAP_RX_NBL_FLAG_SET(netBufferList,TAP_RX_NBL_FLAGS_IS_P2P);
+
+                    //
+                    // Indicate the packet
+                    //
+                    NdisMIndicateReceiveNetBufferLists(
+                        adapter->MiniportAdapterHandle,
+                        netBufferList,
+                        NDIS_DEFAULT_PORT_NUMBER,
+                        1,      // NumberOfNetBufferLists
+                        0       // ReceiveFlags
+                        );
+
+                    ntStatus = STATUS_PENDING;
+                }
+                else
+                {
+                    mdl->Next = NULL;
+                    NdisFreeMdl(mdl);
+
+                    DEBUGP (("[%s] NdisMIndicateReceiveNetBufferLists failed in IRP_MJ_WRITE\n",
+                        MINIPORT_INSTANCE_ID (adapter)));
+                    NOTE_ERROR ();
+
+                    // Fail the IRP
+                    Irp->IoStatus.Information = 0;
+                    ntStatus = STATUS_INSUFFICIENT_RESOURCES;
+                }
+            }
+            else
+            {
+                DEBUGP (("[%s] NdisAllocateMdl failed in IRP_MJ_WRITE\n",
+                    MINIPORT_INSTANCE_ID (adapter)));
+                NOTE_ERROR ();
+
+                // Fail the IRP
+                Irp->IoStatus.Information = 0;
+                ntStatus = STATUS_INSUFFICIENT_RESOURCES;
             }
         }
         else
         {
-            // Fail the IRP
-		    ntStatus = STATUS_INSUFFICIENT_RESOURCES;
+            DEBUGP (("[%s] Bad buffer size in IRP_MJ_WRITE, len=%d\n",
+                MINIPORT_INSTANCE_ID (adapter),
+                irpSp->Parameters.Write.Length));
+            NOTE_ERROR ();
+
+            Irp->IoStatus.Information = 0;	// ETHERNET_HEADER_SIZE;
+            Irp->IoStatus.Status = ntStatus = STATUS_BUFFER_TOO_SMALL;
         }
     }
     else
     {
-        DEBUGP (("[%s] Bad buffer size in IRP_MJ_WRITE, len=%d\n",
-            MINIPORT_INSTANCE_ID (adapter),
-            irpSp->Parameters.Write.Length));
-        NOTE_ERROR ();
-        Irp->IoStatus.Information = 0;	// ETHERNET_HEADER_SIZE;
-        Irp->IoStatus.Status = ntStatus = STATUS_BUFFER_TOO_SMALL;
+        DEBUGP (("[%s] Lying send in IRP_MJ_WRITE while adapter paused\n",
+            MINIPORT_INSTANCE_ID (adapter)));
+
+        ntStatus = STATUS_SUCCESS;
     }
 
     if (ntStatus != STATUS_PENDING)
     {
-		Irp->IoStatus.Information = 0;
         Irp->IoStatus.Status = ntStatus;
         IoCompleteRequest(Irp, IO_NO_INCREMENT);
     }
