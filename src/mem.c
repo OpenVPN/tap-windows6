@@ -225,16 +225,14 @@ tapPacketQueueInsertTail(
     KeReleaseSpinLock(&TapPacketQueue->QueueLock,irql);
 }
 
+// Call with QueueLock held
 PTAP_PACKET
-tapPacketRemoveHead(
+tapPacketRemoveHeadLocked(
     __in PTAP_PACKET_QUEUE  TapPacketQueue
     )
 {
     PTAP_PACKET     tapPacket = NULL;
     PLIST_ENTRY     listEntry;
-    KIRQL           irql;
-
-    KeAcquireSpinLock(&TapPacketQueue->QueueLock,&irql);
 
     listEntry = RemoveHeadList(&TapPacketQueue->Queue);
 
@@ -245,6 +243,21 @@ tapPacketRemoveHead(
         // Update counts
         ++TapPacketQueue->Count;
     }
+
+    return tapPacket;
+}
+
+PTAP_PACKET
+tapPacketRemoveHead(
+    __in PTAP_PACKET_QUEUE  TapPacketQueue
+    )
+{
+    PTAP_PACKET     tapPacket = NULL;
+    KIRQL           irql;
+
+    KeAcquireSpinLock(&TapPacketQueue->QueueLock,&irql);
+
+    tapPacket = tapPacketRemoveHeadLocked(TapPacketQueue);
 
     KeReleaseSpinLock(&TapPacketQueue->QueueLock,irql);
 

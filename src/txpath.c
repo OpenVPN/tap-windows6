@@ -268,6 +268,121 @@ ProcessARP(
         return FALSE;
 }
 
+//=============================================================
+// CompleteIRP is normally called with an adapter -> userspace
+// network packet and an IRP (Pending I/O request) from userspace.
+//
+// The IRP will normally represent a queued overlapped read
+// operation from userspace that is in a wait state.
+//
+// Use the ethernet packet to satisfy the IRP.
+//=============================================================
+
+VOID
+tapCompletePendingReadIrp(
+    __in PIRP Irp,
+    __in PTAP_PACKET TapPacket
+    )
+{
+    int offset;
+    int len;
+    NTSTATUS    status = STATUS_UNSUCCESSFUL;
+
+    ASSERT(Irp);
+    ASSERT(TapPacket);
+
+    //-------------------------------------------
+    // While p_PacketBuffer always contains a
+    // full ethernet packet, including the
+    // ethernet header, in point-to-point mode,
+    // we only want to return the IPv4
+    // component.
+    //-------------------------------------------
+
+    if (TapPacket->m_SizeFlags & TP_TUN)
+    {
+        offset = ETHERNET_HEADER_SIZE;
+        len = (int) (TapPacket->m_SizeFlags & TP_SIZE_MASK) - ETHERNET_HEADER_SIZE;
+    }
+    else
+    {
+        offset = 0;
+        len = (TapPacket->m_SizeFlags & TP_SIZE_MASK);
+    }
+
+    if (len < 0 || (int) Irp->IoStatus.Information < len)
+    {
+        Irp->IoStatus.Information = 0;
+        Irp->IoStatus.Status = status = STATUS_BUFFER_OVERFLOW;
+        NOTE_ERROR ();
+    }
+    else
+    {
+        Irp->IoStatus.Information = len;
+        Irp->IoStatus.Status = status = STATUS_SUCCESS;
+
+        // Copy packet data
+        NdisMoveMemory(
+            Irp->AssociatedIrp.SystemBuffer,
+            TapPacket->m_Data + offset,
+            len
+            );
+    }
+
+    // Free the TAP packet
+    NdisFreeMemory(TapPacket,0,0);
+
+    // Complete the IRP
+    IoCompleteRequest (Irp, IO_NETWORK_INCREMENT);
+}
+
+VOID
+tapProcessSendPacketQueue(
+    __in PTAP_ADAPTER_CONTEXT   Adapter
+    )
+{
+    KIRQL  irql;
+
+    // Process the send packet queue
+    KeAcquireSpinLock(&Adapter->SendPacketQueue.QueueLock,&irql);
+
+    while(Adapter->SendPacketQueue.Count > 0 )
+    {
+        PIRP            irp;
+        PTAP_PACKET     tapPacket;
+
+        // Fetch a read IRP
+        irp = IoCsqRemoveIrp(
+                &Adapter->PendingReadIrpQueue.CsqQueue,
+                NULL
+                );
+
+        if( irp == NULL )
+        {
+            // No IRP to satisfy
+            break;
+        }
+
+        // Fetch a queued TAP send packet
+        tapPacket = tapPacketRemoveHeadLocked(
+                        &Adapter->SendPacketQueue
+                        );
+
+        ASSERT(tapPacket);
+
+        // Release packet queue lock while completing the IRP
+        KeReleaseSpinLock(&Adapter->SendPacketQueue.QueueLock,irql);
+
+        // Complete the read IRP from queued TAP send packet.
+        tapCompletePendingReadIrp(irp,tapPacket);
+
+        // Reqcquire packet queue lock after completing the IRP
+        KeAcquireSpinLock(&Adapter->SendPacketQueue.QueueLock,&irql);
+    }
+
+    KeReleaseSpinLock(&Adapter->SendPacketQueue.QueueLock,irql);
+}
+
 VOID
 tapAdapterTransmit(
     __in PTAP_ADAPTER_CONTEXT   Adapter,
@@ -891,6 +1006,10 @@ Return Value:
         NDIS_STATUS_SUCCESS,
         DispatchLevel
         );
+
+    // Attempt to complete pending read IRPs from pending TAP 
+    // send packet queue.
+    tapProcessSendPacketQueue(adapter);
 }
 
 VOID
@@ -989,8 +1108,6 @@ TapDeviceRead(
 
     // BUGBUG!!! Use RemoveLock???
 
-    // BUGBUG!!! Service IRP immediately??? Queue if unable to do so.
-
     //
     // Queue the IRP and return STATUS_PENDING.
     // ----------------------------------------
@@ -1003,6 +1120,10 @@ TapDeviceRead(
     // Is this needed???
     //
     IoCsqInsertIrp(&adapter->PendingReadIrpQueue.CsqQueue, Irp, NULL);
+
+    // Attempt to complete pending read IRPs from pending TAP 
+    // send packet queue.
+    tapProcessSendPacketQueue(adapter);
 
     ntStatus = STATUS_PENDING;
 

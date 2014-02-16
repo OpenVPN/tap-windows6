@@ -66,6 +66,13 @@ tapPacketQueueInsertTail(
     __in PTAP_PACKET        TapPacket
     );
 
+
+// Call with QueueLock held
+PTAP_PACKET
+tapPacketRemoveHeadLocked(
+    __in PTAP_PACKET_QUEUE  TapPacketQueue
+    );
+
 PTAP_PACKET
 tapPacketRemoveHead(
     __in PTAP_PACKET_QUEUE  TapPacketQueue
