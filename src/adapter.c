@@ -156,7 +156,7 @@ VOID
 tapReadPermanentAddress(
     __in PTAP_ADAPTER_CONTEXT   Adapter,
     __in NDIS_HANDLE            ConfigurationHandle,
-    __out MACADDR               PeranentAddress
+    __out MACADDR               PermanentAddress
     )
 {
     NDIS_STATUS status;
@@ -186,7 +186,7 @@ tapReadPermanentAddress(
                     TRUE) == STATUS_SUCCESS
                     )
             {
-                macFromRegistry = ParseMAC (Adapter->PermanentAddress, macString.Buffer);
+                macFromRegistry = ParseMAC (PermanentAddress, macString.Buffer);
                 RtlFreeAnsiString (&macString);
             }
         }
@@ -200,7 +200,7 @@ tapReadPermanentAddress(
         // Make up a dummy mac address based on the ANSI representation of the
         // NetCfgInstanceId GUID.
         //
-        GenerateRandomMac(Adapter->PermanentAddress, MINIPORT_INSTANCE_ID(Adapter));
+        GenerateRandomMac(PermanentAddress, MINIPORT_INSTANCE_ID(Adapter));
     }
 }
 
@@ -402,7 +402,7 @@ tapReadConfiguration(
                 Adapter->PermanentAddress
                 );
 
-            DEBUGP (("[%s] Using MAC PermanentAddress %x:%x:%x:%x:%x:%x\n",
+            DEBUGP (("[%s] Using MAC PermanentAddress %2.2x:%2.2x:%2.2x:%2.2x:%2.2x:%2.2x\n",
                 MINIPORT_INSTANCE_ID (Adapter),
                 Adapter->PermanentAddress[0],
                 Adapter->PermanentAddress[1],
@@ -415,7 +415,7 @@ tapReadConfiguration(
             // Now seed the current MAC address with the permanent address.
             COPY_MAC(Adapter->CurrentAddress, Adapter->PermanentAddress);
 
-            DEBUGP (("[%s] Using MAC CurrentAddress %x:%x:%x:%x:%x:%x\n",
+            DEBUGP (("[%s] Using MAC CurrentAddress %2.2x:%2.2x:%2.2x:%2.2x:%2.2x:%2.2x\n",
                 MINIPORT_INSTANCE_ID (Adapter),
                 Adapter->CurrentAddress[0],
                 Adapter->CurrentAddress[1],
