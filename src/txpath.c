@@ -370,14 +370,18 @@ tapProcessSendPacketQueue(
 
         ASSERT(tapPacket);
 
+        // BUGBUG!!! Investigate whether release/reacquire can cause
+        // out-of-order IRP completion. Also, whether user-mode can
+        // tolerate out-of-order packets.
+
         // Release packet queue lock while completing the IRP
-        KeReleaseSpinLock(&Adapter->SendPacketQueue.QueueLock,irql);
+        //KeReleaseSpinLock(&Adapter->SendPacketQueue.QueueLock,irql);
 
         // Complete the read IRP from queued TAP send packet.
         tapCompletePendingReadIrp(irp,tapPacket);
 
         // Reqcquire packet queue lock after completing the IRP
-        KeAcquireSpinLock(&Adapter->SendPacketQueue.QueueLock,&irql);
+        //KeAcquireSpinLock(&Adapter->SendPacketQueue.QueueLock,&irql);
     }
 
     KeReleaseSpinLock(&Adapter->SendPacketQueue.QueueLock,irql);
