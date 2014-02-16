@@ -1048,11 +1048,36 @@ Return Value:
     adapter->Locked.AdapterState = MiniportPausingState;
     tapAdapterReleaseLock(adapter,FALSE);
 
-    // Wait for all in-flight receive indications to be returned.
+    //
+    // Stop the flow of network data through the receive path
+    // ------------------------------------------------------
+    // In the Pausing and Paused state tapAdapterSendAndReceiveReady
+    // will prevent new calls to NdisMIndicateReceiveNetBufferLists
+    // to indicate additional receive NBLs to the host.
+    //
+    // However, there may be some in-flight NBLs owned by the driver
+    // that have been indicated to the host but have not yet been
+    // returned.
+    //
+    // Wait here for all in-flight receive indications to be returned.
+    //
     tapWaitForReceiveNblInFlightCountZeroEvent(adapter);
 
-    // Wait until driver has completed all send NBLs.
-    // BUGBUG!!! Add necessary checks!!!
+    //
+    // Stop the flow of network data through the send path
+    // ---------------------------------------------------
+    // The initial implementation of the NDIS 6 send path follows the
+    // NDIS 5 pattern. Under this approach every send packet is copied
+    // into a driver-owned TAP_PACKET structure and the NBL owned by
+    // higher-level protocol is immediatly completed.
+    //
+    // With this deep-copy approach the driver never claims ownership
+    // of any send NBL.
+    //
+    // A future implementation may queue send NBLs and thereby eliminate
+    // the need for the unnecessary allocation and deep copy of each packet.
+    //
+    // So, nothing to do here for the send path for now...
 
     status = NDIS_STATUS_SUCCESS;
 
