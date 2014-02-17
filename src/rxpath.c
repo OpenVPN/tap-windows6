@@ -139,6 +139,8 @@ IndicateReceivePacket(
                 nblCount = NdisInterlockedIncrement(&Adapter->ReceiveNblInFlightCount);
                 ASSERT(nblCount > 0 );
 
+                netBufferList->SourceHandle = Adapter->MiniportAdapterHandle;
+
                 //
                 // Indicate the packet
                 // -------------------

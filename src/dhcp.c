@@ -233,7 +233,7 @@ GetDHCPMessageType(
 
 BOOLEAN
 DHCPMessageOurs (
-    __in const PTAP_ADAPTER_CONTEXT p_Adapter,
+    __in const PTAP_ADAPTER_CONTEXT Adapter,
     __in const ETH_HEADER *eth,
     __in const IPHDR *ip,
     __in const UDPHDR *udp,
@@ -247,14 +247,14 @@ DHCPMessageOurs (
     }
 
     // Source MAC must be our adapter
-    if (!MAC_EQUAL (eth->src, p_Adapter->CurrentAddress))
+    if (!MAC_EQUAL (eth->src, Adapter->CurrentAddress))
     {
         return FALSE;
     }
 
     // Dest MAC must be either broadcast or our virtual DHCP server
-    if (!(MAC_EQUAL (eth->dest, p_Adapter->m_MAC_Broadcast)
-        || MAC_EQUAL (eth->dest, p_Adapter->m_dhcp_server_mac)))
+    if (!(ETH_IS_BROADCAST(eth->dest)
+        || MAC_EQUAL (eth->dest, Adapter->m_dhcp_server_mac)))
     {
         return FALSE;
     }
@@ -289,7 +289,7 @@ DHCPMessageOurs (
 
 VOID
 BuildDHCPPre (
-    __in const PTAP_ADAPTER_CONTEXT a,
+    __in const PTAP_ADAPTER_CONTEXT Adapter,
     __inout DHCPPre *p,
     __in const ETH_HEADER *eth,
     __in const IPHDR *ip,
@@ -300,16 +300,16 @@ BuildDHCPPre (
 {
     // Should we broadcast or direct to a specific MAC / IP address?
     const BOOLEAN broadcast = (type == DHCPNAK
-        || MAC_EQUAL (eth->dest, a->m_MAC_Broadcast));
+        || ETH_IS_BROADCAST(eth->dest));
 
     //
     // Build ethernet header
     //
-    COPY_MAC (p->eth.src, a->m_dhcp_server_mac);
+    COPY_MAC (p->eth.src, Adapter->m_dhcp_server_mac);
 
     if (broadcast)
     {
-        COPY_MAC (p->eth.dest, a->m_MAC_Broadcast);
+        memset(p->eth.dest,0xFF,ETH_LENGTH_OF_ADDRESS);
     }
     else
     {
@@ -329,7 +329,7 @@ BuildDHCPPre (
     p->ip.ttl = 16;
     p->ip.protocol = IPPROTO_UDP;
     p->ip.check = 0;
-    p->ip.saddr = a->m_dhcp_server_ip;
+    p->ip.saddr = Adapter->m_dhcp_server_ip;
 
     if (broadcast)
     {
@@ -337,7 +337,7 @@ BuildDHCPPre (
     }
     else
     {
-        p->ip.daddr = a->m_dhcp_addr;
+        p->ip.daddr = Adapter->m_dhcp_addr;
     }
 
     //
@@ -365,10 +365,10 @@ BuildDHCPPre (
     }
     else
     {
-        p->dhcp.yiaddr = a->m_dhcp_addr;
+        p->dhcp.yiaddr = Adapter->m_dhcp_addr;
     }
 
-    p->dhcp.siaddr = a->m_dhcp_server_ip;
+    p->dhcp.siaddr = Adapter->m_dhcp_server_ip;
     p->dhcp.giaddr = 0;
     COPY_MAC (p->dhcp.chaddr, eth->src);
     p->dhcp.magic = htonl (0x63825363);

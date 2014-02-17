@@ -245,8 +245,6 @@ typedef struct _TAP_ADAPTER_CONTEXT
   LONG m_Rx, m_RxErr;
   NDIS_MEDIUM m_Medium;
 
-  MACADDR m_MAC_Broadcast;
-
   // Help to tear down the adapter by keeping
   // some state information on allocated
   // resources.

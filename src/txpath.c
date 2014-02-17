@@ -220,7 +220,7 @@ ProcessARP(
     if (src->m_Proto == htons (ETH_P_ARP)
         && MAC_EQUAL (src->m_MAC_Source, Adapter->PermanentAddress)
         && MAC_EQUAL (src->m_ARP_MAC_Source, Adapter->PermanentAddress)
-        && MAC_EQUAL (src->m_MAC_Destination, Adapter->m_MAC_Broadcast)
+        && ETH_IS_BROADCAST(src->m_MAC_Destination)
         && src->m_ARP_Operation == htons (ARP_REQUEST)
         && src->m_MAC_AddressType == htons (MAC_ADDR_TYPE)
         && src->m_MAC_AddressSize == sizeof (MACADDR)

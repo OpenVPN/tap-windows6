@@ -541,8 +541,11 @@ Return Value:
     PVOID                   pInfo=NULL;
     ULONG                   ulInfoLen = sizeof(ulInfo);
 
-    // ATTENTION!!! OID_GEN_STATISTICS to noisy to print...
-    if(OidRequest->DATA.QUERY_INFORMATION.Oid != OID_GEN_STATISTICS)
+    // ATTENTION!!! Ignore OIDs to noisy to print...
+    if((OidRequest->DATA.QUERY_INFORMATION.Oid != OID_GEN_STATISTICS)
+        && (OidRequest->DATA.QUERY_INFORMATION.Oid != OID_IP4_OFFLOAD_STATS)
+        && (OidRequest->DATA.QUERY_INFORMATION.Oid != OID_IP6_OFFLOAD_STATS)
+        )
     {
         DBG_PRINT_OID_NAME(OidRequest->DATA.QUERY_INFORMATION.Oid);
     }
