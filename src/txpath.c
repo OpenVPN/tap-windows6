@@ -387,6 +387,38 @@ tapProcessSendPacketQueue(
     KeReleaseSpinLock(&Adapter->SendPacketQueue.QueueLock,irql);
 }
 
+// Flush the pending send TAP packet queue.
+VOID
+tapFlushSendPacketQueue(
+    __in PTAP_ADAPTER_CONTEXT   Adapter
+    )
+{
+    KIRQL  irql;
+
+    // Process the send packet queue
+    KeAcquireSpinLock(&Adapter->SendPacketQueue.QueueLock,&irql);
+
+    DEBUGP (("[TAP] tapFlushSendPacketQueue: Flushing %d TAP packets\n",
+        Adapter->SendPacketQueue.Count));
+
+    while(Adapter->SendPacketQueue.Count > 0 )
+    {
+        PTAP_PACKET     tapPacket;
+
+        // Fetch a queued TAP send packet
+        tapPacket = tapPacketRemoveHeadLocked(
+                        &Adapter->SendPacketQueue
+                        );
+
+        ASSERT(tapPacket);
+
+        // Free the TAP packet
+        NdisFreeMemory(tapPacket,0,0);
+    }
+
+    KeReleaseSpinLock(&Adapter->SendPacketQueue.QueueLock,irql);
+}
+
 VOID
 tapAdapterTransmit(
     __in PTAP_ADAPTER_CONTEXT   Adapter,

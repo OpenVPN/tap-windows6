@@ -51,41 +51,11 @@ DestroyTapDevice(
     __in PTAP_ADAPTER_CONTEXT   Adapter
    );
 
-//VOID TapDeviceFreeResources
-//   (
-//    TapExtensionPointer p_Extension
-//    );
-//
-//NTSTATUS CompleteIRP
-//   (
-//    IN PIRP p_IRP,
-//    IN PTAP_PACKET p_PacketBuffer,
-//    IN CCHAR PriorityBoost
-//   );
-//
-//VOID CancelIRPCallback
-//   (
-//    IN PDEVICE_OBJECT p_DeviceObject,
-//    IN PIRP p_IRP
-//   );
-//
-//VOID CancelIRP
-//   (
-//    TapExtensionPointer p_Extension,
-//    IN PIRP p_IRP,
-//    BOOLEAN callback
-//   );
-//
-//VOID FlushQueues
-//   (
-//    TapExtensionPointer p_Extension
-//   );
-//
-//VOID ResetTapAdapterState
-//   (
-//    TapAdapterPointer p_Adapter
-//   );
-//
+// Flush the pending send TAP packet queue.
+VOID
+tapFlushSendPacketQueue(
+    __in PTAP_ADAPTER_CONTEXT   Adapter
+    );
 
 VOID
 IndicateReceivePacket(

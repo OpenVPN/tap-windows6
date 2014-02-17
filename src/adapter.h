@@ -306,7 +306,6 @@ tapAdapterAcquireLock(
     }
 }
 
-
 FORCEINLINE
 VOID
 tapAdapterReleaseLock(

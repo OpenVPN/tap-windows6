@@ -709,12 +709,16 @@ End:
     return ntStatus;
 }
 
+// Flush the pending read IRP queue.
 VOID
 tapFlushIrpQueues(
     __in PTAP_ADAPTER_CONTEXT   Adapter
     )
 {
-    // Flush the pending read IRP queue.
+
+    DEBUGP (("[TAP] tapFlushIrpQueues: Flushing %d pending read IRPs\n",
+        Adapter->PendingReadIrpQueue.Count));
+
     tapIrpCsqFlush(&Adapter->PendingReadIrpQueue);
 }
 
@@ -797,14 +801,19 @@ Return Value:
 
         // BUGBUG!!! Use RemoveLock???
 
-        // BUGBUG!!! Flush other queues???
+        //
+        // Flush pending send TAP packet queue.
+        //
+        tapFlushSendPacketQueue(adapter);
+
+        ASSERT(adapter->SendPacketQueue.Count == 0);
 
         //
-        // Flush the pending IRP queues.
-        // -----------------------------
-        // The queues should have been flushed already by DestroyTapDevice.
+        // Flush the pending IRP queues
         //
         tapFlushIrpQueues(adapter);
+
+        ASSERT(adapter->PendingReadIrpQueue.Count == 0);
     }
 
     // Complete the IRP.

@@ -31,7 +31,7 @@ extern int g_LastErrorLineNumber;
 
 // Debug info output
 #define ALSO_DBGPRINT           1
-#define DEBUGP_AT_DISPATCH      0
+#define DEBUGP_AT_DISPATCH      1
 
 // Uncomment line below to allow packet dumps
 //#define ALLOW_PACKET_DUMP       1
