@@ -241,7 +241,7 @@ tapPacketRemoveHeadLocked(
         tapPacket = CONTAINING_RECORD(listEntry, TAP_PACKET, QueueLink);
 
         // Update counts
-        ++TapPacketQueue->Count;
+        --TapPacketQueue->Count;
     }
 
     return tapPacket;
