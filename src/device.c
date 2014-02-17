@@ -258,13 +258,13 @@ tapSetMediaConnectStatus(
         {
             linkState.MediaConnectState = MediaConnectStateConnected;
 
-            DEBUGP (("[TAP] Set MediaConnectState to Connected.\n"));
+            DEBUGP (("[TAP] Set MediaConnectState: Connected.\n"));
         }
         else
         {
             linkState.MediaConnectState = MediaConnectStateDisconnected;
 
-            DEBUGP (("[TAP] Set MediaConnectState to Disconnected.\n"));
+            DEBUGP (("[TAP] Set MediaConnectState: Disconnected.\n"));
         }
     }
 
@@ -789,7 +789,15 @@ Return Value:
     {
         adapter->TapFileIsOpen = 0;    // Legacy...
 
+        // Disconnect from media.
+        tapSetMediaConnectStatus(adapter,FALSE);
+
+        // Reset adapter state when cleaning up;
+        tapResetAdapterState(adapter);
+
         // BUGBUG!!! Use RemoveLock???
+
+        // BUGBUG!!! Flush other queues???
 
         //
         // Flush the pending IRP queues.
