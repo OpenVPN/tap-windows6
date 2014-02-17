@@ -582,6 +582,9 @@ TapDeviceWrite(
 
                     NET_BUFFER_LIST_NEXT_NBL(netBufferList) = NULL; // Only one NBL
 
+                    IoMarkIrpPending(Irp);
+                    IoSetCancelRoutine(Irp,NULL);
+
                     // Stash IRP pointer in NBL MiniportReserved[0] field.
                     netBufferList->MiniportReserved[0] = Irp;
                     netBufferList->MiniportReserved[1] = NULL;
