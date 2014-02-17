@@ -582,7 +582,10 @@ TapDeviceWrite(
 
                     NET_BUFFER_LIST_NEXT_NBL(netBufferList) = NULL; // Only one NBL
 
+                    // This IRP is pended.
                     IoMarkIrpPending(Irp);
+
+                    // This IRP cannot be cancelled while in-flight.
                     IoSetCancelRoutine(Irp,NULL);
 
                     // Stash IRP pointer in NBL MiniportReserved[0] field.
