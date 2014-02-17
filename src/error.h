@@ -33,6 +33,9 @@ extern int g_LastErrorLineNumber;
 #define ALSO_DBGPRINT           1
 #define DEBUGP_AT_DISPATCH      0
 
+// Uncomment line below to allow packet dumps
+//#define ALLOW_PACKET_DUMP       1
+
 #define NOTE_ERROR() \
 { \
   g_LastErrorFilename = __FILE__; \
@@ -58,14 +61,26 @@ VOID PrMac (const MACADDR mac);
 
 VOID PrIP (IPADDR ip_addr);
 
-VOID DumpPacket (const char *prefix,
-		 const unsigned char *data,
-		 unsigned int len);
+#ifdef ALLOW_PACKET_DUMP
 
-VOID DumpPacket2 (const char *prefix,
-		  const ETH_HEADER *eth,
-		  const unsigned char *data,
-		  unsigned int len);
+VOID
+DumpPacket(
+    __in const char *prefix,
+    __in const unsigned char *data,
+    __in unsigned int len
+    );
+
+DumpPacket2(
+    __in const char *prefix,
+    __in const ETH_HEADER *eth,
+    __in const unsigned char *data,
+    __in unsigned int len
+    );
+
+#else
+#define DUMP_PACKET(prefix, data, len)
+#define DUMP_PACKET2(prefix, eth, data, len)
+#endif
 
 #define CAN_WE_PRINT (DEBUGP_AT_DISPATCH || KeGetCurrentIrql () < DISPATCH_LEVEL)
 
@@ -83,11 +98,15 @@ VOID DumpPacket2 (const char *prefix,
     } \
 }
 
+#ifdef ALLOW_PACKET_DUMP
+
 #define DUMP_PACKET(prefix, data, len) \
   DumpPacket (prefix, data, len)
 
 #define DUMP_PACKET2(prefix, eth, data, len) \
   DumpPacket2 (prefix, eth, data, len)
+
+#endif
 
 BOOLEAN
 GetDebugLine (

@@ -253,11 +253,15 @@ struct ethpayload {
   UCHAR payload[DEFAULT_PACKET_LOOKAHEAD];
 };
 
+#ifdef ALLOW_PACKET_DUMP
+
 VOID
-DumpPacket2 (const char *prefix,
-	     const ETH_HEADER *eth,
-	     const unsigned char *data,
-	     unsigned int len)
+DumpPacket2(
+    __in const char *prefix,
+    __in const ETH_HEADER *eth,
+    __in const unsigned char *data,
+    __in unsigned int len
+    )
 {
   struct ethpayload *ep = (struct ethpayload *) MemAlloc (sizeof (struct ethpayload), TRUE);
   if (ep)
@@ -272,9 +276,11 @@ DumpPacket2 (const char *prefix,
 }
 
 VOID
-DumpPacket (const char *prefix,
-	    const unsigned char *data,
-	    unsigned int len)
+DumpPacket(
+    __in const char *prefix,
+    __in const unsigned char *data,
+    __in unsigned int len
+    )
 {
   const ETH_HEADER *eth = (const ETH_HEADER *) data;
   const IPHDR *ip = (const IPHDR *) (data + sizeof (ETH_HEADER));
@@ -386,5 +392,7 @@ DumpPacket (const char *prefix,
 	      len));
   }
 }
+
+#endif // ALLOW_PACKET_DUMP
 
 #endif

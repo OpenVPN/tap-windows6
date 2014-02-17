@@ -592,8 +592,6 @@ TapDeviceWrite(
                     netBufferList->MiniportReserved[0] = Irp;
                     netBufferList->MiniportReserved[1] = NULL;
 
-                    // BUGBUG!!! Setup for IRP cancel!!!
-
                     // Set flag indicating that this is P2P packet
                     TAP_RX_NBL_FLAGS_CLEAR_ALL(netBufferList);
                     TAP_RX_NBL_FLAG_SET(netBufferList,TAP_RX_NBL_FLAGS_IS_P2P);
