@@ -287,43 +287,17 @@ tapAdapterContextDereference(
     return refCount;
 }
 
-FORCEINLINE
 VOID
 tapAdapterAcquireLock(
     __in    PTAP_ADAPTER_CONTEXT    Adapter,
     __in    BOOLEAN                 DispatchLevel
-    )
-{
-    ASSERT(!DispatchLevel || (DISPATCH_LEVEL == KeGetCurrentIrql()));
-   
-    if (DispatchLevel)
-    {
-        NdisDprAcquireSpinLock(&Adapter->AdapterLock);
-    }
-    else
-    {
-        NdisAcquireSpinLock(&Adapter->AdapterLock);
-    }
-}
+    );
 
-FORCEINLINE
 VOID
 tapAdapterReleaseLock(
     __in    PTAP_ADAPTER_CONTEXT    Adapter,
     __in    BOOLEAN                 DispatchLevel
-    )
-{
-    ASSERT(!DispatchLevel || (DISPATCH_LEVEL == KeGetCurrentIrql()));
-   
-    if (DispatchLevel)
-    {
-        NdisDprReleaseSpinLock(&Adapter->AdapterLock);
-    }
-    else
-    {
-        NdisReleaseSpinLock(&Adapter->AdapterLock);
-    }
-}
+    );
 
 // Returns with added reference on adapter context.
 PTAP_ADAPTER_CONTEXT

@@ -100,6 +100,7 @@ Return Value:
     NDIS_STATUS             status;
     PIO_STACK_LOCATION      irpSp;// Pointer to current stack location
     PTAP_ADAPTER_CONTEXT    adapter = NULL;
+    PFILE_OBJECT            originalFileObject;
 
     PAGED_CODE();
 
@@ -138,20 +139,22 @@ Return Value:
         return STATUS_DEVICE_DOES_NOT_EXIST;
     }
 
-	DEBUGP(("[%s] [TAP] release [%d.%d] open request (TapFileIsOpen=%d)\n",
-	    MINIPORT_INSTANCE_ID(adapter),
+    DEBUGP(("[%s] [TAP] release [%d.%d] open request (TapFileIsOpen=%d)\n",
+        MINIPORT_INSTANCE_ID(adapter),
         TAP_DRIVER_MAJOR_VERSION,
-	    TAP_DRIVER_MINOR_VERSION,
+        TAP_DRIVER_MINOR_VERSION,
         adapter->TapFileIsOpen
         ));
 
-    // Hold lock while checking for existing open.
-    tapAdapterAcquireLock(adapter,FALSE);
+    // Enforce exclusive access
+    originalFileObject = InterlockedCompareExchangePointer(
+                    &adapter->TapFileObject,
+                    irpSp->FileObject,
+                    NULL
+                    );
 
-    if(adapter->TapFileObject == NULL)
+    if(originalFileObject == NULL)
     {
-        adapter->TapFileObject = irpSp->FileObject;
-
         irpSp->FileObject->FsContext = adapter; // Quick reference
 
         status = STATUS_SUCCESS;
@@ -162,7 +165,7 @@ Return Value:
     }
 
     // Release the lock.
-    tapAdapterReleaseLock(adapter,FALSE);
+    //tapAdapterReleaseLock(adapter,FALSE);
 
     if(status == STATUS_SUCCESS)
     {
@@ -887,9 +890,6 @@ Return Value:
 
     if(adapter != NULL )
     {
-        // Hold lock while removing file object
-        tapAdapterAcquireLock(adapter,FALSE);
-
         if(adapter->TapFileObject == NULL)
         {
             // Should never happen!!!
@@ -904,9 +904,6 @@ Return Value:
 
         adapter->TapFileObject = NULL;
         irpSp->FileObject = NULL;
-
-        // Release the lock.
-        tapAdapterReleaseLock(adapter,FALSE);
 
         // Remove reference added by when handle was opened.
         tapAdapterContextDereference(adapter);

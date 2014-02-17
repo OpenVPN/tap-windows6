@@ -1674,4 +1674,40 @@ Return Value:
     return netBufferCount;
 }
 
+VOID
+tapAdapterAcquireLock(
+    __in    PTAP_ADAPTER_CONTEXT    Adapter,
+    __in    BOOLEAN                 DispatchLevel
+    )
+{
+    ASSERT(!DispatchLevel || (DISPATCH_LEVEL == KeGetCurrentIrql()));
+   
+    if (DispatchLevel)
+    {
+        NdisDprAcquireSpinLock(&Adapter->AdapterLock);
+    }
+    else
+    {
+        NdisAcquireSpinLock(&Adapter->AdapterLock);
+    }
+}
+
+VOID
+tapAdapterReleaseLock(
+    __in    PTAP_ADAPTER_CONTEXT    Adapter,
+    __in    BOOLEAN                 DispatchLevel
+    )
+{
+    ASSERT(!DispatchLevel || (DISPATCH_LEVEL == KeGetCurrentIrql()));
+   
+    if (DispatchLevel)
+    {
+        NdisDprReleaseSpinLock(&Adapter->AdapterLock);
+    }
+    else
+    {
+        NdisReleaseSpinLock(&Adapter->AdapterLock);
+    }
+}
+
 
