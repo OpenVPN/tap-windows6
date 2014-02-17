@@ -352,7 +352,7 @@ tapProcessSendPacketQueue(
         PTAP_PACKET     tapPacket;
 
         // Fetch a read IRP
-        irp = IoCsqRemoveIrp(
+        irp = IoCsqRemoveNextIrp(
                 &Adapter->PendingReadIrpQueue.CsqQueue,
                 NULL
                 );
