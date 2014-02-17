@@ -257,10 +257,14 @@ tapSetMediaConnectStatus(
         if (LogicalMediaState == TRUE)
         {
             linkState.MediaConnectState = MediaConnectStateConnected;
+
+            DEBUGP (("[TAP] Set MediaConnectState to Connected.\n"));
         }
         else
         {
             linkState.MediaConnectState = MediaConnectStateDisconnected;
+
+            DEBUGP (("[TAP] Set MediaConnectState to Disconnected.\n"));
         }
     }
 
