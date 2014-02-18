@@ -1114,6 +1114,14 @@ DestroyTapDevice(
     Adapter->TapDeviceCreated = FALSE;
 
     //
+    // Flush pending send TAP packet queue.
+    //
+    tapFlushSendPacketQueue(Adapter);
+
+    ASSERT(Adapter->SendPacketQueue.Count == 0);
+
+
+    //
     // Flush IRP queues. Wait for pending I/O. Etc.
     // --------------------------------------------
     // Exhaust IRP and packet queues. Any pending IRPs will
@@ -1137,6 +1145,8 @@ DestroyTapDevice(
     // the TapDeviceClose callback.
     //
     tapFlushIrpQueues(Adapter);
+
+    ASSERT(Adapter->PendingReadIrpQueue.Count == 0);
 
     //
     // Deregister the Win32 device.
