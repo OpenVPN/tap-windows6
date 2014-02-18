@@ -272,7 +272,10 @@ tapSetMediaConnectStatus(
     }
 
     // Make the status indication.
-    NdisMIndicateStatusEx(Adapter->MiniportAdapterHandle, &statusIndication);
+    if(Adapter->Locked.AdapterState != MiniportHaltedState)
+    {
+        NdisMIndicateStatusEx(Adapter->MiniportAdapterHandle, &statusIndication);
+    }
 }
 
 //======================================================

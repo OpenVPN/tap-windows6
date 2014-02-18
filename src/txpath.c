@@ -1101,7 +1101,7 @@ TapDeviceRead(
             MINIPORT_INSTANCE_ID (adapter)));
 
         NOTE_ERROR();
-        Irp->IoStatus.Status = ntStatus = STATUS_UNSUCCESSFUL;
+        Irp->IoStatus.Status = ntStatus = STATUS_CANCELLED;
         Irp->IoStatus.Information = 0;
         IoCompleteRequest (Irp, IO_NO_INCREMENT);
 
