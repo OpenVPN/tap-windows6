@@ -38,80 +38,80 @@ DebugOutput g_Debug;
 BOOLEAN
 NewlineExists (const char *str, int len)
 {
-  while (len-- > 0)
+    while (len-- > 0)
     {
-      const char c = *str++;
-      if (c == '\n')
-	return TRUE;
-      else if (c == '\0')
-	break;
+        const char c = *str++;
+        if (c == '\n')
+            return TRUE;
+        else if (c == '\0')
+            break;
     }
-  return FALSE;
+    return FALSE;
 }
 
 VOID
 MyDebugInit (unsigned int bufsiz)
 {
-  NdisZeroMemory (&g_Debug, sizeof (g_Debug));
-  g_Debug.text = (char *) MemAlloc (bufsiz, FALSE);
-  if (g_Debug.text)
-    g_Debug.capacity = bufsiz;
+    NdisZeroMemory (&g_Debug, sizeof (g_Debug));
+    g_Debug.text = (char *) MemAlloc (bufsiz, FALSE);
+    if (g_Debug.text)
+        g_Debug.capacity = bufsiz;
 }
 
 VOID
 MyDebugFree ()
 {
-  if (g_Debug.text)
-    MemFree (g_Debug.text, g_Debug.capacity);
-  NdisZeroMemory (&g_Debug, sizeof (g_Debug));
+    if (g_Debug.text)
+        MemFree (g_Debug.text, g_Debug.capacity);
+    NdisZeroMemory (&g_Debug, sizeof (g_Debug));
 }
 
 VOID
 MyDebugPrint (const unsigned char* format, ...)
 {
-  if (g_Debug.text && g_Debug.capacity > 0 && CAN_WE_PRINT)
+    if (g_Debug.text && g_Debug.capacity > 0 && CAN_WE_PRINT)
     {
-      BOOLEAN owned;
-      ACQUIRE_MUTEX_ADAPTIVE (&g_Debug.lock, owned);
-      if (owned)
-	{
-	  const int remaining = (int)g_Debug.capacity - (int)g_Debug.out;
+        BOOLEAN owned;
+        ACQUIRE_MUTEX_ADAPTIVE (&g_Debug.lock, owned);
+        if (owned)
+        {
+            const int remaining = (int)g_Debug.capacity - (int)g_Debug.out;
 
-	  if (remaining > 0)
-	    {
-	      va_list args;
-	      NTSTATUS status;
-	      char *end;
+            if (remaining > 0)
+            {
+                va_list args;
+                NTSTATUS status;
+                char *end;
 
 #ifdef DBG_PRINT
-	      va_start (args, format);
-	      vDbgPrintEx (DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, format, args);
-	      va_end (args);
+                va_start (args, format);
+                vDbgPrintEx (DPFLTR_IHVNETWORK_ID, DPFLTR_INFO_LEVEL, format, args);
+                va_end (args);
 #endif
-	      va_start (args, format);
-	      status = RtlStringCchVPrintfExA (g_Debug.text + g_Debug.out,
-					       remaining,
-					       &end,
-					       NULL,
-					       STRSAFE_NO_TRUNCATION | STRSAFE_IGNORE_NULLS,
-					       format,
-					       args);
-	      va_end (args);
-va_start (args, format);
-vDbgPrintEx(DPFLTR_IHVDRIVER_ID , 1, format, args);
-va_end (args);
-	      if (status == STATUS_SUCCESS)
-		g_Debug.out = (unsigned int) (end - g_Debug.text);
-	      else
-		g_Debug.error = TRUE;
-	    }
-	  else
-	    g_Debug.error = TRUE;
+                va_start (args, format);
+                status = RtlStringCchVPrintfExA (g_Debug.text + g_Debug.out,
+                    remaining,
+                    &end,
+                    NULL,
+                    STRSAFE_NO_TRUNCATION | STRSAFE_IGNORE_NULLS,
+                    format,
+                    args);
+                va_end (args);
+                va_start (args, format);
+                vDbgPrintEx(DPFLTR_IHVDRIVER_ID , 1, format, args);
+                va_end (args);
+                if (status == STATUS_SUCCESS)
+                    g_Debug.out = (unsigned int) (end - g_Debug.text);
+                else
+                    g_Debug.error = TRUE;
+            }
+            else
+                g_Debug.error = TRUE;
 
-	  RELEASE_MUTEX (&g_Debug.lock);
-	}
-      else
-	g_Debug.error = TRUE;
+            RELEASE_MUTEX (&g_Debug.lock);
+        }
+        else
+            g_Debug.error = TRUE;
     }
 }
 
@@ -121,67 +121,56 @@ GetDebugLine (
     __in const int len
     )
 {
-  static const char *truncated = "[OUTPUT TRUNCATED]\n";
-  BOOLEAN ret = FALSE;
+    static const char *truncated = "[OUTPUT TRUNCATED]\n";
+    BOOLEAN ret = FALSE;
 
-  NdisZeroMemory (buf, len);
+    NdisZeroMemory (buf, len);
 
-  if (g_Debug.text && g_Debug.capacity > 0)
+    if (g_Debug.text && g_Debug.capacity > 0)
     {
-      BOOLEAN owned;
-      ACQUIRE_MUTEX_ADAPTIVE (&g_Debug.lock, owned);
-      if (owned)
-	{
-	  int i = 0;
+        BOOLEAN owned;
+        ACQUIRE_MUTEX_ADAPTIVE (&g_Debug.lock, owned);
+        if (owned)
+        {
+            int i = 0;
 
-	  if (g_Debug.error || NewlineExists (g_Debug.text + g_Debug.in, (int)g_Debug.out - (int)g_Debug.in))
-	    {
-	      while (i < (len - 1) && g_Debug.in < g_Debug.out)
-		{
-		  const char c = g_Debug.text[g_Debug.in++];
-		  if (c == '\n')
-		    break;
-		  buf[i++] = c;
-		}
-	      if (i < len)
-		buf[i] = '\0';
-	    }
+            if (g_Debug.error || NewlineExists (g_Debug.text + g_Debug.in, (int)g_Debug.out - (int)g_Debug.in))
+            {
+                while (i < (len - 1) && g_Debug.in < g_Debug.out)
+                {
+                    const char c = g_Debug.text[g_Debug.in++];
+                    if (c == '\n')
+                        break;
+                    buf[i++] = c;
+                }
+                if (i < len)
+                    buf[i] = '\0';
+            }
 
-	  if (!i)
-	    {
-	      if (g_Debug.in == g_Debug.out)
-		{
-		  g_Debug.in = g_Debug.out = 0;
-		  if (g_Debug.error)
-		    {
-		      const unsigned int tlen = strlen (truncated);
-		      if (tlen < g_Debug.capacity)
-			{
-			  NdisMoveMemory (g_Debug.text, truncated, tlen+1);
-			  g_Debug.out = tlen;
-			}
-		      g_Debug.error = FALSE;
-		    }
-		}
-	    }
-	  else
-	    ret = TRUE;
+            if (!i)
+            {
+                if (g_Debug.in == g_Debug.out)
+                {
+                    g_Debug.in = g_Debug.out = 0;
+                    if (g_Debug.error)
+                    {
+                        const unsigned int tlen = strlen (truncated);
+                        if (tlen < g_Debug.capacity)
+                        {
+                            NdisMoveMemory (g_Debug.text, truncated, tlen+1);
+                            g_Debug.out = tlen;
+                        }
+                        g_Debug.error = FALSE;
+                    }
+                }
+            }
+            else
+                ret = TRUE;
 
-	  RELEASE_MUTEX (&g_Debug.lock);
-	}      
+            RELEASE_MUTEX (&g_Debug.lock);
+        }      
     }
-  return ret;
-}
-
-VOID
-MyAssert (const unsigned char *file, int line)
-{
-      DEBUGP (("MYASSERT failed %s/%d\n", file, line));
-      KeBugCheckEx (0x0F00BABA,
-		    (ULONG_PTR) line,
-		    (ULONG_PTR) 0,
-		    (ULONG_PTR) 0,
-		    (ULONG_PTR) 0);
+    return ret;
 }
 
 VOID

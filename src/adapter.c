@@ -413,7 +413,7 @@ tapReadConfiguration(
                 );
 
             // Now seed the current MAC address with the permanent address.
-            COPY_MAC(Adapter->CurrentAddress, Adapter->PermanentAddress);
+            ETH_COPY_NETWORK_ADDRESS(Adapter->CurrentAddress, Adapter->PermanentAddress);
 
             DEBUGP (("[%s] Using MAC CurrentAddress %2.2x:%2.2x:%2.2x:%2.2x:%2.2x:%2.2x\n",
                 MINIPORT_INSTANCE_ID (Adapter),
@@ -755,7 +755,7 @@ AdapterCreate(
         //
         // Return the MAC address of the NIC burnt in the hardware.
         //
-        COPY_MAC(genAttributes.PermanentMacAddress, adapter->PermanentAddress);
+        ETH_COPY_NETWORK_ADDRESS(genAttributes.PermanentMacAddress, adapter->PermanentAddress);
 
         //
         // Return the MAC address the NIC is currently programmed to use. Note
@@ -763,7 +763,7 @@ AdapterCreate(
         // the user can override using registry. Read NdisReadNetworkAddress
         // doc for more info.
         //
-        COPY_MAC(genAttributes.CurrentMacAddress, adapter->CurrentAddress);
+        ETH_COPY_NETWORK_ADDRESS(genAttributes.CurrentMacAddress, adapter->CurrentAddress);
 
         genAttributes.RecvScaleCapabilities = NULL;
         genAttributes.AccessType = TAP_ACCESS_TYPE;

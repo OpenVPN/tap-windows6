@@ -55,8 +55,6 @@ typedef struct {
 
 VOID MyDebugPrint (const unsigned char* format, ...);
 
-VOID MyAssert (const unsigned char *file, int line);
-
 VOID PrMac (const MACADDR mac);
 
 VOID PrIP (IPADDR ip_addr);
@@ -90,14 +88,6 @@ DumpPacket2(
 #define DEBUGP(fmt) { MyDebugPrint fmt; }
 #endif
 
-#define MYASSERT(exp) \
-{ \
-  if (!(exp)) \
-    { \
-      MyAssert(__FILE__, __LINE__); \
-    } \
-}
-
 #ifdef ALLOW_PACKET_DUMP
 
 #define DUMP_PACKET(prefix, data, len) \
@@ -117,7 +107,6 @@ GetDebugLine (
 #else 
 
 #define DEBUGP(fmt)
-#define MYASSERT(exp)
 #define DUMP_PACKET(prefix, data, len)
 #define DUMP_PACKET2(prefix, eth, data, len)
 

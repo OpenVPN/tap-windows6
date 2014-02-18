@@ -305,7 +305,7 @@ BuildDHCPPre (
     //
     // Build ethernet header
     //
-    COPY_MAC (p->eth.src, Adapter->m_dhcp_server_mac);
+    ETH_COPY_NETWORK_ADDRESS (p->eth.src, Adapter->m_dhcp_server_mac);
 
     if (broadcast)
     {
@@ -313,7 +313,7 @@ BuildDHCPPre (
     }
     else
     {
-        COPY_MAC (p->eth.dest, eth->src);
+        ETH_COPY_NETWORK_ADDRESS (p->eth.dest, eth->src);
     }
 
     p->eth.proto = htons (ETH_P_IP);
@@ -370,7 +370,7 @@ BuildDHCPPre (
 
     p->dhcp.siaddr = Adapter->m_dhcp_server_ip;
     p->dhcp.giaddr = 0;
-    COPY_MAC (p->dhcp.chaddr, eth->src);
+    ETH_COPY_NETWORK_ADDRESS (p->dhcp.chaddr, eth->src);
     p->dhcp.magic = htonl (0x63825363);
 }
 

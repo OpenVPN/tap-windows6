@@ -289,7 +289,7 @@ CheckIfDhcpAndTunMode (
     {
         if ((Adapter->m_dhcp_server_ip & Adapter->m_remoteNetmask) == Adapter->m_remoteNetwork)
         {
-            COPY_MAC (Adapter->m_dhcp_server_mac, Adapter->m_TapToUser.dest);
+            ETH_COPY_NETWORK_ADDRESS (Adapter->m_dhcp_server_mac, Adapter->m_TapToUser.dest);
             Adapter->m_dhcp_server_arp = FALSE;
         }
     }
@@ -363,7 +363,7 @@ Return Value:
         {
             if (outBufLength >= MACADDR_SIZE )
             {
-                COPY_MAC(
+                ETH_COPY_NETWORK_ADDRESS(
                     Irp->AssociatedIrp.SystemBuffer,
                     adapter->CurrentAddress
                     );
@@ -447,10 +447,10 @@ Return Value:
                     break;
                 }
 
-                COPY_MAC (adapter->m_TapToUser.src, adapter->CurrentAddress);
-                COPY_MAC (adapter->m_TapToUser.dest, dest);
-                COPY_MAC (adapter->m_UserToTap.src, dest);
-                COPY_MAC (adapter->m_UserToTap.dest, adapter->CurrentAddress);
+                ETH_COPY_NETWORK_ADDRESS (adapter->m_TapToUser.src, adapter->CurrentAddress);
+                ETH_COPY_NETWORK_ADDRESS (adapter->m_TapToUser.dest, dest);
+                ETH_COPY_NETWORK_ADDRESS (adapter->m_UserToTap.src, dest);
+                ETH_COPY_NETWORK_ADDRESS (adapter->m_UserToTap.dest, adapter->CurrentAddress);
 
                 adapter->m_TapToUser.proto = adapter->m_UserToTap.proto = htons (ETH_P_IP);
                 adapter->m_UserToTap_IPv6 = adapter->m_UserToTap;
@@ -486,10 +486,10 @@ Return Value:
                 adapter->m_remoteNetwork = ((IPADDR*) (Irp->AssociatedIrp.SystemBuffer))[1];
                 adapter->m_remoteNetmask = ~0;
 
-                COPY_MAC (adapter->m_TapToUser.src, adapter->CurrentAddress);
-                COPY_MAC (adapter->m_TapToUser.dest, dest);
-                COPY_MAC (adapter->m_UserToTap.src, dest);
-                COPY_MAC (adapter->m_UserToTap.dest, adapter->CurrentAddress);
+                ETH_COPY_NETWORK_ADDRESS (adapter->m_TapToUser.src, adapter->CurrentAddress);
+                ETH_COPY_NETWORK_ADDRESS (adapter->m_TapToUser.dest, dest);
+                ETH_COPY_NETWORK_ADDRESS (adapter->m_UserToTap.src, dest);
+                ETH_COPY_NETWORK_ADDRESS (adapter->m_UserToTap.dest, adapter->CurrentAddress);
 
                 adapter->m_TapToUser.proto = adapter->m_UserToTap.proto = htons (ETH_P_IP);
                 adapter->m_UserToTap_IPv6 = adapter->m_UserToTap;

@@ -31,7 +31,6 @@
 #define IsMacDelimiter(a) (a == ':' || a == '-' || a == '.')
 #define IsHexDigit(c) ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f'))
 
-#define COPY_MAC(dest, src) NdisMoveMemory ((dest), (src), sizeof (MACADDR))
 #define CLEAR_MAC(dest)     NdisZeroMemory ((dest), sizeof (MACADDR))
 #define MAC_EQUAL(a,b)      (memcmp ((a), (b), sizeof (MACADDR)) == 0)
 

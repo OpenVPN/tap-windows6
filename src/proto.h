@@ -49,6 +49,9 @@ typedef struct {
   ETH_ADDR list[TAP_MAX_MCAST_LIST];
 } MC_LIST;
 
+
+// BUGBUG!!! Consider using ststem defines in netiodef.h!!!
+
 //----------------
 // Ethernet header
 //----------------

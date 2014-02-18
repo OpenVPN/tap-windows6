@@ -149,8 +149,8 @@ HandleIPv6NeighborDiscovery(
 
     // ethernet header
     na->eth.proto = htons(ETH_P_IPV6);
-    COPY_MAC(na->eth.dest, Adapter->PermanentAddress);
-    COPY_MAC(na->eth.src, Adapter->m_TapToUser.dest);
+    ETH_COPY_NETWORK_ADDRESS(na->eth.dest, Adapter->PermanentAddress);
+    ETH_COPY_NETWORK_ADDRESS(na->eth.src, Adapter->m_TapToUser.dest);
 
     // IPv6 header
     na->ipv6.version_prio = ipv6->version_prio;
@@ -177,7 +177,7 @@ HandleIPv6NeighborDiscovery(
     // ICMPv6 option "Target Link Layer Address"
     na->icmpv6.opt_type = ICMPV6_OPTION_TLLA;
     na->icmpv6.opt_length = ICMPV6_LENGTH_TLLA;
-    COPY_MAC( na->icmpv6.target_macaddr, Adapter->m_TapToUser.dest );
+    ETH_COPY_NETWORK_ADDRESS( na->icmpv6.target_macaddr, Adapter->m_TapToUser.dest );
 
     // calculate and set checksum
     icmpv6_csum = icmpv6_checksum (
@@ -246,10 +246,10 @@ ProcessARP(
             //----------------------------------------------
             // ARP addresses
             //----------------------------------------------      
-            COPY_MAC (arp->m_MAC_Source, mac);
-            COPY_MAC (arp->m_MAC_Destination, Adapter->PermanentAddress);
-            COPY_MAC (arp->m_ARP_MAC_Source, mac);
-            COPY_MAC (arp->m_ARP_MAC_Destination, Adapter->PermanentAddress);
+            ETH_COPY_NETWORK_ADDRESS (arp->m_MAC_Source, mac);
+            ETH_COPY_NETWORK_ADDRESS (arp->m_MAC_Destination, Adapter->PermanentAddress);
+            ETH_COPY_NETWORK_ADDRESS (arp->m_ARP_MAC_Source, mac);
+            ETH_COPY_NETWORK_ADDRESS (arp->m_ARP_MAC_Destination, Adapter->PermanentAddress);
             arp->m_ARP_IP_Source = src->m_ARP_IP_Destination;
             arp->m_ARP_IP_Destination = adapter_ip;
 
