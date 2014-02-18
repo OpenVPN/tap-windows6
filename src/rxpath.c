@@ -105,7 +105,7 @@ IndicateReceivePacket(
 
             mdl->Next = NULL;   // No next MDL
 
-            // Allocate the NBL
+            // Allocate the NBL and NB. Link MDL chain to NB.
             netBufferList = NdisAllocateNetBufferAndNetBufferList(
                                 Adapter->ReceiveNblPool,
                                 0,                  // ContextSize
@@ -133,7 +133,6 @@ IndicateReceivePacket(
 
                 netBufferList->MiniportReserved[0] = NULL;
                 netBufferList->MiniportReserved[1] = NULL;
-
 
                 // Increment in-flight receive NBL count.
                 nblCount = NdisInterlockedIncrement(&Adapter->ReceiveNblInFlightCount);
@@ -456,9 +455,7 @@ TapDeviceWrite(
 #endif
             (Irp->MdlAddress)->Next = NULL; // No next MDL
 
-            //
-            // Allocate the NBL
-            //
+            // Allocate the NBL and NB. Link MDL chain to NB.
             netBufferList = NdisAllocateNetBufferAndNetBufferList(
                 adapter->ReceiveNblPool,
                 0,                  // ContextSize
@@ -564,9 +561,7 @@ TapDeviceWrite(
                 mdl->Next = Irp->MdlAddress;
                 (Irp->MdlAddress)->Next = NULL; // No next MDL
 
-                //
-                // Allocate the NBL
-                //
+                // Allocate the NBL and NB. Link MDL chain to NB.
                 netBufferList = NdisAllocateNetBufferAndNetBufferList(
                     adapter->ReceiveNblPool,
                     0,          // ContextSize

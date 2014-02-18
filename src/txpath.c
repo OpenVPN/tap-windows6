@@ -292,7 +292,7 @@ tapCompletePendingReadIrp(
     ASSERT(TapPacket);
 
     //-------------------------------------------
-    // While p_PacketBuffer always contains a
+    // While TapPacket always contains a
     // full ethernet packet, including the
     // ethernet header, in point-to-point mode,
     // we only want to return the IPv4
