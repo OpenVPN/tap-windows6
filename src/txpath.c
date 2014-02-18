@@ -1097,10 +1097,10 @@ TapDeviceRead(
     //
     if (!tapAdapterReadAndWriteReady(adapter))
     {
-        DEBUGP (("[%s] Interface is down in IRP_MJ_READ\n",
-            MINIPORT_INSTANCE_ID (adapter)));
+        //DEBUGP (("[%s] Interface is down in IRP_MJ_READ\n",
+        //    MINIPORT_INSTANCE_ID (adapter)));
+        //NOTE_ERROR();
 
-        NOTE_ERROR();
         Irp->IoStatus.Status = ntStatus = STATUS_CANCELLED;
         Irp->IoStatus.Information = 0;
         IoCompleteRequest (Irp, IO_NO_INCREMENT);

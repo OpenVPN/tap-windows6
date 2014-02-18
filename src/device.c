@@ -1120,7 +1120,6 @@ DestroyTapDevice(
 
     ASSERT(Adapter->SendPacketQueue.Count == 0);
 
-
     //
     // Flush IRP queues. Wait for pending I/O. Etc.
     // --------------------------------------------

@@ -358,10 +358,9 @@ TapDeviceWrite(
     //
     if (!tapAdapterReadAndWriteReady(adapter))
     {
-        DEBUGP (("[%s] Interface is down in IRP_MJ_WRITE\n",
-            MINIPORT_INSTANCE_ID (adapter)));
-
-        NOTE_ERROR();
+        //DEBUGP (("[%s] Interface is down in IRP_MJ_WRITE\n",
+        //    MINIPORT_INSTANCE_ID (adapter)));
+        //NOTE_ERROR();
 
         Irp->IoStatus.Status = ntStatus = STATUS_CANCELLED;
         Irp->IoStatus.Information = 0;
