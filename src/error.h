@@ -44,13 +44,14 @@ extern int g_LastErrorLineNumber;
 
 #if DBG
 
-typedef struct {
-  unsigned int in;
-  unsigned int out;
-  unsigned int capacity;
-  char *text;
-  BOOLEAN error;
-  MUTEX lock;
+typedef struct
+{
+    unsigned int in;
+    unsigned int out;
+    unsigned int capacity;
+    char *text;
+    BOOLEAN error;
+    MUTEX lock;
 } DebugOutput;
 
 VOID MyDebugPrint (const unsigned char* format, ...);

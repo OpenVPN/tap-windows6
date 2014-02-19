@@ -29,47 +29,57 @@
 #include "tap-windows.h"
 
 PVOID
-MemAlloc (ULONG p_Size, BOOLEAN zero)
+MemAlloc(
+    __in ULONG p_Size,
+    __in BOOLEAN zero
+    )
 {
-  PVOID l_Return = NULL;
+    PVOID l_Return = NULL;
 
-  if (p_Size)
+    if (p_Size)
     {
-      __try
-      {
-	if (NdisAllocateMemoryWithTag (&l_Return, p_Size, 'APAT')
-	    == NDIS_STATUS_SUCCESS)
-	  {
-	    if (zero)
-	      NdisZeroMemory (l_Return, p_Size);
-	  }
-	else
-	  l_Return = NULL;
-      }
-      __except (EXCEPTION_EXECUTE_HANDLER)
-      {
-	l_Return = NULL;
-      }
+        __try
+        {
+            if (NdisAllocateMemoryWithTag (&l_Return, p_Size, 'APAT')
+                == NDIS_STATUS_SUCCESS)
+            {
+                if (zero)
+                {
+                    NdisZeroMemory (l_Return, p_Size);
+                }
+            }
+            else
+            {
+                l_Return = NULL;
+            }
+        }
+        __except (EXCEPTION_EXECUTE_HANDLER)
+        {
+            l_Return = NULL;
+        }
     }
 
-  return l_Return;
+    return l_Return;
 }
 
 VOID
-MemFree (PVOID p_Addr, ULONG p_Size)
+MemFree(
+    __in PVOID p_Addr,
+    __in ULONG p_Size
+    )
 {
-  if (p_Addr && p_Size)
+    if (p_Addr && p_Size)
     {
-      __try
-      {
+        __try
+        {
 #if DBG
-	NdisZeroMemory (p_Addr, p_Size);
+            NdisZeroMemory (p_Addr, p_Size);
 #endif
-	NdisFreeMemory (p_Addr, p_Size, 0);
-      }
-      __except (EXCEPTION_EXECUTE_HANDLER)
-      {
-      }
+            NdisFreeMemory (p_Addr, p_Size, 0);
+        }
+        __except (EXCEPTION_EXECUTE_HANDLER)
+        {
+        }
     }
 }
 

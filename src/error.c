@@ -54,15 +54,21 @@ MyDebugInit (unsigned int bufsiz)
 {
     NdisZeroMemory (&g_Debug, sizeof (g_Debug));
     g_Debug.text = (char *) MemAlloc (bufsiz, FALSE);
+
     if (g_Debug.text)
+    {
         g_Debug.capacity = bufsiz;
+    }
 }
 
 VOID
 MyDebugFree ()
 {
     if (g_Debug.text)
+    {
         MemFree (g_Debug.text, g_Debug.capacity);
+    }
+
     NdisZeroMemory (&g_Debug, sizeof (g_Debug));
 }
 
@@ -193,18 +199,22 @@ PrIP (IPADDR ip_addr)
 const char *
 PrIPProto (int proto)
 {
-  switch (proto)
+    switch (proto)
     {
     case IPPROTO_UDP:
-      return "UDP";
+        return "UDP";
+
     case IPPROTO_TCP:
-      return "TCP";
+        return "TCP";
+
     case IPPROTO_ICMP:
-      return "ICMP";
+        return "ICMP";
+
     case IPPROTO_IGMP:
-      return "IGMP";
+        return "IGMP";
+
     default:
-      return "???";
+        return "???";
     }
 }
 
@@ -237,7 +247,8 @@ DumpARP (const char *prefix, const ARP_PACKET *arp)
   DEBUGP (("\n"));
 }
 
-struct ethpayload {
+struct ethpayload
+{
   ETH_HEADER eth;
   UCHAR payload[DEFAULT_PACKET_LOOKAHEAD];
 };
@@ -252,15 +263,15 @@ DumpPacket2(
     __in unsigned int len
     )
 {
-  struct ethpayload *ep = (struct ethpayload *) MemAlloc (sizeof (struct ethpayload), TRUE);
-  if (ep)
+    struct ethpayload *ep = (struct ethpayload *) MemAlloc (sizeof (struct ethpayload), TRUE);
+    if (ep)
     {
-      if (len > DEFAULT_PACKET_LOOKAHEAD)
-	len = DEFAULT_PACKET_LOOKAHEAD;
-      ep->eth = *eth;
-      NdisMoveMemory (ep->payload, data, len);
-      DumpPacket (prefix, (unsigned char *) ep, sizeof (ETH_HEADER) + len);
-      MemFree (ep, sizeof (struct ethpayload));
+        if (len > DEFAULT_PACKET_LOOKAHEAD)
+            len = DEFAULT_PACKET_LOOKAHEAD;
+        ep->eth = *eth;
+        NdisMoveMemory (ep->payload, data, len);
+        DumpPacket (prefix, (unsigned char *) ep, sizeof (ETH_HEADER) + len);
+        MemFree (ep, sizeof (struct ethpayload));
     }
 }
 
@@ -271,115 +282,115 @@ DumpPacket(
     __in unsigned int len
     )
 {
-  const ETH_HEADER *eth = (const ETH_HEADER *) data;
-  const IPHDR *ip = (const IPHDR *) (data + sizeof (ETH_HEADER));
+    const ETH_HEADER *eth = (const ETH_HEADER *) data;
+    const IPHDR *ip = (const IPHDR *) (data + sizeof (ETH_HEADER));
 
-  if (len < sizeof (ETH_HEADER))
+    if (len < sizeof (ETH_HEADER))
     {
-      DEBUGP (("%s TRUNCATED PACKET LEN=%d\n", prefix, len));
-      return;
+        DEBUGP (("%s TRUNCATED PACKET LEN=%d\n", prefix, len));
+        return;
     }
 
-  // ARP Packet?
-  if (len >= sizeof (ARP_PACKET) && eth->proto == htons (ETH_P_ARP))
+    // ARP Packet?
+    if (len >= sizeof (ARP_PACKET) && eth->proto == htons (ETH_P_ARP))
     {
-      DumpARP (prefix, (const ARP_PACKET *) data);
-      return;
+        DumpARP (prefix, (const ARP_PACKET *) data);
+        return;
     }
 
-  // IPv4 packet?
-  if (len >= (sizeof (IPHDR) + sizeof (ETH_HEADER))
-      && eth->proto == htons (ETH_P_IP)
-      && IPH_GET_VER (ip->version_len) == 4)
+    // IPv4 packet?
+    if (len >= (sizeof (IPHDR) + sizeof (ETH_HEADER))
+        && eth->proto == htons (ETH_P_IP)
+        && IPH_GET_VER (ip->version_len) == 4)
     {
-      const int hlen = IPH_GET_LEN (ip->version_len);
-      const int blen = len - sizeof (ETH_HEADER);
-      BOOLEAN did = FALSE;
+        const int hlen = IPH_GET_LEN (ip->version_len);
+        const int blen = len - sizeof (ETH_HEADER);
+        BOOLEAN did = FALSE;
 
-      DEBUGP (("%s IPv4 %s[%d]", prefix, PrIPProto (ip->protocol), len));
+        DEBUGP (("%s IPv4 %s[%d]", prefix, PrIPProto (ip->protocol), len));
 
-      if (!(ntohs (ip->tot_len) == blen && hlen <= blen))
-	{
-	  DEBUGP ((" XXX"));
-	  return;
-	}
-      
-      // TCP packet?
-      if (ip->protocol == IPPROTO_TCP
-	  && blen - hlen >= (sizeof (TCPHDR)))
-	{
-	  const TCPHDR *tcp = (TCPHDR *) (data + sizeof (ETH_HEADER) + hlen);
-	  DEBUGP ((" "));
-	  PrIP (ip->saddr);
-	  DEBUGP ((":%d", ntohs (tcp->source)));
-	  DEBUGP ((" -> "));
-	  PrIP (ip->daddr);
-	  DEBUGP ((":%d", ntohs (tcp->dest)));
-	  did = TRUE;
-	}
+        if (!(ntohs (ip->tot_len) == blen && hlen <= blen))
+        {
+            DEBUGP ((" XXX"));
+            return;
+        }
 
-      // UDP packet?
-      else if ((ntohs (ip->frag_off) & IP_OFFMASK) == 0
-	       && ip->protocol == IPPROTO_UDP
-	       && blen - hlen >= (sizeof (UDPHDR)))
-	{
-	  const UDPHDR *udp = (UDPHDR *) (data + sizeof (ETH_HEADER) + hlen);
-	  
-	  // DHCP packet?
-	  if ((udp->dest == htons (BOOTPC_PORT) || udp->dest == htons (BOOTPS_PORT))
-	      && blen - hlen >= (sizeof (UDPHDR) + sizeof (DHCP)))
-	    {
-	      const DHCP *dhcp = (DHCP *) (data
-					   + hlen
-					   + sizeof (ETH_HEADER)
-					   + sizeof (UDPHDR));
-	      
-	      int optlen = len
-		- sizeof (ETH_HEADER)
-		- hlen
-		- sizeof (UDPHDR)
-		- sizeof (DHCP);
+        // TCP packet?
+        if (ip->protocol == IPPROTO_TCP
+            && blen - hlen >= (sizeof (TCPHDR)))
+        {
+            const TCPHDR *tcp = (TCPHDR *) (data + sizeof (ETH_HEADER) + hlen);
+            DEBUGP ((" "));
+            PrIP (ip->saddr);
+            DEBUGP ((":%d", ntohs (tcp->source)));
+            DEBUGP ((" -> "));
+            PrIP (ip->daddr);
+            DEBUGP ((":%d", ntohs (tcp->dest)));
+            did = TRUE;
+        }
 
-	      if (optlen < 0)
-		optlen = 0;
+        // UDP packet?
+        else if ((ntohs (ip->frag_off) & IP_OFFMASK) == 0
+            && ip->protocol == IPPROTO_UDP
+            && blen - hlen >= (sizeof (UDPHDR)))
+        {
+            const UDPHDR *udp = (UDPHDR *) (data + sizeof (ETH_HEADER) + hlen);
 
-	      DumpDHCP (eth, ip, udp, dhcp, optlen);
-	      did = TRUE;
-	    }
+            // DHCP packet?
+            if ((udp->dest == htons (BOOTPC_PORT) || udp->dest == htons (BOOTPS_PORT))
+                && blen - hlen >= (sizeof (UDPHDR) + sizeof (DHCP)))
+            {
+                const DHCP *dhcp = (DHCP *) (data
+                    + hlen
+                    + sizeof (ETH_HEADER)
+                    + sizeof (UDPHDR));
 
-	  if (!did)
-	    {
-	      DEBUGP ((" "));
-	      PrIP (ip->saddr);
-	      DEBUGP ((":%d", ntohs (udp->source)));
-	      DEBUGP ((" -> "));
-	      PrIP (ip->daddr);
-	      DEBUGP ((":%d", ntohs (udp->dest)));
-	      did = TRUE;
-	    }
-	}
+                int optlen = len
+                    - sizeof (ETH_HEADER)
+                    - hlen
+                    - sizeof (UDPHDR)
+                    - sizeof (DHCP);
 
-      if (!did)
-	{
-	  DEBUGP ((" ipproto=%d ", ip->protocol));
-	  PrIP (ip->saddr);
-	  DEBUGP ((" -> "));
-	  PrIP (ip->daddr);
-	}
+                if (optlen < 0)
+                    optlen = 0;
 
-      DEBUGP (("\n"));
-      return;
+                DumpDHCP (eth, ip, udp, dhcp, optlen);
+                did = TRUE;
+            }
+
+            if (!did)
+            {
+                DEBUGP ((" "));
+                PrIP (ip->saddr);
+                DEBUGP ((":%d", ntohs (udp->source)));
+                DEBUGP ((" -> "));
+                PrIP (ip->daddr);
+                DEBUGP ((":%d", ntohs (udp->dest)));
+                did = TRUE;
+            }
+        }
+
+        if (!did)
+        {
+            DEBUGP ((" ipproto=%d ", ip->protocol));
+            PrIP (ip->saddr);
+            DEBUGP ((" -> "));
+            PrIP (ip->daddr);
+        }
+
+        DEBUGP (("\n"));
+        return;
     }
 
-  {
-    DEBUGP (("%s ??? src=", prefix));
-    PrMac (eth->src);
-    DEBUGP ((" dest="));
-    PrMac (eth->dest);
-    DEBUGP ((" proto=0x%04x len=%d\n",
-	      (int) ntohs(eth->proto),
-	      len));
-  }
+    {
+        DEBUGP (("%s ??? src=", prefix));
+        PrMac (eth->src);
+        DEBUGP ((" dest="));
+        PrMac (eth->dest);
+        DEBUGP ((" proto=0x%04x len=%d\n",
+            (int) ntohs(eth->proto),
+            len));
+    }
 }
 
 #endif // ALLOW_PACKET_DUMP

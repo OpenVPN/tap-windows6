@@ -80,7 +80,13 @@ Arguments:
 
     UNREFERENCED_PARAMETER(RegistryPath);
 
-    DEBUGP (("[TAP] --> DriverEntry\n"));
+    DEBUGP (("[TAP] --> DriverEntry; version [%d.%d] %s %s\n",
+        TAP_DRIVER_MAJOR_VERSION,
+        TAP_DRIVER_MINOR_VERSION,
+        __DATE__,
+        __TIME__));
+
+    DEBUGP (("[TAP] Registry Path: '%wZ'\n", RegistryPath));
 
     //
     // Initialize any driver-global variables here.
@@ -153,9 +159,13 @@ Arguments:
                     &GlobalData.NdisDriverHandle
                     );
 
-        if (NDIS_STATUS_SUCCESS != status)
+        if (NDIS_STATUS_SUCCESS == status)
         {
-            DEBUGP(("NdisMRegisterMiniportDriver failed: %8.8X\n", status));
+            DEBUGP (("[TAP] Registered miniport successfully\n"));
+        }
+        else
+        {
+            DEBUGP(("[TAP] NdisMRegisterMiniportDriver failed: %8.8X\n", status));
             TapDriverUnload(DriverObject);
             status = NDIS_STATUS_FAILURE;
             break;
@@ -197,7 +207,12 @@ Return Value:
     PDEVICE_OBJECT deviceObject = DriverObject->DeviceObject;
     UNICODE_STRING uniWin32NameString;
 
-    DEBUGP (("[TAP] --> TapDriverUnload\n"));
+    DEBUGP (("[TAP] --> TapDriverUnload; version [%d.%d] %s %s unloaded\n",
+        TAP_DRIVER_MAJOR_VERSION,
+        TAP_DRIVER_MINOR_VERSION,
+        __DATE__,
+        __TIME__
+        ));
 
     PAGED_CODE();
 
@@ -206,14 +221,6 @@ Return Value:
     //
 
     ASSERT(IsListEmpty(&GlobalData.AdapterList));
-
-  //DEBUGP (("[TAP] version [%d.%d] %s %s unloaded, instances=%d, imbs=%d\n",
-	 //  TAP_DRIVER_MAJOR_VERSION,
-	 //  TAP_DRIVER_MINOR_VERSION,
-	 //  __DATE__,
-	 //  __TIME__,
-	 //  NInstances(),
-	 //  InstanceMaxBucketSize()));
 
     if(GlobalData.NdisDriverHandle != NULL )
     {

@@ -27,10 +27,16 @@
 //------------------
 
 PVOID
-MemAlloc (ULONG p_Size, BOOLEAN zero);
+MemAlloc(
+    __in ULONG p_Size,
+    __in BOOLEAN zero
+    );
 
 VOID
-MemFree (PVOID p_Addr, ULONG p_Size);
+MemFree(
+    __in PVOID p_Addr,
+    __in ULONG p_Size
+    );
 
 //======================================================================
 // TAP Packet Queue
