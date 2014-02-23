@@ -148,7 +148,7 @@ HandleIPv6NeighborDiscovery(
     //------------------------------------------------
 
     // ethernet header
-    na->eth.proto = htons(ETH_P_IPV6);
+    na->eth.proto = htons(NDIS_ETH_TYPE_IPV6);
     ETH_COPY_NETWORK_ADDRESS(na->eth.dest, Adapter->PermanentAddress);
     ETH_COPY_NETWORK_ADDRESS(na->eth.src, Adapter->m_TapToUser.dest);
 
@@ -217,14 +217,14 @@ ProcessARP(
     //-----------------------------------------------
     // Is this the kind of packet we are looking for?
     //-----------------------------------------------
-    if (src->m_Proto == htons (ETH_P_ARP)
+    if (src->m_Proto == htons (NDIS_ETH_TYPE_ARP)
         && MAC_EQUAL (src->m_MAC_Source, Adapter->PermanentAddress)
         && MAC_EQUAL (src->m_ARP_MAC_Source, Adapter->PermanentAddress)
         && ETH_IS_BROADCAST(src->m_MAC_Destination)
         && src->m_ARP_Operation == htons (ARP_REQUEST)
         && src->m_MAC_AddressType == htons (MAC_ADDR_TYPE)
         && src->m_MAC_AddressSize == sizeof (MACADDR)
-        && src->m_PROTO_AddressType == htons (ETH_P_IP)
+        && src->m_PROTO_AddressType == htons (NDIS_ETH_TYPE_IPV4)
         && src->m_PROTO_AddressSize == sizeof (IPADDR)
         && src->m_ARP_IP_Source == adapter_ip
         && (src->m_ARP_IP_Destination & ip_netmask) == ip_network
@@ -236,9 +236,9 @@ ProcessARP(
             //----------------------------------------------
             // Initialize ARP reply fields
             //----------------------------------------------
-            arp->m_Proto = htons (ETH_P_ARP);
+            arp->m_Proto = htons (NDIS_ETH_TYPE_ARP);
             arp->m_MAC_AddressType = htons (MAC_ADDR_TYPE);
-            arp->m_PROTO_AddressType = htons (ETH_P_IP);
+            arp->m_PROTO_AddressType = htons (NDIS_ETH_TYPE_IPV4);
             arp->m_MAC_AddressSize = sizeof (MACADDR);
             arp->m_PROTO_AddressSize = sizeof (IPADDR);
             arp->m_ARP_Operation = htons (ARP_REPLY);
@@ -545,7 +545,7 @@ Return Value:
 
         // ARP packet?
         if (packetLength == sizeof (ARP_PACKET)
-            && eth->proto == htons (ETH_P_ARP)
+            && eth->proto == htons (NDIS_ETH_TYPE_ARP)
             && Adapter->m_dhcp_server_arp
             )
         {
@@ -564,7 +564,7 @@ Return Value:
 
         // DHCP packet?
         else if (packetLength >= sizeof (ETH_HEADER) + sizeof (IPHDR) + sizeof (UDPHDR) + sizeof (DHCP)
-            && eth->proto == htons (ETH_P_IP)
+            && eth->proto == htons (NDIS_ETH_TYPE_IPV4)
             && ip->version_len == 0x45 // IPv4, 20 byte header
             && ip->protocol == IPPROTO_UDP
             && udp->dest == htons (BOOTPS_PORT)
@@ -610,7 +610,7 @@ Return Value:
 
         switch (ntohs (e->proto))
         {
-        case ETH_P_ARP:
+        case NDIS_ETH_TYPE_ARP:
 
             // Make sure that packet is the right size for ARP.
             if (packetLength != sizeof (ARP_PACKET))
@@ -630,7 +630,7 @@ Return Value:
         default:
             goto no_queue;
 
-        case ETH_P_IP:
+        case NDIS_ETH_TYPE_IPV4:
 
             // Make sure that packet is large enough to be IPv4.
             if (packetLength < (ETHERNET_HEADER_SIZE + IP_HEADER_SIZE))
@@ -648,7 +648,7 @@ Return Value:
             tapPacket->m_SizeFlags |= TP_TUN;
             break;
 
-        case ETH_P_IPV6:
+        case NDIS_ETH_TYPE_IPV6:
             // Make sure that packet is large enough to be IPv6.
             if (packetLength < (ETHERNET_HEADER_SIZE + IPV6_HEADER_SIZE))
             {

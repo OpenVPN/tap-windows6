@@ -455,9 +455,9 @@ Return Value:
                 ETH_COPY_NETWORK_ADDRESS (adapter->m_UserToTap.src, dest);
                 ETH_COPY_NETWORK_ADDRESS (adapter->m_UserToTap.dest, adapter->CurrentAddress);
 
-                adapter->m_TapToUser.proto = adapter->m_UserToTap.proto = htons (ETH_P_IP);
+                adapter->m_TapToUser.proto = adapter->m_UserToTap.proto = htons (NDIS_ETH_TYPE_IPV4);
                 adapter->m_UserToTap_IPv6 = adapter->m_UserToTap;
-                adapter->m_UserToTap_IPv6.proto = htons(ETH_P_IPV6);
+                adapter->m_UserToTap_IPv6.proto = htons(NDIS_ETH_TYPE_IPV6);
 
                 adapter->m_tun = TRUE;
 
@@ -494,9 +494,9 @@ Return Value:
                 ETH_COPY_NETWORK_ADDRESS (adapter->m_UserToTap.src, dest);
                 ETH_COPY_NETWORK_ADDRESS (adapter->m_UserToTap.dest, adapter->CurrentAddress);
 
-                adapter->m_TapToUser.proto = adapter->m_UserToTap.proto = htons (ETH_P_IP);
+                adapter->m_TapToUser.proto = adapter->m_UserToTap.proto = htons (NDIS_ETH_TYPE_IPV4);
                 adapter->m_UserToTap_IPv6 = adapter->m_UserToTap;
-                adapter->m_UserToTap_IPv6.proto = htons(ETH_P_IPV6);
+                adapter->m_UserToTap_IPv6.proto = htons(NDIS_ETH_TYPE_IPV6);
 
                 adapter->m_tun = TRUE;
 

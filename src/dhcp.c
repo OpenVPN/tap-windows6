@@ -241,7 +241,7 @@ DHCPMessageOurs (
     )
 {
     // Must be UDPv4 protocol
-    if (!(eth->proto == htons (ETH_P_IP) && ip->protocol == IPPROTO_UDP))
+    if (!(eth->proto == htons (NDIS_ETH_TYPE_IPV4) && ip->protocol == IPPROTO_UDP))
     {
         return FALSE;
     }
@@ -316,7 +316,7 @@ BuildDHCPPre (
         ETH_COPY_NETWORK_ADDRESS (p->eth.dest, eth->src);
     }
 
-    p->eth.proto = htons (ETH_P_IP);
+    p->eth.proto = htons (NDIS_ETH_TYPE_IPV4);
 
     //
     // Build IP header

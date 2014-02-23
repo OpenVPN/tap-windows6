@@ -55,16 +55,11 @@ typedef struct {
 //----------------
 // Ethernet header
 //----------------
-
 typedef struct
 {
-  MACADDR dest;               /* destination eth addr	*/
-  MACADDR src;                /* source ether addr	*/
-
-# define ETH_P_IP   0x0800    /* IPv4 protocol */
-# define ETH_P_IPV6 0x86DD    /* IPv6 protocol */
-# define ETH_P_ARP  0x0806    /* ARP protocol */
-  USHORT proto;               /* packet type ID field	*/
+    MACADDR dest;               /* destination eth addr	*/
+    MACADDR src;                /* source ether addr	*/
+    USHORT proto;               /* packet type ID field	*/
 } ETH_HEADER, *PETH_HEADER;
 
 //----------------
