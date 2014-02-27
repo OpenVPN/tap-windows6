@@ -27,6 +27,7 @@
 #include <ntifs.h>
 #include <ndis.h>
 #include <ntstrsafe.h>
+#include <netioapi.h>
 
 #include "config.h"
 #include "lock.h"

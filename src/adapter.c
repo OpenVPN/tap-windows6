@@ -548,6 +548,9 @@ tapAdapterContextFromDeviceObject(
 
                 return adapter;
             }
+
+            // Move to next entry
+            entry = entry->Flink;
         }
     }
 
