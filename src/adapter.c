@@ -26,7 +26,7 @@
 // Include files.
 //
 
-#include "tap-windows.h"
+#include "tap.h"
 
 NDIS_OID TAPSupportedOids[] =
 {

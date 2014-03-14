@@ -41,7 +41,7 @@
 
 #include <string.h>
 
-#include "tap-windows.h"
+#include "tap.h"
 
 
 // Global data

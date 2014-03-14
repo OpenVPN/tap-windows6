@@ -23,7 +23,7 @@
  */
 
 
-#include "tap-windows.h"
+#include "tap.h"
 
 int
 HexStringToDecimalInt (const int p_Character)

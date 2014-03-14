@@ -24,68 +24,6 @@
 #ifndef __TAP_WIN_H
 #define __TAP_WIN_H
 
-#include <ntifs.h>
-#include <ndis.h>
-#include <ntstrsafe.h>
-#include <netioapi.h>
-
-#include "config.h"
-#include "lock.h"
-#include "constants.h"
-#include "proto.h"
-#include "mem.h"
-#include "macinfo.h"
-#include "dhcp.h"
-#include "error.h"
-#include "endian.h"
-#include "dhcp.h"
-#include "types.h"
-#include "adapter.h"
-#include "device.h"
-#include "prototypes.h"
-
-/*++
-
-    ioctl codes
-
---*/
-
-
-//========================================================
-// Check for truncated IPv4 packets, log errors if found.
-//========================================================
-#define PACKET_TRUNCATION_CHECK 0
-
-//========================================================
-// EXPERIMENTAL -- Configure TAP device object to be
-// accessible from non-administrative accounts, based
-// on an advanced properties setting.
-//
-// Duplicates the functionality of OpenVPN's
-// --allow-nonadmin directive.
-//========================================================
-#define ENABLE_NONADMIN 1
-
-//
-// The driver has exactly one instance of the TAP_GLOBAL structure.  NDIS keeps
-// an opaque handle to this data, (it doesn't attempt to read or interpret this
-// data), and it passes the handle back to the miniport in MiniportSetOptions
-// and MiniportInitializeEx.
-//
-typedef struct _TAP_GLOBAL
-{
-    LIST_ENTRY          AdapterList;
-
-    NDIS_RW_LOCK        Lock;
-
-    NDIS_HANDLE         NdisDriverHandle;   // From NdisMRegisterMiniportDriver
-
-} TAP_GLOBAL, *PTAP_GLOBAL;
-
-
-// Global data
-extern TAP_GLOBAL      GlobalData;
-
 /*
  * =============
  * TAP IOCTLs
@@ -111,5 +49,26 @@ extern TAP_GLOBAL      GlobalData;
 
 /* obsoletes TAP_WIN_IOCTL_CONFIG_POINT_TO_POINT */
 #define TAP_WIN_IOCTL_CONFIG_TUN            TAP_WIN_CONTROL_CODE (10, METHOD_BUFFERED)
+
+/*
+ * =================
+ * Registry keys
+ * =================
+ */
+
+#define ADAPTER_KEY "SYSTEM\\CurrentControlSet\\Control\\Class\\{4D36E972-E325-11CE-BFC1-08002BE10318}"
+
+#define NETWORK_CONNECTIONS_KEY "SYSTEM\\CurrentControlSet\\Control\\Network\\{4D36E972-E325-11CE-BFC1-08002BE10318}"
+
+/*
+ * ======================
+ * Filesystem prefixes
+ * ======================
+ */
+
+#define USERMODEDEVICEDIR "\\\\.\\Global\\"
+#define SYSDEVICEDIR      "\\Device\\"
+#define USERDEVICEDIR     "\\DosDevices\\Global\\"
+#define TAP_WIN_SUFFIX    ".tap"
 
 #endif // __TAP_WIN_H

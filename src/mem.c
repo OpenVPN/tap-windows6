@@ -26,7 +26,7 @@
 // Memory Management
 //------------------
 
-#include "tap-windows.h"
+#include "tap.h"
 
 PVOID
 MemAlloc(

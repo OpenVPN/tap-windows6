@@ -26,7 +26,7 @@
 // Include files.
 //
 
-#include "tap-windows.h"
+#include "tap.h"
 #include <wdmsec.h> // for SDDLs
 
 //======================================================================
