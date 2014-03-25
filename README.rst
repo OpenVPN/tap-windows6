@@ -21,7 +21,7 @@ environment variable.
 These instructions have been tested on Windows 7 using Git Bash, as well as on 
 Windows 2012 Server using Git Bash and Windows Powershell.
 
-View build script options:
+View build script options::
 
   $ python buildtap.py
   Usage: buildtap.py [options]
