@@ -477,7 +477,7 @@ Return Value:
 
     case TAP_WIN_IOCTL_CONFIG_POINT_TO_POINT:
         {
-            if(inBufLength >= sizeof(IPADDR)*3)
+            if(inBufLength >= sizeof(IPADDR)*2)
             {
                 MACADDR dest;
 
