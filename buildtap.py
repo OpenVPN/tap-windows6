@@ -24,12 +24,12 @@ class BuildTAPWindows(object):
 
         # driver signing options
         self.sign_cn = opt.cert
-        self.ms_cert = os.path.join(self.top, "MSCV-VSClass3.cer")
+        self.crosscert = os.path.join(self.top, opt.crosscert)
 
         self.inf2cat_cmd = os.path.join(self.ddk_path, 'bin', 'selfsign', 'Inf2Cat')
         self.signtool_cmd = os.path.join(self.ddk_path, 'bin', 'x86', 'SignTool')
 
-        self.timestamp_server="http://timestamp.verisign.com/scripts/timstamp.dll"
+        self.timestamp_server = opt.timestamp
 
     # split a path into a list of components
     @staticmethod
@@ -345,7 +345,7 @@ class BuildTAPWindows(object):
     def sign(self, x64):
             self.system("%s sign /v /ac %s /s my /n %s /t %s %s" % (
                     self.signtool_cmd,
-                    self.ms_cert,
+                    self.crosscert,
                     self.sign_cn,
                     self.timestamp_server,
                     self.drvfile(x64, '.cat'),
@@ -374,8 +374,11 @@ if __name__ == '__main__':
     # defaults
     src = os.path.dirname(os.path.realpath(__file__))
     cert = "openvpn"
+    crosscert = "MSCV-VSClass3.cer"
+    timestamp = "http://timestamp.verisign.com/scripts/timstamp.dll"
 
     op.add_option("-s", "--src", dest="src", metavar="SRC",
+
                   default=src,
                   help="TAP-Windows top-level directory, default=%s" % (src,))
     op.add_option("--ti", dest="tapinstall", metavar="TAPINSTALL",
@@ -389,6 +392,12 @@ if __name__ == '__main__':
     op.add_option("--cert", dest="cert", metavar="CERT",
                   default=cert,
                   help="Common name of code signing certificate, default=%s" % (cert,))
+    op.add_option("--crosscert", dest="crosscert", metavar="CERT",
+	              default=crosscert,
+				  help="The cross-certificate file to use, default=%s" % (crosscert,))
+    op.add_option("--timestamp", dest="timestamp", metavar="URL",
+                  default=timestamp,
+                  help="Timestamp URL to use, default=%s" % (timestamp,))
     op.add_option("-a", "--oas", action="store_true", dest="oas",
                   help="Build for OpenVPN Access Server clients")
     (opt, args) = op.parse_args()
