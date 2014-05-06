@@ -374,7 +374,7 @@ if __name__ == '__main__':
     # defaults
     src = os.path.dirname(os.path.realpath(__file__))
     cert = "openvpn"
-    crosscert = "MSCV-VSClass3.cer"
+    crosscert = "MSCV-VSClass3.cer" # cross certs available here: http://msdn.microsoft.com/en-us/library/windows/hardware/dn170454(v=vs.85).aspx
     timestamp = "http://timestamp.verisign.com/scripts/timstamp.dll"
 
     op.add_option("-s", "--src", dest="src", metavar="SRC",
