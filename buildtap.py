@@ -124,9 +124,9 @@ class BuildTAPWindows(object):
     # our tap-windows version.m4 settings
     def gen_version_m4(self, x64):
         kv = self.parse_version_m4()
-        if self.opt.oas:
+        if self.opt.oas: # for OpenVPN Connect (i.e. OpenVPN Access Server)
             kv['PRODUCT_NAME'] = "OpenVPNAS"
-            kv['PRODUCT_TAP_WIN_DEVICE_DESCRIPTION'] = "TAP-Win32 Adapter OAS (NDIS 6.0)"
+            kv['PRODUCT_TAP_WIN_DEVICE_DESCRIPTION'] = "TAP Adapter OAS NDIS 6.0"
             kv['PRODUCT_TAP_WIN_PROVIDER'] = "TAP-Win32 Provider OAS"
             kv['PRODUCT_TAP_WIN_COMPONENT_ID'] = "tapoas"
 
@@ -209,6 +209,12 @@ class BuildTAPWindows(object):
                     destfn = os.path.join(dist, f)
                     self.cp(path, destfn)
 
+    # copy tap-windows.h to dist/include
+    def copy_include(self):
+        incdir = os.path.join(self.dist_path(), 'include')
+        self.makedirs(incdir)
+        self.cp(os.path.join(self.src, 'tap-windows.h'), incdir)
+
     # copy tapinstall to dist
     def copy_tapinstall_to_dist(self, x64):
         dist = self.mkdir_dist(x64)
@@ -265,6 +271,7 @@ class BuildTAPWindows(object):
     # build tap driver and tapinstall
     def build(self):
         self.build_tap()
+        self.copy_include()
         if self.top_tapinstall:
             self.build_tapinstall()
         self.copy_dist_src_to_dist()
@@ -272,9 +279,10 @@ class BuildTAPWindows(object):
         print "***** Generated files"
         self.dump_dist()
 
-        self.make_tarball(os.path.join(self.top, "tap6.tar.gz"),
+        tapbase = "tapoas6" if self.opt.oas else "tap6"
+        self.make_tarball(os.path.join(self.top, tapbase+".tar.gz"),
                           self.dist_path(),
-                          "tap6")
+                          tapbase)
 
     # like find . | sort
     def enum_tree(self, dir):
