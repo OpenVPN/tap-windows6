@@ -475,7 +475,11 @@ TapDeviceWrite(
                 netBufferList->MiniportReserved[0] = Irp;
                 netBufferList->MiniportReserved[1] = NULL;
 
-                // BUGBUG!!! Setup for IRP cancel!!!
+                // This IRP is pended.
+                IoMarkIrpPending(Irp);
+
+                // This IRP cannot be cancelled while in-flight.
+                IoSetCancelRoutine(Irp,NULL);
 
                 TAP_RX_NBL_FLAGS_CLEAR_ALL(netBufferList);
 
