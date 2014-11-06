@@ -18,9 +18,14 @@ class BuildTAPWindows(object):
             self.top_tapinstall = os.path.realpath(opt.tapinstall)   # tapinstall dir
         else:
             self.top_tapinstall = None
+            if opt.package:
+                raise ValueError("parameter -p must be used with --ti")
 
         # path to DDK
         self.ddk_path = paths.DDK
+
+        # path to makensis
+        self.makensis = os.path.join(paths.NSIS, 'makensis.exe')
 
         # driver signing options
         self.sign_cn = opt.cert
@@ -97,6 +102,10 @@ class BuildTAPWindows(object):
     # return path of dist directory
     def dist_path(self):
         return os.path.join(self.top, 'dist')
+
+    # return path of dist include directory
+    def dist_include_path(self):
+        return os.path.join(self.dist_path(), 'include')
 
     # make a distribution directory (if absent) and return its path
     def mkdir_dist(self, x64):
@@ -264,8 +273,11 @@ class BuildTAPWindows(object):
         for x64 in (False, True):
             print "***** BUILD TAPINSTALL x64=%s" % (x64,)
             tisrc = self.tapinstall_src()
-            self.config_tapinstall(x64=x64)
-            self.build_ddk(tisrc, x64=x64, debug=opt.debug)
+            # Only build if we have a chance of succeeding
+            sources_in = os.path.join(tisrc, "sources.in")
+            if os.path.isfile(sources_in):
+                self.config_tapinstall(x64=x64)
+                self.build_ddk(tisrc, x64=x64, debug=opt.debug)
             self.copy_tapinstall_to_dist(x64)
 
     # build tap driver and tapinstall
@@ -283,6 +295,47 @@ class BuildTAPWindows(object):
         self.make_tarball(os.path.join(self.top, tapbase+".tar.gz"),
                           self.dist_path(),
                           tapbase)
+
+    # package the produced files into an NSIS installer
+    def package(self):
+
+        # Generate license.txt and converting LF -> CRLF as we go. Apparently
+        # this type of conversion will stop working in Python 3.x.
+        dst = open(os.path.join(self.dist_path(), 'license.txt'), mode='wb')
+
+        for f in (os.path.join(self.top, 'COPYING'), os.path.join(self.top, 'COPYRIGHT.GPL')):
+            src=open(f, mode='rb')
+            input = src.read()
+            output = input.replace('\n', '\r\n')
+            dst.write(output+' \n')
+            src.close()
+
+        dst.close()
+
+        # Copy tap-windows.h to dist include directory
+        self.mkdir(self.dist_include_path())
+        self.cp(os.path.join(self.src, 'tap-windows.h'), self.dist_include_path())
+
+        # Get variables from version.m4
+        kv = self.gen_version_m4(True)
+
+        installer_file=os.path.join(self.top, 'tap-windows-'+kv['PRODUCT_VERSION']+'.exe')
+
+        installer_cmd = "\"%s\" -DDEVCON32=%s -DDEVCON64=%s -DDEVCON_BASENAME=%s -DPRODUCT_TAP_WIN_COMPONENT_ID=%s -DPRODUCT_NAME=%s -DPRODUCT_VERSION=%s -DOUTPUT=%s -DIMAGE=%s %s" % \
+                        (self.makensis,
+                         os.path.join(self.tapinstall_src(), 'objfre_wlh_x86', 'i386', 'tapinstall.exe'),
+                         os.path.join(self.tapinstall_src(), 'objfre_wlh_amd64', 'amd64', 'tapinstall.exe'),
+                         'tapinstall.exe',
+                         kv['PRODUCT_TAP_WIN_COMPONENT_ID'],
+                         kv['PRODUCT_NAME'],
+                         kv['PRODUCT_VERSION'],
+                         installer_file,
+                         self.dist_path(),
+                         os.path.join(self.top, 'installer', 'tap-windows6.nsi')
+                        )
+
+        self.system(installer_cmd)
+        self.sign(installer_file)
 
     # like find . | sort
     def enum_tree(self, dir):
@@ -350,14 +403,17 @@ class BuildTAPWindows(object):
             oslist = "Vista_X86,Server2008_X86,7_X86"
         self.system("%s /driver:%s /os:%s" % (self.inf2cat_cmd, self.drvdir(self.src, x64), oslist))
 
-    def sign(self, x64):
+    def sign(self, file):
             self.system("%s sign /v /ac %s /s my /n %s /t %s %s" % (
                     self.signtool_cmd,
                     self.crosscert,
                     self.sign_cn,
                     self.timestamp_server,
-                    self.drvfile(x64, '.cat'),
+                    file,
                 ))
+
+    def sign_driver(self, x64):
+        self.sign(self.drvfile(x64, '.cat'))
 
     def verify(self, x64):
             self.system("%s verify /kp /v /c %s %s" % (
@@ -368,7 +424,7 @@ class BuildTAPWindows(object):
 
     def sign_verify(self, x64):
         self.inf2cat(x64)
-        self.sign(x64)
+        self.sign_driver(x64)
         self.verify(x64)
 
     # END Driver signing
@@ -390,13 +446,15 @@ if __name__ == '__main__':
                   default=src,
                   help="TAP-Windows top-level directory, default=%s" % (src,))
     op.add_option("--ti", dest="tapinstall", metavar="TAPINSTALL",
-                  help="tapinstall (i.e. devcon) source directory (optional)")
+                  help="tapinstall (i.e. devcon) directory (optional)")
     op.add_option("-d", "--debug", action="store_true", dest="debug",
                   help="enable debug build")
     op.add_option("-c", "--clean", action="store_true", dest="clean",
                   help="do an nmake clean before build")
     op.add_option("-b", "--build", action="store_true", dest="build",
                   help="build TAP-Windows and possibly tapinstall (add -c to clean before build)")
+    op.add_option("-p", "--package", action="store_true", dest="package",
+                  help="generate an NSIS installer from the compiled files")
     op.add_option("--cert", dest="cert", metavar="CERT",
                   default=cert,
                   help="Common name of code signing certificate, default=%s" % (cert,))
@@ -419,3 +477,5 @@ if __name__ == '__main__':
         btw.clean()
     if opt.build:
         btw.build()
+    if opt.package:
+        btw.package()
