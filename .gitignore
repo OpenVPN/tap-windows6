@@ -7,3 +7,4 @@ src/build*.log
 src/obj*
 src/i386
 src/amd64
+tap-windows-*.exe
