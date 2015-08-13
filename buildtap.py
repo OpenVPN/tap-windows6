@@ -29,6 +29,8 @@ class BuildTAPWindows(object):
 
         # driver signing options
         self.sign_cn = opt.cert
+        self.sign_cert = opt.certfile
+        self.cert_pw = opt.certpw
         self.crosscert = os.path.join(self.top, opt.crosscert)
 
         self.inf2cat_cmd = os.path.join(self.ddk_path, 'bin', 'selfsign', 'Inf2Cat')
@@ -407,13 +409,21 @@ class BuildTAPWindows(object):
         self.system("%s /driver:%s /os:%s" % (self.inf2cat_cmd, self.drvdir(self.src, x64), oslist))
 
     def sign(self, file):
-            self.system("%s sign /v /ac %s /s my /n %s /t %s %s" % (
-                    self.signtool_cmd,
-                    self.crosscert,
-                    self.sign_cn,
-                    self.timestamp_server,
-                    file,
-                ))
+        certspec = ""
+        if self.sign_cert:
+            certspec += "/f %s " % self.sign_cert
+            if self.cert_pw:
+                certspec += "/p %s " % self.cert_pw
+        else:
+            certspec += "/s my /n %s " % self.sign_cert
+
+        self.system("%s sign /v /ac %s %s /t %s %s" % (
+                self.signtool_cmd,
+                self.crosscert,
+                certspec,
+                self.timestamp_server,
+                file,
+            ))
 
     def sign_driver(self, x64):
         self.sign(self.drvfile(x64, '.cat'))
@@ -461,6 +471,10 @@ if __name__ == '__main__':
     op.add_option("--cert", dest="cert", metavar="CERT",
                   default=cert,
                   help="Common name of code signing certificate, default=%s" % (cert,))
+    op.add_option("--certfile", dest="certfile", metavar="CERTFILE",
+                  help="Path to the code signing certificate")
+    op.add_option("--certpw", dest="certpw", metavar="CERTPW",
+                  help="Password for the code signing certificate/key (optional)")
     op.add_option("--crosscert", dest="crosscert", metavar="CERT",
 	              default=crosscert,
 				  help="The cross-certificate file to use, default=%s" % (crosscert,))
