@@ -17,7 +17,7 @@ To build, the following prerequisites are required:
 - Patched source code directory of **devcon** sample from WDK (optional)
 - Prebuilt tapinstall.exe binaries (optional)
 
-Make sure you add Python's install directory (usually c:\python27) to the PATH 
+Make sure you add Python's install directory (usually c:\\python27) to the PATH 
 environment variable.
 
 These instructions have been tested on Windows 7 using Git Bash, as well as on 
