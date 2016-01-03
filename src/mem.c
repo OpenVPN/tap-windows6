@@ -139,23 +139,6 @@ tapPacketRemoveHeadLocked(
     return tapPacket;
 }
 
-PTAP_PACKET
-tapPacketRemoveHead(
-    __in PTAP_PACKET_QUEUE  TapPacketQueue
-    )
-{
-    PTAP_PACKET     tapPacket = NULL;
-    KIRQL           irql;
-
-    KeAcquireSpinLock(&TapPacketQueue->QueueLock,&irql);
-
-    tapPacket = tapPacketRemoveHeadLocked(TapPacketQueue);
-
-    KeReleaseSpinLock(&TapPacketQueue->QueueLock,irql);
-
-    return tapPacket;
-}
-
 VOID
 tapPacketQueueInitialize(
     __in PTAP_PACKET_QUEUE  TapPacketQueue
