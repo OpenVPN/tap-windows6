@@ -98,7 +98,6 @@ HandleIPv6NeighborDiscovery(
     __in UCHAR * m_Data
     )
 {
-    const ETH_HEADER * e = (ETH_HEADER *) m_Data;
     const IPV6HDR *ipv6 = (IPV6HDR *) (m_Data + sizeof (ETH_HEADER));
     const ICMPV6_NS * icmpv6_ns = (ICMPV6_NS *) (m_Data + sizeof (ETH_HEADER) + sizeof (IPV6HDR));
     ICMPV6_NA_PKT *na;
@@ -696,7 +695,6 @@ no_queue:
         NdisFreeMemory(tapPacket,0,0);
     }
   
-exit_success:
     return;
 }
 

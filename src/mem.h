@@ -79,11 +79,6 @@ tapPacketRemoveHeadLocked(
     __in PTAP_PACKET_QUEUE  TapPacketQueue
     );
 
-PTAP_PACKET
-tapPacketRemoveHead(
-    __in PTAP_PACKET_QUEUE  TapPacketQueue
-    );
-
 VOID
 tapPacketQueueInitialize(
     __in PTAP_PACKET_QUEUE  TapPacketQueue
