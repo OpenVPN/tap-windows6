@@ -61,15 +61,15 @@ cannot be made public due to licensing restrictions. For these reasons the
 default behavior is to reuse pre-built executables. To make sure the buildsystem
 finds the executables create the following directory structure under
 tap-windows6 directory:
-
-tapinstall
-└── 7600
-    ├── objfre_wlh_amd64
-    │   └── amd64
-    │       └── tapinstall.exe
-    └── objfre_wlh_x86
-        └── i386
-            └── tapinstall.exe
+::
+  tapinstall
+  └── 7600
+      ├── objfre_wlh_amd64
+      │   └── amd64
+      │       └── tapinstall.exe
+      └── objfre_wlh_x86
+          └── i386
+              └── tapinstall.exe
 
 This structure is equal to what building tapinstall would create. Replace 7600
 with the major number of your WinDDK version. Finally call buildtap.py with
