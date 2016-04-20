@@ -121,3 +121,17 @@ It is possible to build tap-windows6 without connectivity to the Internet but
 any attempt to timestamp the driver will fail. For this reason configure your 
 outbound proxy server before starting the build. Note that the command prompt 
 also needs to be restarted to make use of new proxy settings.
+
+Notes on Authenticode signatures
+--------------------------------
+
+Recent Windows versions such as Windows 10 are fairly picky about the
+Authenticode signatures of kernel-mode drivers. In addition making older Windows
+versions such as Vista play along with signatures that Windows 10 accepts can be
+rather challenging. A good starting point on this topic is the
+`building tap-windows6 <https://community.openvpn.net/openvpn/wiki/BuildingTapWindows6>`_
+page on the OpenVPN community wiki. As that page points out, having two
+completely separate Authenticode signatures may be the only reasonable option.
+Fortunately there is a tool, `Sign-Tap6 <https://github.com/mattock/sign-tap6/>`_,
+which can be used to append secondary signatures to the tap-windows6 driver or
+to handle the entire signing process if necessary.
