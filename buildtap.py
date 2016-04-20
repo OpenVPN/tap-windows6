@@ -28,6 +28,7 @@ class BuildTAPWindows(object):
         self.makensis = os.path.join(paths.NSIS, 'makensis.exe')
 
         # driver signing options
+        self.codesign = opt.codesign
         self.sign_cn = opt.cert
         self.crosscert = os.path.join(self.top, opt.crosscert)
 
@@ -265,7 +266,8 @@ class BuildTAPWindows(object):
             print "***** BUILD TAP x64=%s" % (x64,)
             self.config_tap(x64=x64)
             self.build_ddk(dir=self.src, x64=x64, debug=opt.debug)
-            self.sign_verify(x64=x64)
+            if self.codesign:
+                self.sign_verify(x64=x64)
             self.copy_tap_to_dist(x64=x64)
 
     # build tapinstall
@@ -456,6 +458,8 @@ if __name__ == '__main__':
                   help="do an nmake clean before build")
     op.add_option("-b", "--build", action="store_true", dest="build",
                   help="build TAP-Windows and possibly tapinstall (add -c to clean before build)")
+    op.add_option("--sign", action="store_true", dest="codesign",
+                  default=False, help="sign the driver files")
     op.add_option("-p", "--package", action="store_true", dest="package",
                   help="generate an NSIS installer from the compiled files")
     op.add_option("--cert", dest="cert", metavar="CERT",

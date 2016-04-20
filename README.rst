@@ -36,6 +36,7 @@ View build script options::
     -c, --clean        do an nmake clean before build
     -b, --build        build TAP-Windows and possibly tapinstall (add -c to
                        clean before build)
+    -s, --sign         sign the driver files (disabled by default)
     -p, --package      generate an NSIS installer from the compiled files
     --cert=CERT        Common name of code signing certificate, default=openvpn
     --crosscert=CERT   The cross-certificate file to use, default=MSCV-
@@ -51,6 +52,15 @@ Edit **version.m4** and **paths.py** as necessary then build::
 On successful completion, all build products will be placed in the "dist" 
 directory as well as tap6.tar.gz. The NSIS installer package will be placed to
 the build root directory.
+
+Note that due to the strict driver signing requirements in Windows 10 you need
+an EV certificate to sign the driver files. These EV certificates may be
+stored inside a hardware device, which makes fully automated signing process
+difficult, dangerous or impossible. Eventually the signing process will become
+even more involved, with drivers having to be submitted to the Windows
+Hardware Developer Center Dashboard portal. Therefore, by default, this
+buildsystem no longer signs any files. You can revert to the old behavior
+by using the --sign parameter.
 
 Building tapinstall (optional)
 ------------------------------
