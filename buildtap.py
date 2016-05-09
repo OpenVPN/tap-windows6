@@ -28,6 +28,7 @@ class BuildTAPWindows(object):
         self.makensis = os.path.join(paths.NSIS, 'makensis.exe')
 
         # driver signing options
+        self.codesign = opt.codesign
         self.sign_cn = opt.cert
         self.crosscert = os.path.join(self.top, opt.crosscert)
 
@@ -265,7 +266,8 @@ class BuildTAPWindows(object):
             print "***** BUILD TAP x64=%s" % (x64,)
             self.config_tap(x64=x64)
             self.build_ddk(dir=self.src, x64=x64, debug=opt.debug)
-            self.sign_verify(x64=x64)
+            if self.codesign:
+                self.sign_verify(x64=x64)
             self.copy_tap_to_dist(x64=x64)
 
     # build tapinstall
@@ -278,6 +280,8 @@ class BuildTAPWindows(object):
             if os.path.isfile(sources_in):
                 self.config_tapinstall(x64=x64)
                 self.build_ddk(tisrc, x64=x64, debug=opt.debug)
+            if self.codesign:
+                self.sign_verify_ti(x64=x64)
             self.copy_tapinstall_to_dist(x64)
 
     # build tap driver and tapinstall
@@ -326,8 +330,8 @@ class BuildTAPWindows(object):
 
         installer_cmd = "\"%s\" -DDEVCON32=%s -DDEVCON64=%s -DDEVCON_BASENAME=%s -DPRODUCT_TAP_WIN_COMPONENT_ID=%s -DPRODUCT_NAME=%s -DPRODUCT_VERSION=%s -DOUTPUT=%s -DIMAGE=%s %s" % \
                         (self.makensis,
-                         os.path.join(self.tapinstall_src(), 'objfre_wlh_x86', 'i386', 'tapinstall.exe'),
-                         os.path.join(self.tapinstall_src(), 'objfre_wlh_amd64', 'amd64', 'tapinstall.exe'),
+                         self.tifile(x64=False),
+                         self.tifile(x64=True),
                          'tapinstall.exe',
                          kv['PRODUCT_TAP_WIN_COMPONENT_ID'],
                          kv['PRODUCT_NAME'],
@@ -399,6 +403,12 @@ class BuildTAPWindows(object):
             assert(len(catlist)==1)
             return os.path.join(dd, catlist[0])
 
+    def tifile(self, x64):
+        if x64:
+            return os.path.join(self.tapinstall_src(), 'objfre_wlh_amd64', 'amd64', 'tapinstall.exe')
+        else:
+            return os.path.join(self.tapinstall_src(), 'objfre_wlh_x86', 'i386', 'tapinstall.exe')
+
     def inf2cat(self, x64):
         if x64:
             oslist = "Vista_X64,Server2008_X64,Server2008R2_X64,7_X64"
@@ -430,6 +440,10 @@ class BuildTAPWindows(object):
         self.sign_driver(x64)
         self.verify(x64)
 
+    def sign_verify_ti(self, x64):
+        self.sign(self.tifile(x64))
+        self.system("%s verify /pa %s" % (self.signtool_cmd, self.tifile(x64)))
+
     # END Driver signing
 
 if __name__ == '__main__':
@@ -456,6 +470,8 @@ if __name__ == '__main__':
                   help="do an nmake clean before build")
     op.add_option("-b", "--build", action="store_true", dest="build",
                   help="build TAP-Windows and possibly tapinstall (add -c to clean before build)")
+    op.add_option("--sign", action="store_true", dest="codesign",
+                  default=False, help="sign the driver files")
     op.add_option("-p", "--package", action="store_true", dest="package",
                   help="generate an NSIS installer from the compiled files")
     op.add_option("--cert", dest="cert", metavar="CERT",

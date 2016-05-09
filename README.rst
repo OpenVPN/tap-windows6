@@ -36,6 +36,7 @@ View build script options::
     -c, --clean        do an nmake clean before build
     -b, --build        build TAP-Windows and possibly tapinstall (add -c to
                        clean before build)
+    -s, --sign         sign the driver files (disabled by default)
     -p, --package      generate an NSIS installer from the compiled files
     --cert=CERT        Common name of code signing certificate, default=openvpn
     --crosscert=CERT   The cross-certificate file to use, default=MSCV-
@@ -52,6 +53,15 @@ On successful completion, all build products will be placed in the "dist"
 directory as well as tap6.tar.gz. The NSIS installer package will be placed to
 the build root directory.
 
+Note that due to the strict driver signing requirements in Windows 10 you need
+an EV certificate to sign the driver files. These EV certificates may be
+stored inside a hardware device, which makes fully automated signing process
+difficult, dangerous or impossible. Eventually the signing process will become
+even more involved, with drivers having to be submitted to the Windows
+Hardware Developer Center Dashboard portal. Therefore, by default, this
+buildsystem no longer signs any files. You can revert to the old behavior
+by using the --sign parameter.
+
 Building tapinstall (optional)
 ------------------------------
 
@@ -61,15 +71,15 @@ cannot be made public due to licensing restrictions. For these reasons the
 default behavior is to reuse pre-built executables. To make sure the buildsystem
 finds the executables create the following directory structure under
 tap-windows6 directory:
-
-tapinstall
-└── 7600
-    ├── objfre_wlh_amd64
-    │   └── amd64
-    │       └── tapinstall.exe
-    └── objfre_wlh_x86
-        └── i386
-            └── tapinstall.exe
+::
+  tapinstall
+  └── 7600
+      ├── objfre_wlh_amd64
+      │   └── amd64
+      │       └── tapinstall.exe
+      └── objfre_wlh_x86
+          └── i386
+              └── tapinstall.exe
 
 This structure is equal to what building tapinstall would create. Replace 7600
 with the major number of your WinDDK version. Finally call buildtap.py with
@@ -111,3 +121,17 @@ It is possible to build tap-windows6 without connectivity to the Internet but
 any attempt to timestamp the driver will fail. For this reason configure your 
 outbound proxy server before starting the build. Note that the command prompt 
 also needs to be restarted to make use of new proxy settings.
+
+Notes on Authenticode signatures
+--------------------------------
+
+Recent Windows versions such as Windows 10 are fairly picky about the
+Authenticode signatures of kernel-mode drivers. In addition making older Windows
+versions such as Vista play along with signatures that Windows 10 accepts can be
+rather challenging. A good starting point on this topic is the
+`building tap-windows6 <https://community.openvpn.net/openvpn/wiki/BuildingTapWindows6>`_
+page on the OpenVPN community wiki. As that page points out, having two
+completely separate Authenticode signatures may be the only reasonable option.
+Fortunately there is a tool, `Sign-Tap6 <https://github.com/mattock/sign-tap6/>`_,
+which can be used to append secondary signatures to the tap-windows6 driver or
+to handle the entire signing process if necessary.
