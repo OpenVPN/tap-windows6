@@ -697,7 +697,7 @@ Return Value:
             if (inBufLength >= sizeof(ULONG))
             {
                 adapter->m_source_check = (BOOLEAN) ((PULONG) (Irp->AssociatedIrp.SystemBuffer))[0];
-                Irp->IoStatus.Information = 1
+                Irp->IoStatus.Information = 1;
             }
             else
             {
@@ -705,7 +705,7 @@ Return Value:
                 Irp->IoStatus.Status = ntStatus = STATUS_INVALID_PARAMETER;
             }
         }
-            break;
+        break;
     default:
 
         //

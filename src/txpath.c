@@ -219,7 +219,7 @@ ProcessARP(
     BOOLEAN source_check = FALSE;
     if (Adapter->m_source_check)
     {
-        source_check = (Adapter->src->m_ARP_IP_Source == adapter_ip);
+        source_check = (src->m_ARP_IP_Source == adapter_ip);
     }
     else
     {
