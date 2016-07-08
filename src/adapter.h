@@ -108,7 +108,7 @@ typedef struct _TAP_ADAPTER_CONTEXT
     // ----------------------------------
     // This a GUID string provided by NDIS that identifies the adapter instance.
     // An example is:
-    // 
+    //
     //    NetCfgInstanceId={410EB49D-2381-4FE7-9B36-498E22619DF0}
     //
     // Other names are derived from NetCfgInstanceId. For example, MiniportName:
@@ -250,6 +250,10 @@ typedef struct _TAP_ADAPTER_CONTEXT
   // resources.
   BOOLEAN m_CalledAdapterFreeResources;
   BOOLEAN m_RegisteredAdapterShutdownHandler;
+
+   // This variable is initialised as TRUE. If it is set to FALSE, the adapter does
+   // not check the source IP field of the ARP requests it receives on the adapter.
+  BOOLEAN m_source_check;
 
 } TAP_ADAPTER_CONTEXT, *PTAP_ADAPTER_CONTEXT;
 
