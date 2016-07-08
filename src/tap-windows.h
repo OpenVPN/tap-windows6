@@ -4,6 +4,7 @@
  *
  *  This code was inspired by the CIPE-Win32 driver by Damion K. Wilson.
  *
+ *  Copyright (C) 2016 Noel Kuntze <noel@familie-kuntze.de>
  *  This source code is Copyright (C) 2002-2014 OpenVPN Technologies, Inc.,
  *  and is released under the GPL version 2 (see below).
  *
