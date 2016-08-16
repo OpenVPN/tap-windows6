@@ -415,7 +415,7 @@ class BuildTAPWindows(object):
             if self.cert_pw:
                 certspec += "/p %s " % self.cert_pw
         else:
-            certspec += "/s my /n %s " % self.sign_cert
+            certspec += "/s my /n %s " % self.sign_cn
 
         self.system("%s sign /v /ac %s %s /t %s %s" % (
                 self.signtool_cmd,
