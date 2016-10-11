@@ -17,3 +17,8 @@ to be bound by the Microsoft Software License Terms for the
 WDK.  All WDK Code is considered by the GPLv2 licensors to
 qualify for the special exception stated in section 3 of
 GPLv2 (commonly known as the system library exception).
+
+The tap-windows.h file has been released under the MIT
+license (see COPYRIGHT.MIT) as well as under GPLv2 (see
+COPYRIGHT.GPL). This has been done to allow the use of the
+header file in non-GPLv2 compatible projects.

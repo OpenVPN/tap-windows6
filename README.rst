@@ -135,3 +135,8 @@ completely separate Authenticode signatures may be the only reasonable option.
 Fortunately there is a tool, `Sign-Tap6 <https://github.com/mattock/sign-tap6/>`_,
 which can be used to append secondary signatures to the tap-windows6 driver or
 to handle the entire signing process if necessary.
+
+License
+-------
+
+See the file `COPYING <COPYING>`_.
