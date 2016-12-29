@@ -10,6 +10,7 @@
 
 SetCompressor lzma
 
+!addplugindir .
 !include "MUI.nsh"
 !include "StrFunc.nsh"
 !include "x64.nsh"
@@ -151,7 +152,19 @@ Section /o "TAP Utilities" SecTAPUtilities
 	; Create shortcuts
 	CreateDirectory "$SMPROGRAMS\${PRODUCT_NAME}\Utilities"
 	CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\Utilities\Add a new TAP virtual ethernet adapter.lnk" "$INSTDIR\bin\addtap.bat" ""
+	; set runas admin flag on the addtap link
+	ShellLink::SetRunAsAdministrator "$SMPROGRAMS\${PRODUCT_NAME}\Utilities\Add a new TAP virtual ethernet adapter.lnk"
+	Pop $0
+	${If} $0 != 0
+		DetailPrint "Setting RunAsAdmin flag on addtap failed: status = $0"
+	${Endif}
 	CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\Utilities\Delete ALL TAP virtual ethernet adapters.lnk" "$INSTDIR\bin\deltapall.bat" ""
+	; set runas admin flag on the deltapall link
+	ShellLink::SetRunAsAdministrator "$SMPROGRAMS\${PRODUCT_NAME}\Utilities\Delete ALL TAP virtual ethernet adapters.lnk"
+	Pop $0
+	${If} $0 != 0
+		DetailPrint "Setting RunAsAdmin flag on deltapall failed: status = $0"
+	${Endif}
 SectionEnd
 
 Section /o "TAP SDK" SecTAPSDK
