@@ -177,6 +177,12 @@ Function .onInit
 	${GetParameters} $R0
 	ClearErrors
 
+${IfNot} ${AtLeastWinVista}
+	MessageBox MB_OK "This package requires at least Windows Vista"
+	SetErrorLevel 1
+	Quit
+${EndIf}
+
 	!insertmacro SelectByParameter ${SecTAP} SELECT_TAP 1
 	!insertmacro SelectByParameter ${SecTAPUtilities} SELECT_UTILITIES 0
 	!insertmacro SelectByParameter ${SecTAPSDK} SELECT_SDK 0
