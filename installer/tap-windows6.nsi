@@ -287,9 +287,6 @@ Section -post
 	IntFmt $0 "0x%08X" $0
 	WriteRegDWORD HKLM "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}" "EstimatedSize" "$0"
 
-	; Advise a reboot
-	;Messagebox MB_OK "IMPORTANT: Rebooting the system is advised in order to finalize TAP driver installation/upgrade (this is an informational message only, pressing OK will not reboot)."
-
 SectionEnd
 
 ;--------------------------------
