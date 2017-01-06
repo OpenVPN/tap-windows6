@@ -8,7 +8,7 @@
 
 ; TAP-Windows install script for Windows, using NSIS
 
-SetCompressor lzma
+SetCompressor /SOLID lzma
 
 !addplugindir .
 !include "MUI.nsh"
