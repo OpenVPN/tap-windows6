@@ -311,9 +311,7 @@ class BuildTAPWindows(object):
 
         for f in (os.path.join(self.top, 'COPYING'), os.path.join(self.top, 'COPYRIGHT.GPL')):
             src=open(f, mode='rb')
-            input = src.read()
-            output = input.replace('\n', '\r\n')
-            dst.write(output+' \n')
+            dst.write(src.read()+'\r\n')
             src.close()
 
         dst.close()
