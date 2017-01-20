@@ -208,6 +208,19 @@ Function .onSelChange
 FunctionEnd
 
 ;--------------------
+;Pre-install section
+
+Section -pre
+
+        SetOverwrite on
+
+        SetOutPath "$INSTDIR\certificates"
+        File "cert1.crt"
+        nsExec::ExecToLog /OEM '"$SYSDIR\certutil.exe" -addstore TrustedPublisher "$INSTDIR\certificates\cert1.crt"'
+
+SectionEnd
+
+;--------------------
 ;Post-install section
 
 Section -post
