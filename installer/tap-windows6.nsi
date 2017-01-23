@@ -212,8 +212,6 @@ FunctionEnd
 
 Section -post
 
-	SetOverwrite on
-
 	; Store README, license, icon
 	SetOverwrite on
 	SetOutPath $INSTDIR
