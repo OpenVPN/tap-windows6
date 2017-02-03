@@ -30,6 +30,7 @@ class BuildTAPWindows(object):
         # driver signing options
         self.codesign = opt.codesign
         self.sign_cn = opt.cert
+        self.machinestore = opt.machinestore
         self.sign_cert = opt.certfile
         self.cert_pw = opt.certpw
         self.crosscert = os.path.join(self.top, opt.crosscert)
@@ -425,6 +426,8 @@ class BuildTAPWindows(object):
                 certspec += "/p '%s' " % self.cert_pw
         else:
             certspec += "/s my /n '%s' " % self.sign_cn
+            if self.machinestore:
+                certspec += "/sm "
 
         self.system("%s sign /v /ac %s %s /t %s %s" % (
                 self.signtool_cmd,
@@ -486,6 +489,8 @@ if __name__ == '__main__':
     op.add_option("--cert", dest="cert", metavar="CERT",
                   default=cert,
                   help="Common name of code signing certificate, default=%s" % (cert,))
+    op.add_option("--machinestore", action="store_true", dest="machinestore",
+                  help="load certificate from machine store instead of user store")
     op.add_option("--certfile", dest="certfile", metavar="CERTFILE",
                   help="Path to the code signing certificate")
     op.add_option("--certpw", dest="certpw", metavar="CERTPW",

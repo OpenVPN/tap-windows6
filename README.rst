@@ -25,25 +25,32 @@ Windows 2012 Server using Git Bash and Windows Powershell.
 
 View build script options::
 
-  $ python buildtap.py
-  Usage: buildtap.py [options]
+    $ python buildtap.py
+    Usage: buildtap.py [options]
 
-  Options:
-    -h, --help         show this help message and exit
-    -s SRC, --src=SRC  TAP-Windows top-level directory, default=<CWD>
-    --ti=TAPINSTALL    tapinstall (i.e. devcon) directory (optional)
-    -d, --debug        enable debug build
-    -c, --clean        do an nmake clean before build
-    -b, --build        build TAP-Windows and possibly tapinstall (add -c to
-                       clean before build)
-    --sign         sign the driver files (disabled by default)
-    -p, --package      generate an NSIS installer from the compiled files
-    --cert=CERT        Common name of code signing certificate, default=openvpn
-    --crosscert=CERT   The cross-certificate file to use, default=MSCV-
-                       VSClass3.cer
-    --timestamp=URL    Timestamp URL to use, default=http://timestamp.verisign.c
-                       om/scripts/timstamp.dll
-    -a, --oas          Build for OpenVPN Access Server clients
+    Options:
+      -h, --help           show this help message and exit
+      -s SRC, --src=SRC    TAP-Windows top-level directory,
+                           default=C:\Users\samuli\opt\tap-windows6
+      --ti=TAPINSTALL      tapinstall (i.e. devcon) directory (optional)
+      -d, --debug          enable debug build
+      -c, --clean          do an nmake clean before build
+      -b, --build          build TAP-Windows and possibly tapinstall (add -c to
+                           clean before build)
+      --sign               sign the driver files
+      -p, --package        generate an NSIS installer from the compiled files
+      --cert=CERT          Common name of code signing certificate,
+                           default=openvpn
+      --machinestore       load certificate from machine store instead of user
+                           store
+      --certfile=CERTFILE  Path to the code signing certificate
+      --certpw=CERTPW      Password for the code signing certificate/key
+                           (optional)
+      --crosscert=CERT     The cross-certificate file to use, default=MSCV-
+                           VSClass3.cer
+      --timestamp=URL      Timestamp URL to use, default=http://timestamp.verisign
+                           .com/scripts/timstamp.dll
+      -a, --oas            Build for OpenVPN Access Server clients
 
 Edit **version.m4** and **paths.py** as necessary then build::
 
