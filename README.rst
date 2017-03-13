@@ -36,7 +36,7 @@ View build script options::
     -c, --clean        do an nmake clean before build
     -b, --build        build TAP-Windows and possibly tapinstall (add -c to
                        clean before build)
-    -s, --sign         sign the driver files (disabled by default)
+    --sign         sign the driver files (disabled by default)
     -p, --package      generate an NSIS installer from the compiled files
     --cert=CERT        Common name of code signing certificate, default=openvpn
     --crosscert=CERT   The cross-certificate file to use, default=MSCV-
