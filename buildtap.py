@@ -420,11 +420,11 @@ class BuildTAPWindows(object):
     def sign(self, file):
         certspec = ""
         if self.sign_cert:
-            certspec += "/f %s " % self.sign_cert
+            certspec += "/f '%s' " % self.sign_cert
             if self.cert_pw:
-                certspec += "/p %s " % self.cert_pw
+                certspec += "/p '%s' " % self.cert_pw
         else:
-            certspec += "/s my /n %s " % self.sign_cn
+            certspec += "/s my /n '%s' " % self.sign_cn
 
         self.system("%s sign /v /ac %s %s /t %s %s" % (
                 self.signtool_cmd,
