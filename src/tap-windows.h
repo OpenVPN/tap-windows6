@@ -4,6 +4,7 @@
  *
  *  This code was inspired by the CIPE-Win32 driver by Damion K. Wilson.
  *
+ *  Copyright (C) 2016 Noel Kuntze <noel@familie-kuntze.de>
  *  This source code is Copyright (C) 2002-2014 OpenVPN Technologies, Inc.,
  *  and is released under the GPL version 2 (see below). This particular file
  *  (tap-windows.h) is also licensed using the MIT license (see COPYRIGHT.MIT).
@@ -50,7 +51,7 @@
 
 /* obsoletes TAP_WIN_IOCTL_CONFIG_POINT_TO_POINT */
 #define TAP_WIN_IOCTL_CONFIG_TUN            TAP_WIN_CONTROL_CODE (10, METHOD_BUFFERED)
-
+#define TAP_WIN_IOCTL_CONFIG_SET_SRC_CHECK  TAP_WIN_CONTROL_CODE (11, METHOD_BUFFERED)
 /*
  * =================
  * Registry keys

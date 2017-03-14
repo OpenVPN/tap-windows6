@@ -4,6 +4,7 @@
  *
  *  This code was inspired by the CIPE-Win32 driver by Damion K. Wilson.
  *
+ *  Copyright (C) 2016 Noel Kuntze <noel@familie-kuntze.de>
  *  This source code is Copyright (C) 2002-2014 OpenVPN Technologies, Inc.,
  *  and is released under the GPL version 2 (see below).
  *
@@ -243,7 +244,7 @@ tapSetMediaConnectStatus(
 
     //
     // Fill in the status buffer
-    // 
+    //
     statusIndication.StatusCode = NDIS_STATUS_LINK_STATE;
     statusIndication.SourceHandle = Adapter->MiniportAdapterHandle;
     statusIndication.DestinationHandle = NULL;
@@ -572,7 +573,7 @@ Return Value:
                     inBufLength
                     );
 
-                adapter->m_dhcp_user_supplied_options_buffer_len = 
+                adapter->m_dhcp_user_supplied_options_buffer_len =
                     inBufLength;
 
                 Irp->IoStatus.Information = 1; // Simple boolean value
@@ -692,7 +693,20 @@ Return Value:
             }
         }
         break;
-
+    case TAP_WIN_IOCTL_CONFIG_SET_SRC_CHECK:
+        {
+            if (inBufLength >= sizeof(ULONG))
+            {
+                adapter->m_source_check = (BOOLEAN) ((PULONG) (Irp->AssociatedIrp.SystemBuffer))[0];
+                Irp->IoStatus.Information = 1;
+            }
+            else
+            {
+                NOTE_ERROR();
+                Irp->IoStatus.Status = ntStatus = STATUS_INVALID_PARAMETER;
+            }
+        }
+        break;
     default:
 
         //
@@ -746,7 +760,7 @@ Routine Description:
     IRP_MJ_CLEANUP. When the routine is called, the driver should cancel all
     the pending IRPs that belong to the file object identified by the IRP_MJ_CLEANUP
     call.
-    
+
     In other words, it should cancel all the IRPs that have the same file-object
     pointer as the one supplied in the current I/O stack location of the IRP for the
     IRP_MJ_CLEANUP call. Of course, IRPs belonging to other file objects should
@@ -846,7 +860,7 @@ Routine Description:
     Receipt of this request indicates that the last handle of the file
     object that is associated with the target device object has been closed
     and released.
-    
+
     All outstanding I/O requests have been completed or canceled.
 
 Arguments:
