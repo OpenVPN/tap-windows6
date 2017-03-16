@@ -112,6 +112,7 @@ Section /o "TAP Virtual Ethernet Adapter" SecTAP
 
 		SetOutPath "$INSTDIR\bin"
 		File "${DEVCON64}"
+		File "${DEVCON_BASENAME}.manifest"
 
 		SetOutPath "$INSTDIR\driver"
 		File "${IMAGE}\amd64\OemVista.inf"
@@ -122,6 +123,7 @@ Section /o "TAP Virtual Ethernet Adapter" SecTAP
 
 		SetOutPath "$INSTDIR\bin"
 		File "${DEVCON32}"
+		File "${DEVCON_BASENAME}.manifest"
 
 		SetOutPath "$INSTDIR\driver"
 		File "${IMAGE}\i386\OemVista.inf"
@@ -315,6 +317,7 @@ Section "Uninstall"
 	DetailPrint "${DEVCON_BASENAME} remove returned: $R0"
 
 	Delete "$INSTDIR\bin\${DEVCON_BASENAME}"
+	Delete "$INSTDIR\bin\${DEVCON_BASENAME}.manifest"
 	Delete "$INSTDIR\bin\addtap.bat"
 	Delete "$INSTDIR\bin\deltapall.bat"
 
