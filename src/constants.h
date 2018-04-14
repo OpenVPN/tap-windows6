@@ -102,10 +102,10 @@
 // If you have physical hardware on 802.3, use NdisPhysicalMedium802_3.
 #define TAP_PHYSICAL_MEDIUM         NdisPhysicalMediumUnspecified
 
-// Claim to be 100mbps duplex
+// Claim to be 1Gbps duplex
 #define MEGABITS_PER_SECOND                1000000ULL
-#define TAP_XMIT_SPEED                     (100ULL*MEGABITS_PER_SECOND)
-#define TAP_RECV_SPEED                     (100ULL*MEGABITS_PER_SECOND)
+#define TAP_XMIT_SPEED                     (1000ULL*MEGABITS_PER_SECOND)
+#define TAP_RECV_SPEED                     (1000ULL*MEGABITS_PER_SECOND)
 
 // Max number of multicast addresses supported in hardware
 #define TAP_MAX_MCAST_LIST                 32
