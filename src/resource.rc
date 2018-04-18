@@ -39,7 +39,7 @@
 #define VER_COMPANYNAME_STR         "The OpenVPN Project"
 #define VER_FILEDESCRIPTION_STR     "TAP-Windows Virtual Network Driver (NDIS 6.0)"
 #define VER_ORIGINALFILENAME_STR    PRODUCT_TAP_WIN_COMPONENT_ID ".sys"
-#define VER_LEGALCOPYRIGHT_YEARS    "2003-2014"
+#define VER_LEGALCOPYRIGHT_YEARS    "2003-2018"
 #define VER_LEGALCOPYRIGHT_STR      "OpenVPN Technologies, Inc."
 
 

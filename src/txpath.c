@@ -95,7 +95,8 @@ static IPV6ADDR IPV6_NS_TARGET_UNICAST =
 BOOLEAN
 HandleIPv6NeighborDiscovery(
     __in PTAP_ADAPTER_CONTEXT   Adapter,
-    __in UCHAR * m_Data
+    __in UCHAR * m_Data,
+    __in ULONG packetLength
     )
 {
     const IPV6HDR *ipv6 = (IPV6HDR *) (m_Data + sizeof (ETH_HEADER));
@@ -121,6 +122,13 @@ HandleIPv6NeighborDiscovery(
     if ( ipv6->nexthdr != IPPROTO_ICMPV6 )
     {
         return FALSE;				// wrong next-header
+    }
+
+    // Make sure that packet is large enough to be ICMPv6
+    if (packetLength < (ETHERNET_HEADER_SIZE + IPV6_HEADER_SIZE +
+			sizeof(ICMPV6_NS) ))
+    {
+        return FALSE;				// packet too short
     }
 
     // ICMPv6 type+code must be 135/0 for NS
@@ -659,7 +667,8 @@ Return Value:
 
             // Neighbor discovery packets to fe80::8 are special
             // OpenVPN sets this next-hop to signal "handled by tapdrv"
-            if ( HandleIPv6NeighborDiscovery(Adapter,tapPacket->m_Data) )
+            if ( HandleIPv6NeighborDiscovery(Adapter,tapPacket->m_Data,
+                                             packetLength) )
             {
                 goto no_queue;
             }

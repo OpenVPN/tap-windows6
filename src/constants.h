@@ -38,7 +38,7 @@
 #ifndef TAP_DRIVER_MAJOR_VERSION
 
 #define TAP_DRIVER_MAJOR_VERSION           0x04
-#define TAP_DRIVER_MINOR_VERSION           0x02
+#define TAP_DRIVER_MINOR_VERSION           0x04
 
 #endif
 
