@@ -328,13 +328,14 @@ class BuildTAPWindows(object):
             installer_type = "-oas"
         installer_file=os.path.join(self.top, 'tap-windows'+installer_type+'-'+kv['PRODUCT_VERSION']+'-I'+kv['PRODUCT_TAP_WIN_BUILD']+'.exe')
 
-        installer_cmd = "\"%s\" -DDEVCON32=%s -DDEVCON64=%s -DDEVCON_BASENAME=%s -DPRODUCT_TAP_WIN_COMPONENT_ID=%s -DPRODUCT_NAME=%s -DPRODUCT_VERSION=%s -DPRODUCT_TAP_WIN_BUILD=%s -DOUTPUT=%s -DIMAGE=%s %s" % \
+        installer_cmd = "\"\"%s\" -DDEVCON32=%s -DDEVCON64=%s -DDEVCON_BASENAME=%s -DPRODUCT_TAP_WIN_COMPONENT_ID=%s -DPRODUCT_NAME=%s -DPRODUCT_PUBLISHER=\"%s\" -DPRODUCT_VERSION=%s -DPRODUCT_TAP_WIN_BUILD=%s -DOUTPUT=%s -DIMAGE=%s %s\"" % \
                         (self.makensis,
                          self.tifile(x64=False),
                          self.tifile(x64=True),
                          'tapinstall.exe',
                          kv['PRODUCT_TAP_WIN_COMPONENT_ID'],
                          kv['PRODUCT_NAME'],
+                         kv['PRODUCT_PUBLISHER'],
                          kv['PRODUCT_VERSION'],
                          kv['PRODUCT_TAP_WIN_BUILD'],
                          installer_file,
