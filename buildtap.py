@@ -492,8 +492,8 @@ if __name__ == '__main__':
     op.add_option("--certpw", dest="certpw", metavar="CERTPW",
                   help="Password for the code signing certificate/key (optional)")
     op.add_option("--crosscert", dest="crosscert", metavar="CERT",
-	              default=crosscert,
-				  help="The cross-certificate file to use, default=%s" % (crosscert,))
+                  default=crosscert,
+                  help="The cross-certificate file to use, default=%s" % (crosscert,))
     op.add_option("--timestamp", dest="timestamp", metavar="URL",
                   default=timestamp,
                   help="Timestamp URL to use, default=%s" % (timestamp,))
