@@ -28,19 +28,10 @@
 
 #define PRODUCT_STRING PRODUCT_TAP_DEVICE_DESCRIPTION
 
-
 //
-// Update the driver version number every time you release a new driver
-// The high word is the major version. The low word is the minor version.
-// Also make sure that VER_FILEVERSION specified in the .RC file also
-// matches with the driver version because NDISTESTER checks for that.
+// The major and minor versions should be defined in a central location such
+// as a makefile that is preprocessed to insert the current values.
 //
-#ifndef TAP_DRIVER_MAJOR_VERSION
-
-#define TAP_DRIVER_MAJOR_VERSION           0x04
-#define TAP_DRIVER_MINOR_VERSION           0x04
-
-#endif
 
 #define TAP_DRIVER_VENDOR_VERSION          ((TAP_DRIVER_MAJOR_VERSION << 16) | TAP_DRIVER_MINOR_VERSION)
 
