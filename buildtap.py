@@ -154,15 +154,6 @@ class BuildTAPWindows(object):
             kv['PRODUCT_TAP_WIN_PROVIDER'] = "TAP-Win32 Provider OAS"
             kv['PRODUCT_TAP_WIN_COMPONENT_ID'] = "tapoas"
 
-        if (arch == "amd64"):
-            kv['INF_PROVIDER_SUFFIX'] = ", NTamd64"
-            kv['INF_SECTION_SUFFIX'] = ".NTamd64"
-        elif (arch == "i386"):
-            kv['INF_PROVIDER_SUFFIX'] = ""
-            kv['INF_SECTION_SUFFIX'] = ""
-        else:
-            print "ERROR: Unknown INF section architecture decorator"
-
         return kv
 
     # DDK major version number (as a string)
