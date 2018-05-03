@@ -464,14 +464,14 @@ tapAdapterContextAddToGlobalList(
     __in PTAP_ADAPTER_CONTEXT       Adapter
     )
 {
-    LOCK_STATE      lockState;
+    LOCK_STATE_EX   lockState;
     PLIST_ENTRY     listEntry = &Adapter->AdapterListLink;
 
     // Acquire global adapter list lock.
-    NdisAcquireReadWriteLock(
-        &GlobalData.Lock,
-        TRUE,      // Acquire for write
-        &lockState
+    NdisAcquireRWLockWrite(
+        GlobalData.Lock,
+        &lockState,
+        0
         );
 
     // Adapter context should NOT be in any list.
@@ -484,7 +484,7 @@ tapAdapterContextAddToGlobalList(
     InsertTailList(&GlobalData.AdapterList,&Adapter->AdapterListLink);
 
     // Release global adapter list lock.
-    NdisReleaseReadWriteLock(&GlobalData.Lock,&lockState);
+    NdisReleaseRWLock(GlobalData.Lock, &lockState);
 }
 
 VOID
@@ -492,13 +492,13 @@ tapAdapterContextRemoveFromGlobalList(
     __in PTAP_ADAPTER_CONTEXT       Adapter
     )
 {
-    LOCK_STATE              lockState;
+    LOCK_STATE_EX           lockState;
 
     // Acquire global adapter list lock.
-    NdisAcquireReadWriteLock(
-        &GlobalData.Lock,
-        TRUE,      // Acquire for write
-        &lockState
+    NdisAcquireRWLockWrite(
+        GlobalData.Lock,
+        &lockState,
+        0
         );
 
     // Remove the adapter context from the global list.
@@ -511,7 +511,7 @@ tapAdapterContextRemoveFromGlobalList(
     tapAdapterContextDereference(Adapter);
 
     // Release global adapter list lock.
-    NdisReleaseReadWriteLock(&GlobalData.Lock,&lockState);
+    NdisReleaseRWLock(GlobalData.Lock,&lockState);
 }
 
 // Returns with added reference on adapter context.
@@ -520,13 +520,13 @@ tapAdapterContextFromDeviceObject(
     __in PDEVICE_OBJECT DeviceObject
     )
 {
-    LOCK_STATE              lockState;
+    LOCK_STATE_EX           lockState;
 
     // Acquire global adapter list lock.
-    NdisAcquireReadWriteLock(
-        &GlobalData.Lock,
-        FALSE,      // Acquire for read
-        &lockState
+    NdisAcquireRWLockRead(
+        GlobalData.Lock,
+        &lockState,
+        0
         );
 
     if (!IsListEmpty(&GlobalData.AdapterList))
@@ -545,7 +545,7 @@ tapAdapterContextFromDeviceObject(
                 tapAdapterContextReference(adapter);
 
                 // Release global adapter list lock.
-                NdisReleaseReadWriteLock(&GlobalData.Lock,&lockState);
+                NdisReleaseRWLock(GlobalData.Lock,&lockState);
 
                 return adapter;
             }
@@ -556,7 +556,7 @@ tapAdapterContextFromDeviceObject(
     }
 
     // Release global adapter list lock.
-    NdisReleaseReadWriteLock(&GlobalData.Lock,&lockState);
+    NdisReleaseRWLock(GlobalData.Lock,&lockState);
 
     return (PTAP_ADAPTER_CONTEXT )NULL;
 }

@@ -70,7 +70,7 @@ typedef struct _TAP_GLOBAL
 {
     LIST_ENTRY          AdapterList;
 
-    NDIS_RW_LOCK        Lock;
+    PNDIS_RW_LOCK_EX    Lock;
 
     NDIS_HANDLE         NdisDriverHandle;   // From NdisMRegisterMiniportDriver
 

@@ -102,7 +102,12 @@ Arguments:
     //
     // This lock protects the AdapterList.
     //
-    NdisInitializeReadWriteLock(&GlobalData.Lock);
+    GlobalData.Lock = NdisAllocateRWLock(NULL);
+    if (GlobalData.Lock == NULL)
+    {
+        DEBUGP(("[TAP] NdisAllocateRWLock failed to allocate a lock.\n"));
+        return NDIS_STATUS_FAILURE;
+    }
 
     do
     {
@@ -221,6 +226,8 @@ Return Value:
     //
 
     ASSERT(IsListEmpty(&GlobalData.AdapterList));
+
+    NdisFreeRWLock(GlobalData.Lock);
 
     if(GlobalData.NdisDriverHandle != NULL )
     {

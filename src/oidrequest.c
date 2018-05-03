@@ -244,7 +244,7 @@ tapSetMulticastList(
             break;
         }
 
-        // BUGBUG!!! Is lock needed??? If so, use NDIS_RW_LOCK. Also apply to packet filter.
+        // BUGBUG!!! Is lock needed??? If so, use NDIS_RW_LOCK_EX. Also apply to packet filter.
 
         NdisZeroMemory(Adapter->MCList,
                        TAP_MAX_MCAST_LIST * MACADDR_SIZE);
