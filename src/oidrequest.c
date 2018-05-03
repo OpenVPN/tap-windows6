@@ -495,6 +495,9 @@ Return Value:
     case OID_PNP_REMOVE_WAKE_UP_PATTERN:
     case OID_PNP_ENABLE_WAKE_UP:
 #endif
+#if (NDIS_SUPPORT_NDIS620)
+    case OID_PM_ADD_WOL_PATTERN:
+#endif
         ASSERT(!"NIC does not support wake on LAN OIDs"); 
     default:
         //
