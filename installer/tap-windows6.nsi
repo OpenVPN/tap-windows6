@@ -13,7 +13,7 @@ SetCompressor /SOLID lzma
 !addplugindir .
 !include "MUI.nsh"
 !include "StrFunc.nsh"
-!include "x64.nsh"
+!include "wow.nsh"
 !define MULTIUSER_EXECUTIONLEVEL Admin
 !include "MultiUser.nsh"
 !include FileFunc.nsh
@@ -108,7 +108,7 @@ Section /o "TAP Virtual Ethernet Adapter" SecTAP
 	SetOverwrite on
 
 	${If} ${RunningX64}
-		DetailPrint "We are running on a 64-bit system."
+		DetailPrint "We are running on an x86_64 64-bit system."
 
 		SetOutPath "$INSTDIR\bin"
 		File "${DEVCON64}"
@@ -117,8 +117,18 @@ Section /o "TAP Virtual Ethernet Adapter" SecTAP
 		File "${IMAGE}\amd64\OemVista.inf"
 		File "${IMAGE}\amd64\${PRODUCT_TAP_WIN_COMPONENT_ID}.cat"
 		File "${IMAGE}\amd64\${PRODUCT_TAP_WIN_COMPONENT_ID}.sys"
-	${Else}
-		DetailPrint "We are running on a 32-bit system."
+	${ElseIf} ${RunningArm64}
+		DetailPrint "We are running on an ARM64 64-bit system."
+
+		SetOutPath "$INSTDIR\bin"
+		File "${DEVCONARM64}"
+
+		SetOutPath "$INSTDIR\driver"
+		File "${IMAGE}\arm64\OemVista.inf"
+		File "${IMAGE}\arm64\${PRODUCT_TAP_WIN_COMPONENT_ID}.cat"
+		File "${IMAGE}\arm64\${PRODUCT_TAP_WIN_COMPONENT_ID}.sys"
+	${ElseIf} ${RunningX86}
+		DetailPrint "We are running on an x86 32-bit system."
 
 		SetOutPath "$INSTDIR\bin"
 		File "${DEVCON32}"
@@ -127,6 +137,8 @@ Section /o "TAP Virtual Ethernet Adapter" SecTAP
 		File "${IMAGE}\i386\OemVista.inf"
 		File "${IMAGE}\i386\${PRODUCT_TAP_WIN_COMPONENT_ID}.cat"
 		File "${IMAGE}\i386\${PRODUCT_TAP_WIN_COMPONENT_ID}.sys"
+	${Else}
+		DetailPrint "Native architecture not recognized!"
 	${EndIf}
 SectionEnd
 
