@@ -134,6 +134,14 @@ DBG_PRINT_OID_NAME(
         MAKECASE(OID_PNP_REMOVE_WAKE_UP_PATTERN)
         MAKECASE(OID_PNP_ENABLE_WAKE_UP)
         MAKECASE(OID_PNP_WAKE_UP_PATTERN_LIST)
+        /* NDIS 6.20 upgrades to these OIDs */
+#if (NDIS_SUPPORT_NDIS620)
+        MAKECASE(OID_PM_CURRENT_CAPABILITIES)
+        MAKECASE(OID_PM_PARAMETERS)
+        MAKECASE(OID_PM_WOL_PATTERN_LIST)
+        MAKECASE(OID_PM_ADD_WOL_PATTERN)
+        MAKECASE(OID_PM_REMOVE_WOL_PATTERN)
+#endif
 
         /* PnP power management statistical OIDs */
         MAKECASE(OID_PNP_WAKE_UP_ERROR)
@@ -496,7 +504,11 @@ Return Value:
     case OID_PNP_ENABLE_WAKE_UP:
 #endif
 #if (NDIS_SUPPORT_NDIS620)
+    case OID_PM_CURRENT_CAPABILITIES:
+    case OID_PM_PARAMETERS:
     case OID_PM_ADD_WOL_PATTERN:
+    case OID_PM_REMOVE_WOL_PATTERN:
+    case OID_PM_WOL_PATTERN_LIST:
 #endif
         ASSERT(!"NIC does not support wake on LAN OIDs"); 
     default:
