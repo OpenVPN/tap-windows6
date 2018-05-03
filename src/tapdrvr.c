@@ -143,6 +143,8 @@ Arguments:
         miniportCharacteristics.DevicePnPEventNotifyHandler = AdapterDevicePnpEventNotify;
         miniportCharacteristics.ShutdownHandlerEx = AdapterShutdownEx;
         miniportCharacteristics.CancelOidRequestHandler = AdapterCancelOidRequest;
+        miniportCharacteristics.DirectOidRequestHandler = AdapterDirectOidRequest;
+        miniportCharacteristics.CancelDirectOidRequestHandler = AdapterCancelDirectOidRequest;
 
         //
         // Associate the miniport driver with NDIS by calling the

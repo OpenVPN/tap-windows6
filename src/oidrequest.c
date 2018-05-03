@@ -977,6 +977,57 @@ Return Value:
 }
 
 NDIS_STATUS
+AdapterDirectOidRequest(
+    NDIS_HANDLE MiniportAdapterContext,
+    PNDIS_OID_REQUEST OidRequest
+    )
+/*++
+
+Routine Description:
+
+    Entry point called by NDIS to get or set frequently-acceessed OIDs.
+    Must handle out-of-order calls and calls at IRQL <= DISPATCH_LEVEL.
+
+Arguments:
+
+    MiniportAdapterContext  - Our adapter handle
+    NdisRequest             - The OID request to handle
+
+Return Value:
+
+    Return code from the NdisRequest below.
+
+--*/
+{
+    PTAP_ADAPTER_CONTEXT adapter = (PTAP_ADAPTER_CONTEXT)MiniportAdapterContext;
+    NDIS_STATUS status;
+
+    switch (OidRequest->RequestType)
+    {
+    default:
+        status = NDIS_STATUS_NOT_SUPPORTED;
+    }
+
+    return status;
+}
+
+VOID
+AdapterCancelDirectOidRequest(
+    NDIS_HANDLE MiniportAdapterContext,
+    PVOID RequestId
+    )
+{
+    UNREFERENCED_PARAMETER( MiniportAdapterContext );
+    UNREFERENCED_PARAMETER( RequestId );
+
+    //
+    // This miniport sample does not pend any direct OID requests, so we don't have
+    // to worry about cancelling them.
+    //
+}
+
+
+NDIS_STATUS
 AdapterOidRequest(
     __in  NDIS_HANDLE             MiniportAdapterContext,
     __in  PNDIS_OID_REQUEST       OidRequest
