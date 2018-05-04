@@ -15,4 +15,5 @@ src/tap-windows6.sln
 src/Release
 src/Debug
 src/x64
+src/arm64
 .vs
