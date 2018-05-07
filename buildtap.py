@@ -27,6 +27,18 @@ class BuildTAPWindows(object):
         # path to makensis
         self.makensis = os.path.join(paths.NSIS, 'makensis.exe')
 
+        # Driver Kit build system strings
+        # This driver builds for a specific set of architectures.
+        # The driver kit build system has a set of architecture-specific paths.
+        # The installation script has a set of architecture-specific paths.
+        # The driver kit build system has a set of architecture-specific parameters.
+        # architecture -> build system parameter map
+        self.architecture_platform_map = {"i386": "x86", "amd64": "x64"}
+        # architecture -> build system folder name fragment map
+        self.architecture_platform_folder_map = {"i386": "x86", "amd64": "amd64"}
+        # supported arch names, also installation script folder names
+        self.architectures_supported = self.architecture_platform_map.keys()
+
         # driver signing options
         self.codesign = opt.codesign
         self.sign_cn = opt.cert
@@ -111,8 +123,8 @@ class BuildTAPWindows(object):
         return os.path.join(self.dist_path(), 'include')
 
     # make a distribution directory (if absent) and return its path
-    def mkdir_dist(self, x64):
-        dir = self.drvdir(self.dist_path(), x64)
+    def mkdir_dist(self, arch):
+        dir = self.drvdir(self.dist_path(), arch)
         self.makedirs(dir)
         return dir
 
@@ -134,7 +146,7 @@ class BuildTAPWindows(object):
         return kv
 
     # our tap-windows version.m4 settings
-    def gen_version_m4(self, x64):
+    def gen_version_m4(self, arch):
         kv = self.parse_version_m4()
         if self.opt.oas: # for OpenVPN Connect (i.e. OpenVPN Access Server)
             kv['PRODUCT_NAME'] = "OpenVPNAS"
@@ -142,12 +154,6 @@ class BuildTAPWindows(object):
             kv['PRODUCT_TAP_WIN_PROVIDER'] = "TAP-Win32 Provider OAS"
             kv['PRODUCT_TAP_WIN_COMPONENT_ID'] = "tapoas"
 
-        if (x64):
-            kv['INF_PROVIDER_SUFFIX'] = ", NTamd64"
-            kv['INF_SECTION_SUFFIX'] = ".NTamd64"
-        else:
-            kv['INF_PROVIDER_SUFFIX'] = ""
-            kv['INF_SECTION_SUFFIX'] = ""
         return kv
 
     # DDK major version number (as a string)
@@ -178,28 +184,25 @@ class BuildTAPWindows(object):
             f.write(modtxt)
 
     # set up configuration files for building tap driver
-    def config_tap(self, x64):
-        kv = self.gen_version_m4(x64)
-        drvdir = self.drvdir(self.src, x64)
+    def config_tap(self, arch):
+        kv = self.gen_version_m4(arch)
+        drvdir = self.drvdir(self.src, arch)
         self.mkdir(drvdir)
         self.preprocess(kv, os.path.join(self.src, "OemVista.inf"), os.path.join(drvdir, "OemVista.inf"))
         self.preprocess(kv, os.path.join(self.src, "SOURCES"))
         self.preprocess(kv, os.path.join(self.src, "config.h"))
 
     # set up configuration files for building tapinstall
-    def config_tapinstall(self, x64):
+    def config_tapinstall(self, arch):
         kv = {}
         tisrc = self.tapinstall_src()
         self.preprocess(kv, os.path.join(tisrc, "sources"))
 
     # build a "build" file using DDK
-    def build_ddk(self, dir, x64, debug):
+    def build_ddk(self, dir, arch, debug):
         setenv_bat = os.path.join(self.ddk_path, 'bin', 'setenv.bat')
         target = 'chk' if debug else 'fre'
-        if x64:
-            target += ' x64'
-        else:
-            target += ' x86'
+        target += ' ' + self.architecture_platform_map[arch]
 
         target += ' wlh'  # vista
 
@@ -211,9 +214,9 @@ class BuildTAPWindows(object):
                ))
 
     # copy tap driver files to dist
-    def copy_tap_to_dist(self, x64):
-        dist = self.mkdir_dist(x64)
-        drvdir = self.drvdir(self.src, x64)
+    def copy_tap_to_dist(self, arch):
+        dist = self.mkdir_dist(arch)
+        drvdir = self.drvdir(self.src, arch)
         for dirpath, dirnames, filenames in os.walk(drvdir):
             for f in filenames:
                 path = os.path.join(dirpath, f)
@@ -228,8 +231,8 @@ class BuildTAPWindows(object):
         self.cp(os.path.join(self.src, 'tap-windows.h'), incdir)
 
     # copy tapinstall to dist
-    def copy_tapinstall_to_dist(self, x64):
-        dist = self.mkdir_dist(x64)
+    def copy_tapinstall_to_dist(self, arch):
+        dist = self.mkdir_dist(arch)
         t = os.path.basename(dist)
         tisrc = self.tapinstall_src()
         for dirpath, dirnames, filenames in os.walk(tisrc):
@@ -264,27 +267,27 @@ class BuildTAPWindows(object):
 
     # build, sign, and verify tap driver
     def build_tap(self):
-        for x64 in (False, True):
-            print "***** BUILD TAP x64=%s" % (x64,)
-            self.config_tap(x64=x64)
-            self.build_ddk(dir=self.src, x64=x64, debug=opt.debug)
+        for arch in self.architectures_supported:
+            print "***** BUILD TAP arch=%s" % (arch,)
+            self.config_tap(arch=arch)
+            self.build_ddk(dir=self.src, arch=arch, debug=opt.debug)
             if self.codesign:
-                self.sign_verify(x64=x64)
-            self.copy_tap_to_dist(x64=x64)
+                self.sign_verify(arch=arch)
+            self.copy_tap_to_dist(arch=arch)
 
     # build tapinstall
     def build_tapinstall(self):
-        for x64 in (False, True):
-            print "***** BUILD TAPINSTALL x64=%s" % (x64,)
+        for arch in self.architectures_supported:
+            print "***** BUILD TAPINSTALL arch=%s" % (arch,)
             tisrc = self.tapinstall_src()
             # Only build if we have a chance of succeeding
             sources_in = os.path.join(tisrc, "sources.in")
             if os.path.isfile(sources_in):
-                self.config_tapinstall(x64=x64)
-                self.build_ddk(tisrc, x64=x64, debug=opt.debug)
+                self.config_tapinstall(arch=arch)
+                self.build_ddk(tisrc, arch=arch, debug=opt.debug)
             if self.codesign:
-                self.sign_verify_ti(x64=x64)
-            self.copy_tapinstall_to_dist(x64)
+                self.sign_verify_ti(arch=arch)
+            self.copy_tapinstall_to_dist(arch)
 
     # build tap driver and tapinstall
     def build(self):
@@ -321,7 +324,7 @@ class BuildTAPWindows(object):
         self.cp(os.path.join(self.src, 'tap-windows.h'), self.dist_include_path())
 
         # Get variables from version.m4
-        kv = self.gen_version_m4(True)
+        kv = self.gen_version_m4("amd64")
 
         installer_type = ""
         if self.opt.oas:
@@ -330,8 +333,8 @@ class BuildTAPWindows(object):
 
         installer_cmd = "\"\"%s\" -DDEVCON32=%s -DDEVCON64=%s -DDEVCON_BASENAME=%s -DPRODUCT_TAP_WIN_COMPONENT_ID=%s -DPRODUCT_NAME=%s -DPRODUCT_PUBLISHER=\"%s\" -DPRODUCT_VERSION=%s -DPRODUCT_TAP_WIN_BUILD=%s -DOUTPUT=%s -DIMAGE=%s %s\"" % \
                         (self.makensis,
-                         self.tifile(x64=False),
-                         self.tifile(x64=True),
+                         self.tifile(arch="i386"),
+                         self.tifile(arch="amd64"),
                          'tapinstall.exe',
                          kv['PRODUCT_TAP_WIN_COMPONENT_ID'],
                          kv['PRODUCT_NAME'],
@@ -392,31 +395,27 @@ class BuildTAPWindows(object):
 
     # BEGIN Driver signing
 
-    def drvdir(self, dir, x64):
-        if x64:
-            return os.path.join(dir, "amd64")
-        else:
-            return os.path.join(dir, "i386")
+    def drvdir(self, dir, arch):
+        return os.path.join(dir, arch)
 
-    def drvfile(self, x64, ext):
-        dd = self.drvdir(self.src, x64)
+    def drvfile(self, arch, ext):
+        dd = self.drvdir(self.src, arch)
         for dirpath, dirnames, filenames in os.walk(dd):
             catlist = [ f for f in filenames if f.endswith(ext) ]
             assert(len(catlist)==1)
             return os.path.join(dd, catlist[0])
 
-    def tifile(self, x64):
-        if x64:
-            return os.path.join(self.tapinstall_src(), 'objfre_wlh_amd64', 'amd64', 'tapinstall.exe')
-        else:
-            return os.path.join(self.tapinstall_src(), 'objfre_wlh_x86', 'i386', 'tapinstall.exe')
+    def tifile(self, arch):
+        return os.path.join(self.tapinstall_src(), 'objfre_wlh_' + self.architecture_platform_folder_map[arch], arch, 'tapinstall.exe')
 
-    def inf2cat(self, x64):
-        if x64:
+    def inf2cat(self, arch):
+        if arch == "amd64":
             oslist = "Vista_X64,Server2008_X64,Server2008R2_X64,7_X64"
-        else:
+        elif arch == "i386":
             oslist = "Vista_X86,Server2008_X86,7_X86"
-        self.system("%s /driver:%s /os:%s" % (self.inf2cat_cmd, self.drvdir(self.src, x64), oslist))
+        else:
+            print "ERROR: inf2cat OS list not known for architecture %s!!" % (arch)
+        self.system("%s /driver:%s /os:%s" % (self.inf2cat_cmd, self.drvdir(self.src, arch), oslist))
 
     def sign(self, file):
         certspec = ""
@@ -435,24 +434,24 @@ class BuildTAPWindows(object):
                 file,
             ))
 
-    def sign_driver(self, x64):
-        self.sign(self.drvfile(x64, '.cat'))
+    def sign_driver(self, arch):
+        self.sign(self.drvfile(arch, '.cat'))
 
-    def verify(self, x64):
+    def verify(self, arch):
             self.system("%s verify /kp /v /c %s %s" % (
                     self.signtool_cmd,
-                    self.drvfile(x64, '.cat'),
-                    self.drvfile(x64, '.sys'),
+                    self.drvfile(arch, '.cat'),
+                    self.drvfile(arch, '.sys'),
                 ))
 
-    def sign_verify(self, x64):
-        self.inf2cat(x64)
-        self.sign_driver(x64)
-        self.verify(x64)
+    def sign_verify(self, arch):
+        self.inf2cat(arch)
+        self.sign_driver(arch)
+        self.verify(arch)
 
-    def sign_verify_ti(self, x64):
-        self.sign(self.tifile(x64))
-        self.system("%s verify /pa %s" % (self.signtool_cmd, self.tifile(x64)))
+    def sign_verify_ti(self, arch):
+        self.sign(self.tifile(arch))
+        self.system("%s verify /pa %s" % (self.signtool_cmd, self.tifile(arch)))
 
     # END Driver signing
 
@@ -492,8 +491,8 @@ if __name__ == '__main__':
     op.add_option("--certpw", dest="certpw", metavar="CERTPW",
                   help="Password for the code signing certificate/key (optional)")
     op.add_option("--crosscert", dest="crosscert", metavar="CERT",
-	              default=crosscert,
-				  help="The cross-certificate file to use, default=%s" % (crosscert,))
+                  default=crosscert,
+                  help="The cross-certificate file to use, default=%s" % (crosscert,))
     op.add_option("--timestamp", dest="timestamp", metavar="URL",
                   default=timestamp,
                   help="Timestamp URL to use, default=%s" % (timestamp,))
