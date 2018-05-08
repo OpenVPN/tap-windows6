@@ -16,6 +16,7 @@ To build, the following prerequisites are required:
         - the environment script is the one for the Developer Command Prompt for VS 2017
 - Source code directory of **devcon** sample from WDK (optional)
     - https://github.com/Microsoft/Windows-driver-samples/ setup/devcon
+    - Until [PR #238](https://github.com/Microsoft/Windows-driver-samples/pull/238) is resolved, you will have to add your own ARM64 configurations
 - Windows code signing certificate
 - Git (not strictly required, but useful for running commands using bundled bash shell)
 - MakeNSIS (optional)
@@ -76,7 +77,10 @@ tap-windows6 directory:
   tapinstall
   ├── Release
   │   └── devcon.exe
-  └── x64
+  ├── x64
+  │   └── Release
+  │       └── devcon.exe
+  └── ARM64
       └── Release
           └── devcon.exe
 
@@ -98,7 +102,7 @@ tap-windows NDIS 6 driver follow these steps:
 - place tapinstall.exe/devcon.exe to your PATH
 - open an Administrator shell
 - cd to **dist**
-- cd to **amd64** or **i386** depending on your system's processor architecture.
+- cd to **amd64**, **i386**, or **arm64** depending on your system's processor architecture.
 
 Install::
 
