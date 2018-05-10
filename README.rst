@@ -1,8 +1,10 @@
 TAP-Windows driver (NDIS 6)
 ===========================
 
-This is an NDIS 6.20 implementation of the TAP-Windows driver, used by
-OpenVPN and other apps. NDIS 6.20 drivers can run on Windows 7 or higher.
+This is an NDIS 6.20/6.30 implementation of the TAP-Windows driver, used by
+OpenVPN and other apps. NDIS 6.20 drivers can run on Windows 7 or higher except
+on ARM64 desktop systems where, since the platform relies on next-gen power
+management in its drivers, NDIS 6.30 is required.
 
 Build
 -----
