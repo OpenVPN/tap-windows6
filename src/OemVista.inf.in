@@ -65,13 +65,9 @@
 ;                      Manufacturer + Product Section (Done)
 ;----------------------------------------------------------------
 [Manufacturer]
-   %Provider% = @PRODUCT_TAP_WIN_COMPONENT_ID@, NTx86, NTamd64
+   %Provider% = @PRODUCT_TAP_WIN_COMPONENT_ID@, NT$ARCH$
 
-[@PRODUCT_TAP_WIN_COMPONENT_ID@.NTx86]
-   %DeviceDescription% = @PRODUCT_TAP_WIN_COMPONENT_ID@.ndi, root\@PRODUCT_TAP_WIN_COMPONENT_ID@ ; Root enumerated
-   %DeviceDescription% = @PRODUCT_TAP_WIN_COMPONENT_ID@.ndi, @PRODUCT_TAP_WIN_COMPONENT_ID@      ; Legacy
-
-[@PRODUCT_TAP_WIN_COMPONENT_ID@.NTamd64]
+[@PRODUCT_TAP_WIN_COMPONENT_ID@.NT$ARCH$]
    %DeviceDescription% = @PRODUCT_TAP_WIN_COMPONENT_ID@.ndi, root\@PRODUCT_TAP_WIN_COMPONENT_ID@ ; Root enumerated
    %DeviceDescription% = @PRODUCT_TAP_WIN_COMPONENT_ID@.ndi, @PRODUCT_TAP_WIN_COMPONENT_ID@      ; Legacy
 
