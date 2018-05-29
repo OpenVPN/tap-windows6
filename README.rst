@@ -10,18 +10,21 @@ Build
 To build, the following prerequisites are required:
 
 - Python 2.7
-- Microsoft Windows 7 WDK (Windows Driver Kit)
+- Microsoft Windows 10 EWDK (Enterprise Windows Driver Kit)
+    - WDK works too, but
+        - the tool paths are all different
+        - the environment script is the one for the Developer Command Prompt for VS 2017
+- Source code directory of **devcon** sample from WDK (optional)
+    - https://github.com/Microsoft/Windows-driver-samples/ setup/devcon
 - Windows code signing certificate
 - Git (not strictly required, but useful for running commands using bundled bash shell)
 - MakeNSIS (optional)
-- Patched source code directory of **devcon** sample from WDK (optional)
 - Prebuilt tapinstall.exe binaries (optional)
 
 Make sure you add Python's install directory (usually c:\\python27) to the PATH 
 environment variable.
 
-These instructions have been tested on Windows 7 using Git Bash, as well as on 
-Windows 2012 Server using Git Bash and Windows Powershell.
+These instructions have been tested on Windows 10 using Windows' CMD.exe.
 
 View build script options::
 
@@ -65,25 +68,20 @@ by using the --sign parameter.
 Building tapinstall (optional)
 ------------------------------
 
-The build system supports building tapinstall.exe (a.k.a. devcon.exe). However
-the devcon source code in WinDDK does not build without modifications which
-cannot be made public due to licensing restrictions. For these reasons the
+The build system supports building tapinstall.exe (a.k.a. devcon.exe), but the
 default behavior is to reuse pre-built executables. To make sure the buildsystem
 finds the executables create the following directory structure under
 tap-windows6 directory:
 ::
   tapinstall
-  └── 7600
-      ├── objfre_wlh_amd64
-      │   └── amd64
-      │       └── tapinstall.exe
-      └── objfre_wlh_x86
-          └── i386
-              └── tapinstall.exe
+  ├── Release
+  │   └── devcon.exe
+  └── x64
+      └── Release
+          └── devcon.exe
 
-This structure is equal to what building tapinstall would create. Replace 7600
-with the major number of your WinDDK version. Finally call buildtap.py with
-"--ti=tapinstall".
+This structure is equal to what building tapinstall would create. Call
+buildtap.py with "--ti=tapinstall".
 
 Please note that the NSIS packaging (-p) step will fail if you don't have
 tapinstall.exe available. Also don't use the "-c" flag or the above directories
