@@ -134,6 +134,14 @@ DBG_PRINT_OID_NAME(
         MAKECASE(OID_PNP_REMOVE_WAKE_UP_PATTERN)
         MAKECASE(OID_PNP_ENABLE_WAKE_UP)
         MAKECASE(OID_PNP_WAKE_UP_PATTERN_LIST)
+        /* NDIS 6.20 upgrades to these OIDs */
+#if (NDIS_SUPPORT_NDIS620)
+        MAKECASE(OID_PM_CURRENT_CAPABILITIES)
+        MAKECASE(OID_PM_PARAMETERS)
+        MAKECASE(OID_PM_WOL_PATTERN_LIST)
+        MAKECASE(OID_PM_ADD_WOL_PATTERN)
+        MAKECASE(OID_PM_REMOVE_WOL_PATTERN)
+#endif
 
         /* PnP power management statistical OIDs */
         MAKECASE(OID_PNP_WAKE_UP_ERROR)
@@ -244,7 +252,7 @@ tapSetMulticastList(
             break;
         }
 
-        // BUGBUG!!! Is lock needed??? If so, use NDIS_RW_LOCK. Also apply to packet filter.
+        // BUGBUG!!! Is lock needed??? If so, use NDIS_RW_LOCK_EX. Also apply to packet filter.
 
         NdisZeroMemory(Adapter->MCList,
                        TAP_MAX_MCAST_LIST * MACADDR_SIZE);
@@ -494,6 +502,13 @@ Return Value:
     case OID_PNP_ADD_WAKE_UP_PATTERN:
     case OID_PNP_REMOVE_WAKE_UP_PATTERN:
     case OID_PNP_ENABLE_WAKE_UP:
+#endif
+#if (NDIS_SUPPORT_NDIS620)
+    case OID_PM_CURRENT_CAPABILITIES:
+    case OID_PM_PARAMETERS:
+    case OID_PM_ADD_WOL_PATTERN:
+    case OID_PM_REMOVE_WOL_PATTERN:
+    case OID_PM_WOL_PATTERN_LIST:
 #endif
         ASSERT(!"NIC does not support wake on LAN OIDs"); 
     default:
@@ -960,6 +975,57 @@ Return Value:
 
     return status;
 }
+
+NDIS_STATUS
+AdapterDirectOidRequest(
+    NDIS_HANDLE MiniportAdapterContext,
+    PNDIS_OID_REQUEST OidRequest
+    )
+/*++
+
+Routine Description:
+
+    Entry point called by NDIS to get or set frequently-acceessed OIDs.
+    Must handle out-of-order calls and calls at IRQL <= DISPATCH_LEVEL.
+
+Arguments:
+
+    MiniportAdapterContext  - Our adapter handle
+    NdisRequest             - The OID request to handle
+
+Return Value:
+
+    Return code from the NdisRequest below.
+
+--*/
+{
+    PTAP_ADAPTER_CONTEXT adapter = (PTAP_ADAPTER_CONTEXT)MiniportAdapterContext;
+    NDIS_STATUS status;
+
+    switch (OidRequest->RequestType)
+    {
+    default:
+        status = NDIS_STATUS_NOT_SUPPORTED;
+    }
+
+    return status;
+}
+
+VOID
+AdapterCancelDirectOidRequest(
+    NDIS_HANDLE MiniportAdapterContext,
+    PVOID RequestId
+    )
+{
+    UNREFERENCED_PARAMETER( MiniportAdapterContext );
+    UNREFERENCED_PARAMETER( RequestId );
+
+    //
+    // This miniport sample does not pend any direct OID requests, so we don't have
+    // to worry about cancelling them.
+    //
+}
+
 
 NDIS_STATUS
 AdapterOidRequest(

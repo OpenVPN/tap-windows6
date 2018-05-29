@@ -464,14 +464,14 @@ tapAdapterContextAddToGlobalList(
     __in PTAP_ADAPTER_CONTEXT       Adapter
     )
 {
-    LOCK_STATE      lockState;
+    LOCK_STATE_EX   lockState;
     PLIST_ENTRY     listEntry = &Adapter->AdapterListLink;
 
     // Acquire global adapter list lock.
-    NdisAcquireReadWriteLock(
-        &GlobalData.Lock,
-        TRUE,      // Acquire for write
-        &lockState
+    NdisAcquireRWLockWrite(
+        GlobalData.Lock,
+        &lockState,
+        0
         );
 
     // Adapter context should NOT be in any list.
@@ -484,7 +484,7 @@ tapAdapterContextAddToGlobalList(
     InsertTailList(&GlobalData.AdapterList,&Adapter->AdapterListLink);
 
     // Release global adapter list lock.
-    NdisReleaseReadWriteLock(&GlobalData.Lock,&lockState);
+    NdisReleaseRWLock(GlobalData.Lock, &lockState);
 }
 
 VOID
@@ -492,13 +492,13 @@ tapAdapterContextRemoveFromGlobalList(
     __in PTAP_ADAPTER_CONTEXT       Adapter
     )
 {
-    LOCK_STATE              lockState;
+    LOCK_STATE_EX           lockState;
 
     // Acquire global adapter list lock.
-    NdisAcquireReadWriteLock(
-        &GlobalData.Lock,
-        TRUE,      // Acquire for write
-        &lockState
+    NdisAcquireRWLockWrite(
+        GlobalData.Lock,
+        &lockState,
+        0
         );
 
     // Remove the adapter context from the global list.
@@ -511,7 +511,7 @@ tapAdapterContextRemoveFromGlobalList(
     tapAdapterContextDereference(Adapter);
 
     // Release global adapter list lock.
-    NdisReleaseReadWriteLock(&GlobalData.Lock,&lockState);
+    NdisReleaseRWLock(GlobalData.Lock,&lockState);
 }
 
 // Returns with added reference on adapter context.
@@ -520,13 +520,13 @@ tapAdapterContextFromDeviceObject(
     __in PDEVICE_OBJECT DeviceObject
     )
 {
-    LOCK_STATE              lockState;
+    LOCK_STATE_EX           lockState;
 
     // Acquire global adapter list lock.
-    NdisAcquireReadWriteLock(
-        &GlobalData.Lock,
-        FALSE,      // Acquire for read
-        &lockState
+    NdisAcquireRWLockRead(
+        GlobalData.Lock,
+        &lockState,
+        0
         );
 
     if (!IsListEmpty(&GlobalData.AdapterList))
@@ -545,7 +545,7 @@ tapAdapterContextFromDeviceObject(
                 tapAdapterContextReference(adapter);
 
                 // Release global adapter list lock.
-                NdisReleaseReadWriteLock(&GlobalData.Lock,&lockState);
+                NdisReleaseRWLock(GlobalData.Lock,&lockState);
 
                 return adapter;
             }
@@ -556,7 +556,7 @@ tapAdapterContextFromDeviceObject(
     }
 
     // Release global adapter list lock.
-    NdisReleaseReadWriteLock(&GlobalData.Lock,&lockState);
+    NdisReleaseRWLock(GlobalData.Lock,&lockState);
 
     return (PTAP_ADAPTER_CONTEXT )NULL;
 }
@@ -620,7 +620,7 @@ AdapterCreate(
     {
         NDIS_MINIPORT_ADAPTER_REGISTRATION_ATTRIBUTES regAttributes = {0};
         NDIS_MINIPORT_ADAPTER_GENERAL_ATTRIBUTES genAttributes = {0};
-        NDIS_PNP_CAPABILITIES pnpCapabilities = {0};
+        NDIS_PM_CAPABILITIES pmCapabilities = {0};
 
         //
         // Allocate adapter context structure and initialize all the
@@ -681,10 +681,10 @@ AdapterCreate(
         //
         // Next, set the general attributes.
         //
-        {C_ASSERT(sizeof(genAttributes) >= NDIS_SIZEOF_MINIPORT_ADAPTER_GENERAL_ATTRIBUTES_REVISION_1);}
+        {C_ASSERT(sizeof(genAttributes) >= NDIS_SIZEOF_MINIPORT_ADAPTER_GENERAL_ATTRIBUTES_REVISION_2);}
         genAttributes.Header.Type = NDIS_OBJECT_TYPE_MINIPORT_ADAPTER_GENERAL_ATTRIBUTES;
-        genAttributes.Header.Size = NDIS_SIZEOF_MINIPORT_ADAPTER_GENERAL_ATTRIBUTES_REVISION_1;
-        genAttributes.Header.Revision = NDIS_MINIPORT_ADAPTER_GENERAL_ATTRIBUTES_REVISION_1;
+        genAttributes.Header.Size = NDIS_SIZEOF_MINIPORT_ADAPTER_GENERAL_ATTRIBUTES_REVISION_2;
+        genAttributes.Header.Revision = NDIS_MINIPORT_ADAPTER_GENERAL_ATTRIBUTES_REVISION_2;
 
         //
         // Specify the medium type that the NIC can support but not
@@ -795,10 +795,13 @@ AdapterCreate(
         //
         // Set power management capabilities
         //
-        NdisZeroMemory(&pnpCapabilities, sizeof(pnpCapabilities));
-        pnpCapabilities.WakeUpCapabilities.MinMagicPacketWakeUp = NdisDeviceStateUnspecified;
-        pnpCapabilities.WakeUpCapabilities.MinPatternWakeUp = NdisDeviceStateUnspecified;
-        genAttributes.PowerManagementCapabilities = &pnpCapabilities;
+        NdisZeroMemory(&pmCapabilities, sizeof(pmCapabilities));
+        pmCapabilities.Header.Revision = NDIS_PM_CAPABILITIES_REVISION_1;
+        pmCapabilities.Header.Size = NDIS_SIZEOF_NDIS_PM_CAPABILITIES_REVISION_1;
+        pmCapabilities.MinMagicPacketWakeUp = NdisDeviceStateUnspecified;
+        pmCapabilities.MinPatternWakeUp = NdisDeviceStateUnspecified;
+        genAttributes.PowerManagementCapabilities = NULL;
+        genAttributes.PowerManagementCapabilitiesEx = &pmCapabilities;
 
         status = NdisMSetMiniportAttributes(
                     MiniportAdapterHandle,

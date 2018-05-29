@@ -342,5 +342,7 @@ MINIPORT_RESET                      AdapterReset;
 MINIPORT_DEVICE_PNP_EVENT_NOTIFY    AdapterDevicePnpEventNotify;
 MINIPORT_SHUTDOWN                   AdapterShutdownEx;
 MINIPORT_CANCEL_OID_REQUEST         AdapterCancelOidRequest;
+MINIPORT_DIRECT_OID_REQUEST         AdapterDirectOidRequest;
+MINIPORT_CANCEL_DIRECT_OID_REQUEST  AdapterCancelDirectOidRequest;
 
 #endif // __TAP_ADAPTER_CONTEXT_H_
