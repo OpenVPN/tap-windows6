@@ -99,16 +99,6 @@ Arguments:
     //
     NdisInitializeListHead(&GlobalData.AdapterList);
 
-    //
-    // This lock protects the AdapterList.
-    //
-    GlobalData.Lock = NdisAllocateRWLock(NULL);
-    if (GlobalData.Lock == NULL)
-    {
-        DEBUGP(("[TAP] NdisAllocateRWLock failed to allocate a lock.\n"));
-        return NDIS_STATUS_FAILURE;
-    }
-
     do
     {
         NDIS_MINIPORT_DRIVER_CHARACTERISTICS    miniportCharacteristics;
@@ -169,6 +159,18 @@ Arguments:
         if (NDIS_STATUS_SUCCESS == status)
         {
             DEBUGP (("[TAP] Registered miniport successfully\n"));
+
+            //
+            // This lock protects the AdapterList.
+            //
+            GlobalData.Lock = NdisAllocateRWLock(GlobalData.NdisDriverHandle);
+            if (GlobalData.Lock == NULL)
+            {
+                DEBUGP(("[TAP] NdisAllocateRWLock failed to allocate a lock.\n"));
+                TapDriverUnload(DriverObject);
+                status = NDIS_STATUS_FAILURE;
+                break;
+            }
         }
         else
         {
@@ -229,7 +231,11 @@ Return Value:
 
     ASSERT(IsListEmpty(&GlobalData.AdapterList));
 
-    NdisFreeRWLock(GlobalData.Lock);
+    if (GlobalData.Lock != NULL)
+    {
+        NdisFreeRWLock(GlobalData.Lock);
+        GlobalData.Lock = NULL;
+    }
 
     if(GlobalData.NdisDriverHandle != NULL )
     {
