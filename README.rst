@@ -70,10 +70,17 @@ by using the --sign parameter.
 Building tapinstall (optional)
 ------------------------------
 
-The build system supports building tapinstall.exe (a.k.a. devcon.exe), but the
-default behavior is to reuse pre-built executables. To make sure the buildsystem
-finds the executables create the following directory structure under
-tap-windows6 directory:
+The easiest way to build tapinstall is to clone the Microsoft driver samples
+and copy the source for devcon.exe into the tap-windows6 tree. Using PowerShell:
+
+    git clone https://github.com/Microsoft/Windows-driver-samples
+    Copy-Item -Recurse Windows-driver-samples/setup/devcon tap-windows6
+    cd tap-windows6
+    python.exe buildtap.py -b --ti=devcon
+
+The build system also supports reuse of pre-built executables. To make sure the
+buildsystem finds the executables, create the following directory structure
+under tap-windows6 directory:
 ::
   tapinstall
   ├── Release
