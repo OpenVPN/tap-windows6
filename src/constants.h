@@ -39,8 +39,8 @@
 // Define the NDIS miniport interface version that this driver targets.
 //
 
-#if !defined(NDIS620_MINIPORT)
-#error "tap-windows6 only supports NDIS 6.20 at this time"
+#if !defined(NDIS620_MINIPORT) || !defined(NDIS630_MINIPORT)
+#error "tap-windows6 only supports NDIS 6.20 and 6.30 at this time"
 #endif
 
 //===========================================================

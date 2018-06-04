@@ -107,7 +107,7 @@ Arguments:
     }
     if (GlobalData.NdisVersion > NDIS_RUNTIME_VERSION_620)
     {
-        GlobalData.NdisVersion = NDIS_RUNTIME_VERSION_620;
+        GlobalData.NdisVersion = NDIS_RUNTIME_VERSION_630;
     }
 
     //
