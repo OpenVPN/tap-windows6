@@ -73,7 +73,9 @@ class BuildTAPWindows(object):
     # run a command
     def system(self, cmd):
         print "RUN:", cmd
-        os.system(cmd)
+        result = os.system(cmd)
+        if result != 0:
+            raise ValueError("command failed")
 
     # make a directory
     def mkdir(self, dir):
