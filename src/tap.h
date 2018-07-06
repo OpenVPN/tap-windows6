@@ -74,6 +74,8 @@ typedef struct _TAP_GLOBAL
 
     NDIS_HANDLE         NdisDriverHandle;   // From NdisMRegisterMiniportDriver
 
+    BOOLEAN             RunningWindows8OrGreater;
+
 } TAP_GLOBAL, *PTAP_GLOBAL;
 
 
