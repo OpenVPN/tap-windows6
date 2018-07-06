@@ -76,6 +76,8 @@ Arguments:
 
 --*/
 {
+    ULONGLONG                               conditionMask;
+    RTL_OSVERSIONINFOEXW                    osInfo = { 0 };
     NTSTATUS                                status;
 
     UNREFERENCED_PARAMETER(RegistryPath);
@@ -159,6 +161,50 @@ Arguments:
         if (NDIS_STATUS_SUCCESS == status)
         {
             DEBUGP (("[TAP] Registered miniport successfully\n"));
+
+            //
+            // This driver calls MmGetSystemAddressForMdlSafe which has a flag that is
+            // required for HVCI on Windows 8/Windows Server 2012 and newer. Capture
+            // the version information on driver load.
+            //
+            // Per the docs, major and minor versions are compared hierarchically, not
+            // simultaneously, so the expected behavior is intuitive: 10.0 > 6.2.
+            //
+
+            osInfo.dwOSVersionInfoSize = sizeof(RTL_OSVERSIONINFOEXW);
+            osInfo.dwMajorVersion = 6;
+            osInfo.dwMajorVersion = 2;
+            conditionMask = 0;
+            VER_SET_CONDITION(conditionMask, VER_MAJORVERSION, VER_GREATER_EQUAL);
+            VER_SET_CONDITION(conditionMask, VER_MINORVERSION, VER_GREATER_EQUAL);
+
+            status = RtlVerifyVersionInfo(&osInfo,
+                (ULONG)(VER_MAJORVERSION | VER_MINORVERSION),
+                (ULONGLONG)conditionMask);
+
+            switch (status) {
+            case STATUS_SUCCESS:
+
+                GlobalData.RunningWindows8OrGreater = TRUE;
+                status = NDIS_STATUS_SUCCESS;
+                break;
+
+            case STATUS_REVISION_MISMATCH:
+
+                GlobalData.RunningWindows8OrGreater = FALSE;
+                status = NDIS_STATUS_SUCCESS;
+                break;
+
+            case STATUS_INVALID_PARAMETER:
+            default:
+                NOTHING;
+            }
+
+            if (status != NDIS_STATUS_SUCCESS) {
+                DEBUGP(("[TAP] Failed to detemine OS version using RtlVerifyVersionInfo: %x\n", status));
+                TapDriverUnload(DriverObject);
+                break;
+            }
 
             //
             // This lock protects the AdapterList.

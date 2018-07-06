@@ -1085,6 +1085,7 @@ TapDeviceRead(
     NTSTATUS                ntStatus = STATUS_SUCCESS;// Assume success
     PIO_STACK_LOCATION      irpSp;// Pointer to current stack location
     PTAP_ADAPTER_CONTEXT    adapter = NULL;
+    ULONG                   pagePriority;
 
     PAGED_CODE();
 
@@ -1131,10 +1132,22 @@ TapDeviceRead(
         return ntStatus;
     }
 
+    pagePriority = NormalPagePriority;
+
+    //
+    // On Windows versions 8 and above, the MDL can be marked as not executable.
+    // This is required for the driver to function under HyperVisor-enforced
+    // Code Integrity (HVCI).
+    //
+
+    if (GlobalData.RunningWindows8OrGreater != FALSE) {
+        pagePriority |= MdlMappingNoExecute;
+    }
+
     if ((Irp->AssociatedIrp.SystemBuffer
             = MmGetSystemAddressForMdlSafe(
                 Irp->MdlAddress,
-                NormalPagePriority
+                pagePriority
                 ) ) == NULL
         )
     {

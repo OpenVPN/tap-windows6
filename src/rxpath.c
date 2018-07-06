@@ -253,6 +253,7 @@ tapCompleteIrpAndFreeReceiveNetBufferList(
     //
     if(TAP_RX_NBL_FLAG_TEST(NetBufferList,TAP_RX_NBL_FLAGS_IS_INJECTED))
     {
+        ULONG           pagePriority;
         PNET_BUFFER     netBuffer;
         PMDL            mdl;
         PUCHAR          injectBuffer;
@@ -260,7 +261,19 @@ tapCompleteIrpAndFreeReceiveNetBufferList(
         netBuffer = NET_BUFFER_LIST_FIRST_NB(NetBufferList);
         mdl = NET_BUFFER_FIRST_MDL(netBuffer);
 
-        injectBuffer = (PUCHAR )MmGetSystemAddressForMdlSafe(mdl,NormalPagePriority);
+        //
+        // On Windows versions 8 and above, the MDL can be marked as not executable.
+        // This is required for the driver to function under HyperVisor-enforced
+        // Code Integrity (HVCI).
+        //
+
+        pagePriority = NormalPagePriority;
+
+        if (GlobalData.RunningWindows8OrGreater != FALSE) {
+            pagePriority |= MdlMappingNoExecute;
+        }
+
+        injectBuffer = (PUCHAR )MmGetSystemAddressForMdlSafe(mdl,pagePriority);
 
         if(injectBuffer)
         {
