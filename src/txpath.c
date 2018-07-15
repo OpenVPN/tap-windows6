@@ -108,8 +108,8 @@ HandleIPv6NeighborDiscovery(
     // - it's either a multicast MAC, or the userland destination MAC
     // but since the TAP driver is point-to-point, all packets are "for us"
 
-    // IPv6 target address must be ff02::1::ff00:8 (multicast for
-    // initial NS) or fe80::1 (unicast for recurrent NUD)
+    // IPv6 target address must be ff02::1:ff00:8 (multicast for
+    // initial NS) or fe80::8 (unicast for recurrent NUD)
     if ( memcmp( ipv6->daddr, IPV6_NS_TARGET_MCAST,
         sizeof(IPV6ADDR) ) != 0 &&
         memcmp( ipv6->daddr, IPV6_NS_TARGET_UNICAST,
