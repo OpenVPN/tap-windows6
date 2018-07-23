@@ -76,6 +76,8 @@ typedef struct _TAP_GLOBAL
 
     UINT NdisVersion;
 
+    BOOLEAN             RunningWindows8OrGreater;
+
 } TAP_GLOBAL, *PTAP_GLOBAL;
 
 
