@@ -318,7 +318,8 @@ class BuildTAPWindows(object):
                         )
 
         self.system(installer_cmd)
-        self.sign(installer_file)
+        if self.codesign:
+            self.sign(installer_file)
 
     # like find . | sort
     def enum_tree(self, dir):
