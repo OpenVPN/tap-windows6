@@ -54,8 +54,8 @@
    Class = Net
 
 ; This version number should match the version
-; number given in SOURCES.
-   DriverVer=@PRODUCT_TAP_WIN_RELDATE@,@PRODUCT_TAP_WIN_MAJOR@.00.00.@PRODUCT_TAP_WIN_MINOR@
+; number given in ..\version.m4.
+   DriverVer=filled in by stampinf
 
 [Strings]
    DeviceDescription = "@PRODUCT_TAP_WIN_DEVICE_DESCRIPTION@"
