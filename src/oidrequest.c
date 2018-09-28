@@ -931,10 +931,26 @@ Return Value:
 
         break;
 
-        // TODO: Inplement these query information requests.
-    case OID_GEN_RECEIVE_BUFFER_SPACE:
-    case OID_GEN_MAXIMUM_SEND_PACKETS:
-    case OID_GEN_TRANSMIT_QUEUE_LENGTH:
+	case OID_GEN_TRANSMIT_BUFFER_SPACE:
+		ulInfo = 1UL;
+		pInfo = &ulInfo;
+		status = NDIS_STATUS_SUCCESS;
+	break;
+
+	case OID_GEN_RECEIVE_BUFFER_SPACE:
+		ulInfo = 2UL;
+		pInfo = &ulInfo;
+		status = NDIS_STATUS_SUCCESS;
+	break;
+
+	case OID_GEN_MAXIMUM_SEND_PACKETS:
+		ulInfo = 3UL;
+		pInfo = &ulInfo;
+		status = NDIS_STATUS_SUCCESS;
+	break;
+
+	// TODO: Inplement these query information requests.
+	case OID_GEN_TRANSMIT_QUEUE_LENGTH:
     case OID_802_3_XMIT_HEARTBEAT_FAILURE:
     case OID_802_3_XMIT_TIMES_CRS_LOST:
     case OID_802_3_XMIT_LATE_COLLISIONS:

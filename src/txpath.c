@@ -561,7 +561,7 @@ Return Value:
                     (PARP_PACKET) tapPacket->m_Data,
                     Adapter->m_dhcp_addr,
                     Adapter->m_dhcp_server_ip,
-                    ~0,
+                    ~0UL,
                     Adapter->m_dhcp_server_mac)
                     )
             {
