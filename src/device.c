@@ -487,7 +487,7 @@ Return Value:
 
                 adapter->m_localIP =       ((IPADDR*) (Irp->AssociatedIrp.SystemBuffer))[0];
                 adapter->m_remoteNetwork = ((IPADDR*) (Irp->AssociatedIrp.SystemBuffer))[1];
-                adapter->m_remoteNetmask = ~0UL;
+                adapter->m_remoteNetmask = ~0;
 
                 ETH_COPY_NETWORK_ADDRESS (adapter->m_TapToUser.src, adapter->CurrentAddress);
                 ETH_COPY_NETWORK_ADDRESS (adapter->m_TapToUser.dest, dest);
@@ -602,7 +602,7 @@ Return Value:
             else
                 state[1] = 't';
 
-            state[2] = (char)('0' + adapter->CurrentPowerState);
+            state[2] = '0' + adapter->CurrentPowerState;
 
             if (adapter->MediaStateAlwaysConnected)
                 state[3] = 'C';

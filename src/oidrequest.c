@@ -932,20 +932,14 @@ Return Value:
         break;
 
 	case OID_GEN_TRANSMIT_BUFFER_SPACE:
-		ulInfo = 1UL;
-		pInfo = &ulInfo;
 		status = NDIS_STATUS_SUCCESS;
 	break;
 
 	case OID_GEN_RECEIVE_BUFFER_SPACE:
-		ulInfo = 2UL;
-		pInfo = &ulInfo;
 		status = NDIS_STATUS_SUCCESS;
 	break;
 
 	case OID_GEN_MAXIMUM_SEND_PACKETS:
-		ulInfo = 3UL;
-		pInfo = &ulInfo;
 		status = NDIS_STATUS_SUCCESS;
 	break;
 
