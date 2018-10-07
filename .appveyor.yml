@@ -3,4 +3,4 @@ image: Visual Studio 2015
 build_script:
 - cmd: python buildtap.py -b --sdk=wdk
 artifacts:
-- path: '*'
+- path: 'tap6.tar.gz'
