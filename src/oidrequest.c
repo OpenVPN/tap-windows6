@@ -646,6 +646,44 @@ Return Value:
         ulInfo = (ULONG) TAP_MAX_FRAME_SIZE;
         pInfo = &ulInfo;
         break;
+    
+    case OID_GEN_TRANSMIT_BUFFER_SPACE:
+        //
+        // The OID_GEN_TRANSMIT_BUFFER_SPACE OID specifies the amount of
+        // memory, in bytes, on the NIC that is available for buffering
+        // transmit data. This should exclude space that is already used
+        // by the queued data.
+        //
+
+        ulInfo = (ULONG) TAP_BUFFER_SIZE;
+        pInfo = &ulInfo;
+        break;
+
+    case OID_GEN_RECEIVE_BUFFER_SPACE:
+        //
+        // The OID_GEN_RECEIVE_BUFFER_SPACE OID specifies the amount of
+        // memory on the NIC that is available for buffering receive data. 
+        // This should exclude space used by queued data.
+        //
+        
+        ulInfo = (ULONG) TAP_BUFFER_SIZE;
+        pInfo = &ulInfo;
+        break;
+
+    case OID_GEN_MAXIMUM_SEND_PACKETS:
+        //
+        // The OID_GEN_MAXIMUM_SEND_PACKETS OID specifies the maximum 
+        // number of send packet descriptors that a miniport driver's 
+        // MiniportSendPackets function can accept.
+        // This OID is still marked as mandatory in the HLK tests, but
+        // documentation states it is obsolete in NDIS 6+
+        // In this case, a large arbitrary value is used because this
+        // driver has no real limit.
+        //
+
+        ulInfo = (ULONG) 5000;
+        pInfo = &ulInfo;
+        break;
 
     case OID_GEN_INTERRUPT_MODERATION:
         if (OidRequest->DATA.QUERY_INFORMATION.InformationBufferLength < sizeof(NDIS_INTERRUPT_MODERATION_PARAMETERS))
@@ -940,8 +978,6 @@ Return Value:
         break;
 
         // TODO: Inplement these query information requests.
-    case OID_GEN_RECEIVE_BUFFER_SPACE:
-    case OID_GEN_MAXIMUM_SEND_PACKETS:
     case OID_GEN_TRANSMIT_QUEUE_LENGTH:
     case OID_802_3_XMIT_HEARTBEAT_FAILURE:
     case OID_802_3_XMIT_TIMES_CRS_LOST:

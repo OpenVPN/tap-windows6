@@ -90,7 +90,9 @@
 #define TAP_MAX_MCAST_LIST                 32
 
 #define TAP_MAX_LOOKAHEAD                  TAP_FRAME_MAX_DATA_SIZE
-#define TAP_BUFFER_SIZE                    TAP_MAX_FRAME_SIZE
+
+// Simulated send/receive buffer size for the virtual device.
+#define TAP_BUFFER_SIZE                    0x400000
 
 // Set this value to TRUE if there is a physical adapter.
 #define TAP_HAS_PHYSICAL_CONNECTOR         FALSE
