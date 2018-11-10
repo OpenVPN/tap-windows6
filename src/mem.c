@@ -105,6 +105,8 @@ tapPacketQueueInsertTail(
 
     // Update counts
     ++TapPacketQueue->Count;
+    TapPacketQueue->TotalBytes += (TapPacket->m_SizeFlags & TP_SIZE_MASK);
+
 
     if(TapPacketQueue->Count > TapPacketQueue->MaxCount)
     {
@@ -134,6 +136,7 @@ tapPacketRemoveHeadLocked(
 
         // Update counts
         --TapPacketQueue->Count;
+        TapPacketQueue->TotalBytes -= (tapPacket->m_SizeFlags & TP_SIZE_MASK);
     }
 
     return tapPacket;

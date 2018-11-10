@@ -392,6 +392,8 @@ tapProcessSendPacketQueue(
     }
 
     KeReleaseSpinLock(&Adapter->SendPacketQueue.QueueLock,irql);
+
+    tapCheckFlowControl(Adapter);
 }
 
 // Flush the pending send TAP packet queue.
@@ -424,6 +426,8 @@ tapFlushSendPacketQueue(
     }
 
     KeReleaseSpinLock(&Adapter->SendPacketQueue.QueueLock,irql);
+
+    tapCompleteFlowControlPackets(Adapter);
 }
 
 VOID
@@ -881,6 +885,46 @@ Return Value:
 }
 
 VOID
+tapCompleteFlowControlPackets(
+    __in PTAP_ADAPTER_CONTEXT   Adapter
+    )
+{
+    KIRQL  irql;
+    PNET_BUFFER_LIST completeList = NULL;
+
+    KeAcquireSpinLock(&Adapter->FlowControlLock,&irql);
+
+
+    completeList = Adapter->FlowControlList;
+    Adapter->FlowControlList = NULL;
+    Adapter->FlowControlHasPackets = FALSE;
+
+    KeReleaseSpinLock(&Adapter->FlowControlLock,irql);
+
+    if(completeList != NULL)
+    {
+        tapSendNetBufferListsComplete(
+            Adapter,
+            completeList,
+            NDIS_STATUS_SUCCESS,
+            irql >= DISPATCH_LEVEL
+            );
+    }
+}
+
+VOID
+tapCheckFlowControl(
+    __in PTAP_ADAPTER_CONTEXT   Adapter
+    )
+{
+    if(Adapter->FlowControlHasPackets &&
+        Adapter->SendPacketQueue.TotalBytes < TAP_BUFFER_SIZE)
+    {
+        tapCompleteFlowControlPackets(Adapter);
+    }
+}
+
+VOID
 AdapterSendNetBufferLists(
     __in  NDIS_HANDLE             MiniportAdapterContext,
     __in  PNET_BUFFER_LIST        NetBufferLists,
@@ -1042,13 +1086,41 @@ Return Value:
         currentNbl = nextNbl;
     }
 
-    // Complete all NBLs
-    tapSendNetBufferListsComplete(
-        adapter,
-        NetBufferLists,
-        NDIS_STATUS_SUCCESS,
-        DispatchLevel
-        );
+    if(adapter->SendPacketQueue.TotalBytes > TAP_BUFFER_SIZE)
+    {
+        // Flow control - Don't complete NBLs until transmit buffer drains below buffer size.
+        KIRQL  irql;
+
+        KeAcquireSpinLock(&adapter->FlowControlLock,&irql);
+
+        if(adapter->FlowControlList == NULL)
+        {
+            adapter->FlowControlList = NetBufferLists;
+        }
+        else
+        {
+            PNET_BUFFER_LIST flowControlList = adapter->FlowControlList;
+            while(flowControlList->Next)
+            {
+                flowControlList = flowControlList->Next;
+            }
+            // Append new NBLs at the end of the existing list of NBLs
+            flowControlList->Next = NetBufferLists;
+        }
+        adapter->FlowControlHasPackets = TRUE;
+
+        KeReleaseSpinLock(&adapter->FlowControlLock,irql);
+    }
+    else
+    {
+        // Complete all NBLs
+        tapSendNetBufferListsComplete(
+            adapter,
+            NetBufferLists,
+            NDIS_STATUS_SUCCESS,
+            DispatchLevel
+            );
+    }
 
     // Attempt to complete pending read IRPs from pending TAP 
     // send packet queue.

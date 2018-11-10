@@ -58,6 +58,16 @@ tapFlushSendPacketQueue(
     );
 
 VOID
+tapCompleteFlowControlPackets(
+    __in PTAP_ADAPTER_CONTEXT   Adapter
+    );
+
+VOID
+tapCheckFlowControl(
+    __in PTAP_ADAPTER_CONTEXT   Adapter
+    );
+
+VOID
 IndicateReceivePacket(
     __in PTAP_ADAPTER_CONTEXT  Adapter,
     __in PUCHAR packetData,
