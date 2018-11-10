@@ -102,11 +102,34 @@ tapAdapterContextAllocate(
 
         adapter->MiniportAdapterHandle = MiniportAdapterHandle;
 
+        nblPoolParameters.Header.Type = NDIS_OBJECT_TYPE_DEFAULT;
+        nblPoolParameters.Header.Revision = NET_BUFFER_LIST_POOL_PARAMETERS_REVISION_1;
+        nblPoolParameters.Header.Size = NDIS_SIZEOF_NET_BUFFER_LIST_POOL_PARAMETERS_REVISION_1;
+        nblPoolParameters.ProtocolId = NDIS_PROTOCOL_ID_DEFAULT;
+        nblPoolParameters.ContextSize = 0;
+        //nblPoolParameters.ContextSize = sizeof(RX_NETBUFLIST_RSVD);
+        nblPoolParameters.fAllocateNetBuffer = TRUE;
+        nblPoolParameters.PoolTag = TAP_RX_NBL_TAG;
+
+        adapter->ReceiveNblPool = NdisAllocateNetBufferListPool(
+            adapter->MiniportAdapterHandle,
+            &nblPoolParameters); 
+
+        if (adapter->ReceiveNblPool == NULL)
+        {
+            DEBUGP (("[TAP] Couldn't allocate adapter receive NBL pool\n"));
+            NdisFreeMemory(adapter,0,0);
+            return NULL;
+        }
+
         // Initialize cancel-safe IRP queue
         tapIrpCsqInitialize(&adapter->PendingReadIrpQueue);
 
         // Initialize TAP send packet queue.
         tapPacketQueueInitialize(&adapter->SendPacketQueue);
+
+        // Initialize flow control
+        KeInitializeSpinLock(&adapter->FlowControlLock);
 
         // Allocate the adapter lock.
         NdisAllocateSpinLock(&adapter->AdapterLock);
@@ -117,25 +140,7 @@ tapAdapterContextAllocate(
         // Initialize event used to determine when all receive NBLs have been returned.
         NdisInitializeEvent(&adapter->ReceiveNblInFlightCountZeroEvent);
 
-        nblPoolParameters.Header.Type = NDIS_OBJECT_TYPE_DEFAULT;
-        nblPoolParameters.Header.Revision = NET_BUFFER_LIST_POOL_PARAMETERS_REVISION_1;
-        nblPoolParameters.Header.Size = NDIS_SIZEOF_NET_BUFFER_LIST_POOL_PARAMETERS_REVISION_1;
-        nblPoolParameters.ProtocolId = NDIS_PROTOCOL_ID_DEFAULT;
-        nblPoolParameters.ContextSize = 0;
-        //nblPoolParameters.ContextSize = sizeof(RX_NETBUFLIST_RSVD);
-        nblPoolParameters.fAllocateNetBuffer = TRUE;
-        nblPoolParameters.PoolTag = TAP_RX_NBL_TAG;
 
-#pragma warning( suppress : 28197 )
-        adapter->ReceiveNblPool = NdisAllocateNetBufferListPool(
-            adapter->MiniportAdapterHandle,
-            &nblPoolParameters); 
-
-        if (adapter->ReceiveNblPool == NULL)
-        {
-            DEBUGP (("[TAP] Couldn't allocate adapter receive NBL pool\n"));
-            NdisFreeMemory(adapter,0,0);
-        }
 
         // Add initial reference. Normally removed in AdapterHalt.
         adapter->RefCount = 1;
@@ -1583,6 +1588,9 @@ tapAdapterContextFree(
     }
 
     Adapter->ReceiveNblPool = NULL;
+
+    // Flow control related
+    ASSERT(Adapter->FlowControlList == NULL);
 
     NdisFreeMemory(Adapter,0,0);
 

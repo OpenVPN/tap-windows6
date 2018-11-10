@@ -62,7 +62,8 @@ typedef struct _TAP_PACKET_QUEUE
 {
     KSPIN_LOCK      QueueLock;
     LIST_ENTRY      Queue;
-    ULONG           Count;   // Count of currently queued items
+    ULONG           Count;          // Count of currently queued items
+    ULONG           TotalBytes;     // Total length of queued packets
     ULONG           MaxCount;
 } TAP_PACKET_QUEUE, *PTAP_PACKET_QUEUE;
 
