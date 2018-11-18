@@ -221,4 +221,17 @@ typedef struct {
   ICMPV6_NA  icmpv6;
 } ICMPV6_NA_PKT;
 
+
+//--------------------------------------------
+// 802.1Q Header
+//--------------------------------------------
+
+typedef struct {
+  USHORT  Tag;
+  USHORT  EtherType;
+} ETH_8021Q_HEADER, *PETH_8021Q_HEADER;
+
+#define ETHERTYPE_8021Q   0x8100
+
+
 #pragma pack()

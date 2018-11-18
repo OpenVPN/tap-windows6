@@ -350,41 +350,80 @@ AdapterReturnNetBufferLists(
     }
 }
 
+static PVOID 
+TapStrip8021Q(
+    __inout unsigned char ** PacketBuffer,
+    __inout ULONG *PacketLength
+    )
+{
+    NDIS_NET_BUFFER_LIST_8021Q_INFO priorityInfo;
+    unsigned char* buffer = *PacketBuffer;
+    ULONG length = *PacketLength;
+    priorityInfo.Value = 0;
+
+    if(length >= ETHERNET_HEADER_SIZE + VLAN_TAG_SIZE)
+    {
+        PETH_HEADER frameHeader = (PETH_HEADER) buffer;
+
+        if(frameHeader->proto == htons(ETHERTYPE_8021Q))
+        {
+            // Decode 802.1Q header
+            PETH_8021Q_HEADER tag = (PETH_8021Q_HEADER)(frameHeader+1);
+
+            priorityInfo.TagHeader.UserPriority = (tag->Tag>>13);
+            priorityInfo.TagHeader.VlanId = (tag->Tag & 0x0FFF);
+
+            // Copy the first part of the ethernet header up and over the protocol and 802.1Q data
+            // Don't copy the ethernet header's protocol, leave the inner value from the 802.1Q header.
+            NdisMoveMemory(buffer+4, buffer, ETHERNET_HEADER_SIZE-2);
+
+            // Update pointer/length to reflect this change.
+            *PacketBuffer = buffer+4;
+            *PacketLength = length-4;
+        }
+
+    }
+    return priorityInfo.Value;
+}
+
 static NTSTATUS
 TapSharedSendPacket(
     __in PTAP_ADAPTER_CONTEXT Adapter,
     __in PIRP Irp,
+    __in unsigned char * PacketBuffer,
+    __in ULONG PacketLength,
+    __in PVOID PacketPriority,
     __in const PUCHAR PrefixData,
     __in const unsigned int PrefixLength
     )
 {
     PIO_STACK_LOCATION      irpSp;
-    unsigned int            packetLength;
+    unsigned int            fullLength;
     PNET_BUFFER_LIST        netBufferList = NULL;
     PMDL                    mdl = NULL;    // Head of MDL chain.
     LONG                    nblCount;
 
 
     irpSp = IoGetCurrentIrpStackLocation( Irp );
-    packetLength = irpSp->Parameters.Write.Length + PrefixLength;
+    fullLength = PacketLength + PrefixLength;
 
-    if(packetLength < TAP_MIN_FRAME_SIZE)
+    if(fullLength < TAP_MIN_FRAME_SIZE)
     {
         // Consolidate all the incoming data into a new single minimum-length allocation.
         // This is simpler than additionally allocating another tiny MDL to tack on to the end
         // (and then having to remove it on the cleanup path)
-        PUCHAR          packetBuffer = NULL;
+        PUCHAR          allocBuffer = NULL;
         unsigned int    paddedLength = TAP_MIN_FRAME_SIZE;
 
         // Allocate flat buffer for packet data.
-        packetBuffer = (PUCHAR )NdisAllocateMemoryWithTagPriority(
+        allocBuffer = (PUCHAR )NdisAllocateMemoryWithTagPriority(
                             Adapter->MiniportAdapterHandle,
                             paddedLength,
                             TAP_RX_INJECT_BUFFER_TAG,
                             NormalPoolPriority
                             );
 
-        if(packetBuffer == NULL)
+        if(allocBuffer == NULL)
         {
             DEBUGP (("[%s] NdisAllocateMemoryWithTagPriority failed in IRP_MJ_WRITE\n",
                 MINIPORT_INSTANCE_ID (Adapter)));
@@ -398,15 +437,15 @@ TapSharedSendPacket(
         // Copy packet data to flat buffer.
         if(PrefixLength > 0)
         {
-            NdisMoveMemory(packetBuffer, PrefixData, PrefixLength);
+            NdisMoveMemory(allocBuffer, PrefixData, PrefixLength);
         }
-        NdisMoveMemory (packetBuffer + PrefixLength, Irp->AssociatedIrp.SystemBuffer, irpSp->Parameters.Write.Length);
-        NdisZeroMemory(packetBuffer + packetLength, paddedLength - packetLength);
+        NdisMoveMemory (allocBuffer + PrefixLength, PacketBuffer, PacketLength);
+        NdisZeroMemory(allocBuffer + fullLength, paddedLength - fullLength);
 
         // Allocate MDL for flat buffer.
         mdl = NdisAllocateMdl(
                 Adapter->MiniportAdapterHandle,
-                packetBuffer,
+                allocBuffer,
                 paddedLength
                 );
 
@@ -416,7 +455,7 @@ TapSharedSendPacket(
                 MINIPORT_INSTANCE_ID (Adapter)));
             NOTE_ERROR ();
 
-            NdisFreeMemory(packetBuffer,0,0);
+            NdisFreeMemory(allocBuffer,0,0);
            
             // Fail the IRP
             Irp->IoStatus.Information = 0;
@@ -442,7 +481,7 @@ TapSharedSendPacket(
             NOTE_ERROR ();
 
             NdisFreeMdl(mdl);
-            NdisFreeMemory(packetBuffer,0,0);
+            NdisFreeMemory(allocBuffer,0,0);
            
             // Fail the IRP
             Irp->IoStatus.Information = 0;
@@ -494,8 +533,10 @@ TapSharedSendPacket(
             0,                              // ContextSize
             0,                              // ContextBackFill
             mdl==NULL?Irp->MdlAddress:mdl,  // MDL chain
-            0,
-            packetLength
+            // PacketBuffer will always be from the Irp's SystemBuffer, but may be offset beyond the start.
+            // This will only be the case if there is not a prefix (and mdl == NULL).
+            mdl==NULL?(ULONG)(PacketBuffer-((unsigned char *)Irp->AssociatedIrp.SystemBuffer)):0,
+            fullLength
             );
 
         if(netBufferList == NULL)
@@ -533,6 +574,8 @@ TapSharedSendPacket(
     // Stash IRP pointer in NBL MiniportReserved[0] field.
     netBufferList->MiniportReserved[0] = Irp;
     netBufferList->MiniportReserved[1] = NULL;
+
+    NET_BUFFER_LIST_INFO(netBufferList, Ieee8021QNetBufferListInfo) = PacketPriority;
 
     // Increment in-flight receive NBL count.
     nblCount = NdisInterlockedIncrement(&Adapter->ReceiveNblInFlightCount);
@@ -661,10 +704,22 @@ TapDeviceWrite(
         if (!adapter->m_tun && ((irpSp->Parameters.Write.Length) >= ETHERNET_HEADER_SIZE))
         {
             // TAP mode - Send raw ethernet frame received.
+            unsigned char* packetBuffer = (unsigned char *) Irp->AssociatedIrp.SystemBuffer;
+            ULONG packetLength = irpSp->Parameters.Write.Length;
+            PVOID packetPriority = 0;
 
             DUMP_PACKET ("IRP_MJ_WRITE ETH",
-                (unsigned char *) Irp->AssociatedIrp.SystemBuffer,
-                irpSp->Parameters.Write.Length);
+                packetBuffer,
+                packetLength);
+
+            //=====================================================
+            // Check incoming packet for an 802.1Q VLAN/Priority header
+            // If one exists, remove it in place.
+            // This may change the packet buffer pointer and length.
+            //=====================================================
+
+            packetPriority = TapStrip8021Q(&packetBuffer, &packetLength);
+
 
             //=====================================================
             // If IPv4 packet, check whether or not packet
@@ -672,8 +727,8 @@ TapDeviceWrite(
             //=====================================================
 #if PACKET_TRUNCATION_CHECK
             IPv4PacketSizeVerify (
-                (unsigned char *) Irp->AssociatedIrp.SystemBuffer,
-                irpSp->Parameters.Write.Length,
+                packetBuffer,
+                packetLength,
                 FALSE,
                 "RX",
                 &adapter->m_RxTrunc
@@ -689,7 +744,8 @@ TapDeviceWrite(
                 // Only determine the frame type if we need to check it.
                 frameType = tapGetRawPacketFrameType(
                                 adapter,
-                                Irp->AssociatedIrp.SystemBuffer);
+                                packetBuffer,
+                                packetLength);
             }
 
             if((adapter->PacketFilter & NDIS_PACKET_TYPE_PROMISCUOUS) ||  
@@ -700,6 +756,9 @@ TapDeviceWrite(
                 ntStatus = TapSharedSendPacket(
                     adapter,
                     Irp,
+                    packetBuffer,
+                    packetLength,
+                    packetPriority,
                     NULL,
                     0
                     );
@@ -754,6 +813,9 @@ TapDeviceWrite(
                 ntStatus = TapSharedSendPacket(
                     adapter,
                     Irp,
+                    (unsigned char *) Irp->AssociatedIrp.SystemBuffer,
+                    irpSp->Parameters.Write.Length,
+                    NULL,
                     (PUCHAR)p_UserToTap,
                     sizeof(ETH_HEADER)
                     );

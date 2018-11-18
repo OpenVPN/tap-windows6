@@ -687,6 +687,23 @@ Return Value:
         }
         break;
 
+    case TAP_WIN_IOCTL_PRIORITY_BEHAVIOR:
+        {
+            if(inBufLength >= sizeof(ULONG))
+            {
+                ULONG parm = ((PULONG) (Irp->AssociatedIrp.SystemBuffer))[0];
+                if(parm <= TAP_PRIORITY_BEHAVIOR_MAX)
+                {
+                    adapter->PriorityBehavior = parm;
+                    Irp->IoStatus.Information = 1;
+                    break;
+                }                
+            }
+            NOTE_ERROR();
+            Irp->IoStatus.Status = ntStatus = STATUS_INVALID_PARAMETER;
+        }
+        break;
+
     default:
 
         //
