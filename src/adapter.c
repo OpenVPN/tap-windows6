@@ -651,6 +651,11 @@ AdapterCreate(
         status = tapReadConfiguration(adapter);
 
         //
+        // Default priority behavior
+        //
+        adapter->PriorityBehavior = TAP_PRIORITY_BEHAVIOR_NOPRIORITY;
+
+        //
         // Set the registration attributes.
         //
 
@@ -1593,7 +1598,8 @@ tapAdapterContextFree(
 ULONG
 tapGetRawPacketFrameType(
     __in PTAP_ADAPTER_CONTEXT    Adapter,
-    __in PVOID                   PacketBuffer
+    __in PVOID                   PacketBuffer,
+    __in ULONG                   PacketLength
     )
 /*++
 
@@ -1617,6 +1623,11 @@ Return Value:
 
 --*/
 {
+    if(PacketLength < ETHERNET_HEADER_SIZE)
+    {
+        return 0;
+    }
+    
     PETH_HEADER ethernetHeader = (PETH_HEADER)PacketBuffer;
     ASSERT(ethernetHeader);
 

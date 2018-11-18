@@ -207,6 +207,8 @@ typedef struct _TAP_ADAPTER_CONTEXT
     ULONG                       PacketFilter;
     ULONG                       ulLookahead;
 
+    ULONG                       PriorityBehavior;
+
     //
     // Statistics
     // -------------------------------------------------------------------------
@@ -328,7 +330,8 @@ tapAdapterSendAndReceiveReady(
 ULONG
 tapGetRawPacketFrameType(
     __in PTAP_ADAPTER_CONTEXT    Adapter,
-    __in PVOID                   PacketBuffer
+    __in PVOID                   PacketBuffer,
+    __in ULONG                   PacketLength
     );
 
 ULONG

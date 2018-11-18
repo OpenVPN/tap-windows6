@@ -434,6 +434,7 @@ VOID
 tapAdapterTransmit(
     __in PTAP_ADAPTER_CONTEXT   Adapter,
     __in PNET_BUFFER            NetBuffer,
+    __in PNET_BUFFER_LIST       NetBufferList,    
     __in  BOOLEAN               DispatchLevel
     )
 /*++
@@ -462,6 +463,7 @@ Arguments:
 
     Adapter                     Pointer to our adapter context
     NetBuffer                   Pointer to the net buffer to transmit
+    NetBufferList               List the net buffer was taken from
     DispatchLevel               TRUE if called at IRQL == DISPATCH_LEVEL
 
 Return Value:
@@ -476,13 +478,41 @@ Return Value:
     ULONG           packetLength;
     PTAP_PACKET     tapPacket;
     PVOID           packetData;
+    ULONG           addHeaderSize;
 
     packetLength = NET_BUFFER_DATA_LENGTH(NetBuffer);
+
+    // Determine if we need to add an 802.1Q header
+    NDIS_NET_BUFFER_LIST_8021Q_INFO packetPriority;
+    packetPriority.Value = NET_BUFFER_LIST_INFO(NetBufferList, Ieee8021QNetBufferListInfo);
+
+    addHeaderSize = 0;
+    if (!Adapter->m_tun)
+    {
+        // only add header in TAP mode
+        if(Adapter->PriorityBehavior == TAP_PRIORITY_BEHAVIOR_ADDALWAYS)
+        {
+            addHeaderSize = VLAN_TAG_SIZE;
+        }
+        else if (Adapter->PriorityBehavior == TAP_PRIORITY_BEHAVIOR_ENABLED)
+        {
+            if(packetPriority.TagHeader.UserPriority != 0 || 
+                packetPriority.TagHeader.VlanId != 0)
+            {
+                addHeaderSize = VLAN_TAG_SIZE;
+            }
+        }
+        if(packetLength < ETHERNET_HEADER_SIZE)
+        {
+            // Sanity check - don't try to modify packets that are far too short.
+            addHeaderSize = 0;
+        }
+    }
 
     // Allocate TAP packet memory
     tapPacket = (PTAP_PACKET )NdisAllocateMemoryWithTagPriority(
                     Adapter->MiniportAdapterHandle,
-                    TAP_PACKET_SIZE (packetLength),
+                    TAP_PACKET_SIZE (packetLength+addHeaderSize),
                     TAP_PACKET_TAG,
                     NormalPoolPriority
                     );
@@ -493,7 +523,7 @@ Return Value:
         return;
     }
 
-    tapPacket->m_SizeFlags = (packetLength & TP_SIZE_MASK);
+    tapPacket->m_SizeFlags = ((packetLength+addHeaderSize) & TP_SIZE_MASK);
 
     //
     // Reassemble packet contents
@@ -509,7 +539,7 @@ Return Value:
     //
     // Case 1.) is the most likely in normal operation.
     //
-    packetData = NdisGetDataBuffer(NetBuffer,packetLength,tapPacket->m_Data,1,0);
+    packetData = NdisGetDataBuffer(NetBuffer,packetLength,tapPacket->m_Data+addHeaderSize,1,0);
 
     if(packetData == NULL)
     {
@@ -520,12 +550,28 @@ Return Value:
         return;
     }
 
-    if(packetData != tapPacket->m_Data)
+    if(packetData != (tapPacket->m_Data+addHeaderSize))
     {
         // Packet data was contiguous and not yet copied to m_Data.
-        NdisMoveMemory(tapPacket->m_Data,packetData,packetLength);
+        NdisMoveMemory(tapPacket->m_Data+addHeaderSize,packetData,packetLength);
     }
     
+    if(addHeaderSize > 0)
+    {
+        // Add an 802.1Q header between the ethernet header and the payload
+        NdisMoveMemory(tapPacket->m_Data,tapPacket->m_Data+addHeaderSize,ETHERNET_HEADER_SIZE-2);
+        PETH_HEADER header = (PETH_HEADER)tapPacket->m_Data;
+        PETH_8021Q_HEADER tag = (PETH_8021Q_HEADER)(header+1);
+        header->proto = htons(0x8100);
+        USHORT tagValue = 0;
+        tagValue |= packetPriority.TagHeader.UserPriority<<13;
+        tagValue |= packetPriority.TagHeader.VlanId & 0xFFF;
+        tag->Tag = tagValue;
+
+        packetLength += addHeaderSize;
+    }
+
+
     DUMP_PACKET ("AdapterTransmit", tapPacket->m_Data, packetLength);
 
     //=====================================================
@@ -1076,7 +1122,7 @@ Return Value:
             nextNb = NET_BUFFER_NEXT_NB(currentNb);
 
             // Transmit the NB
-            tapAdapterTransmit(adapter,currentNb,DispatchLevel);
+            tapAdapterTransmit(adapter,currentNb,currentNbl,DispatchLevel);
 
             // Move to next NB
             currentNb = nextNb;
