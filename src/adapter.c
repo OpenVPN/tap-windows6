@@ -170,7 +170,7 @@ tapReadCurrentAddress(
 
     // Read MAC parameter from registry. (NetworkAddress keyword)
     // Using NdisReadNetworkAddress is necessary.
-    // It causes NDIS to set the flags indiciating the MAC address can be changed.
+    // It causes NDIS to set a flag indicating the MAC address can be changed.
     // NdisReadNetworkAddress converts to a byte array from a string.
     NdisReadNetworkAddress(
         &status,
@@ -1589,6 +1589,84 @@ tapAdapterContextFree(
 
     DEBUGP (("[TAP] <-- tapAdapterContextFree\n"));
 }
+
+ULONG
+tapGetRawPacketFrameType(
+    __in PTAP_ADAPTER_CONTEXT    Adapter,
+    __in PVOID                   PacketBuffer
+    )
+/*++
+
+Routine Description:
+
+    Reads the network frame's destination address to determine the type
+    (broadcast, multicast, etc)
+
+Arguments:
+
+    Adapter             Adapter context structure
+    PacketBuffer        Raw packet in memory to examine
+
+Return Value:
+    Some combination of the NDIS Packet type bit flags
+        NDIS_PACKET_TYPE_BROADCAST
+        NDIS_PACKET_TYPE_MULTICAST
+        NDIS_PACKET_TYPE_ALL_MULTICAST
+        NDIS_PACKET_TYPE_DIRECTED
+        NDIS_PACKET_TYPE_ALL_LOCAL
+
+--*/
+{
+    PETH_HEADER ethernetHeader = (PETH_HEADER)PacketBuffer;
+    ASSERT(ethernetHeader);
+
+    if (ETH_IS_BROADCAST(ethernetHeader->dest))
+    {
+        return NDIS_PACKET_TYPE_BROADCAST;
+    }
+    else if(ETH_IS_MULTICAST(ethernetHeader->dest))
+    {
+        // Determine if packet is in multicast list or not.
+        int address_match = 0;
+        for(ULONG i=0;i<Adapter->ulMCListSize;i++)
+        {
+            // Note: Counterintutive match code from this macro. 0 = match
+            ETH_COMPARE_NETWORK_ADDRESSES_EQ(
+                Adapter->MCList[i], 
+                ethernetHeader->dest, 
+                &address_match);
+            
+            if(address_match == 0)
+            {
+                // Address is in multicast list
+                return NDIS_PACKET_TYPE_MULTICAST | NDIS_PACKET_TYPE_ALL_MULTICAST;
+            }
+        }
+        // Address is muticast, but not in multicast list.
+        return NDIS_PACKET_TYPE_ALL_MULTICAST;
+    }
+    else
+    {
+        // Determine if packet is directed to our address or not.
+        int address_match = 0;
+        ETH_COMPARE_NETWORK_ADDRESSES_EQ(
+            Adapter->CurrentAddress, 
+            ethernetHeader->dest, 
+            &address_match);
+
+        if(address_match == 0)
+        {
+            return NDIS_PACKET_TYPE_DIRECTED;    
+        }
+        else
+        {
+            // Directed traffic but not directed to us.
+            return 0;
+        }
+    }
+
+}
+
 ULONG
 tapGetNetBufferFrameType(
     __in PNET_BUFFER       NetBuffer

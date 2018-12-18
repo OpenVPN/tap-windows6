@@ -660,6 +660,7 @@ TapDeviceWrite(
     {
         if (!adapter->m_tun && ((irpSp->Parameters.Write.Length) >= ETHERNET_HEADER_SIZE))
         {
+            // TAP mode - Send raw ethernet frame received.
 
             DUMP_PACKET ("IRP_MJ_WRITE ETH",
                 (unsigned char *) Irp->AssociatedIrp.SystemBuffer,
@@ -680,16 +681,45 @@ TapDeviceWrite(
 #endif
             (Irp->MdlAddress)->Next = NULL; // No next MDL
 
-            ntStatus = TapSharedSendPacket(
-                adapter,
-                Irp,
-                NULL,
-                0
-                );
+            // Determine frame type for packet filtering
+            ULONG frameType = 0;
+
+            if(!(adapter->PacketFilter & NDIS_PACKET_TYPE_PROMISCUOUS))
+            {
+                // Only determine the frame type if we need to check it.
+                frameType = tapGetRawPacketFrameType(
+                                adapter,
+                                Irp->AssociatedIrp.SystemBuffer);
+            }
+
+            if((adapter->PacketFilter & NDIS_PACKET_TYPE_PROMISCUOUS) ||  
+               (frameType & adapter->PacketFilter))
+            {
+                // frame type bit is enabled in the packet filter.
+
+                ntStatus = TapSharedSendPacket(
+                    adapter,
+                    Irp,
+                    NULL,
+                    0
+                    );
+
+            }
+            else
+            {
+                DEBUGP (("[%s] Filtered send in IRP_MJ_WRITE frameType 0x%x, PacketFilter 0x%x\n",
+                    MINIPORT_INSTANCE_ID (adapter), frameType, adapter->PacketFilter));
+
+                ntStatus = STATUS_SUCCESS;
+            }
+
+
+
 
         }
         else if (adapter->m_tun && ((irpSp->Parameters.Write.Length) >= IP_HEADER_SIZE))
         {
+            // TUN mode - Prepend an ethernet header 
             PETH_HEADER         p_UserToTap = &adapter->m_UserToTap;
 
             // For IPv6, need to use Ethernet header with IPv6 proto
@@ -717,12 +747,24 @@ TapDeviceWrite(
                 );
 #endif
 
-            ntStatus = TapSharedSendPacket(
-                adapter,
-                Irp,
-                (PUCHAR)p_UserToTap,
-                sizeof(ETH_HEADER)
-                );
+            if(adapter->PacketFilter & (NDIS_PACKET_TYPE_DIRECTED | NDIS_PACKET_TYPE_PROMISCUOUS))
+            {
+                // All packets are directed - only send directed packets if the packet filter enables this.
+
+                ntStatus = TapSharedSendPacket(
+                    adapter,
+                    Irp,
+                    (PUCHAR)p_UserToTap,
+                    sizeof(ETH_HEADER)
+                    );
+            }
+            else
+            {
+                DEBUGP (("[%s] Filtered send in IRP_MJ_WRITE while directed packets are disabled\n",
+                    MINIPORT_INSTANCE_ID (adapter)));
+
+                ntStatus = STATUS_SUCCESS;
+            }
         }
         else
         {
