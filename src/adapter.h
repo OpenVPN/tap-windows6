@@ -326,6 +326,12 @@ tapAdapterSendAndReceiveReady(
     );
 
 ULONG
+tapGetRawPacketFrameType(
+    __in PTAP_ADAPTER_CONTEXT    Adapter,
+    __in PVOID                   PacketBuffer
+    );
+
+ULONG
 tapGetNetBufferFrameType(
     __in PNET_BUFFER       NetBuffer
     );
