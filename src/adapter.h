@@ -41,6 +41,11 @@
 #define TAP_RX_NBL_FLAGS_IS_P2P             0x00001000
 #define TAP_RX_NBL_FLAGS_IS_INJECTED        0x00002000
 
+
+// True iff the given address was assigned by the local administrator
+#define NIC_ADDR_IS_LOCALLY_ADMINISTERED(_addr) \
+        (BOOLEAN)(((PUCHAR)(_addr))[0] & ((UCHAR)0x02))
+
 // MSDN Ref: http://msdn.microsoft.com/en-us/library/windows/hardware/ff560490(v=vs.85).aspx
 typedef
 enum _TAP_MINIPORT_ADAPTER_STATE
