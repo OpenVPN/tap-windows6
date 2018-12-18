@@ -158,55 +158,46 @@ tapAdapterContextAllocate(
 }
 
 VOID
-tapReadPermanentAddress(
+tapReadCurrentAddress(
     __in PTAP_ADAPTER_CONTEXT   Adapter,
     __in NDIS_HANDLE            ConfigurationHandle,
-    __out MACADDR               PermanentAddress
+    __out MACADDR               CurrentAddress
     )
 {
     NDIS_STATUS status;
-    NDIS_CONFIGURATION_PARAMETER *configParameter;
-    NDIS_STRING macKey = NDIS_STRING_CONST("MAC");
-    ANSI_STRING macString;
-    BOOLEAN macFromRegistry = FALSE;
+    PUCHAR configAddress;
+    UINT configAddressLength = 0;
 
-    // Read MAC parameter from registry.
-    NdisReadConfiguration(
+    // Read MAC parameter from registry. (NetworkAddress keyword)
+    // Using NdisReadNetworkAddress is necessary.
+    // It causes NDIS to set the flags indiciating the MAC address can be changed.
+    // NdisReadNetworkAddress converts to a byte array from a string.
+    NdisReadNetworkAddress(
         &status,
-        &configParameter,
-        ConfigurationHandle,
-        &macKey,
-        NdisParameterString
+        &configAddress,
+        &configAddressLength,
+        ConfigurationHandle
         );
 
-    if (status == NDIS_STATUS_SUCCESS)
+    if (status == NDIS_STATUS_SUCCESS && configAddressLength == 6)
     {
-        if( (configParameter->ParameterType == NdisParameterString)
-            && (configParameter->ParameterData.StringData.Length >= 12)
-            )
+        
+        if ((ETH_IS_MULTICAST(configAddress)
+                || ETH_IS_BROADCAST(configAddress))
+                || !NIC_ADDR_IS_LOCALLY_ADMINISTERED(configAddress))
         {
-            if (RtlUnicodeStringToAnsiString(
-                    &macString,
-                    &configParameter->ParameterData.StringData,
-                    TRUE) == STATUS_SUCCESS
-                    )
-            {
-                macFromRegistry = ParseMAC (PermanentAddress, macString.Buffer);
-                RtlFreeAnsiString (&macString);
-            }
+            // Address is invalid.
+            DEBUGP (("[TAP] --> NetworkAddress in the registry is invalid, using default address.\n"));
+        }
+        else
+        {
+            ETH_COPY_NETWORK_ADDRESS(CurrentAddress, configAddress);
+            return;
         }
     }
 
-    if(!macFromRegistry)
-    {
-        //
-        // There is no (valid) address stashed in the registry parameter.
-        //
-        // Make up a dummy mac address based on the ANSI representation of the
-        // NetCfgInstanceId GUID.
-        //
-        GenerateRandomMac(PermanentAddress, MINIPORT_INSTANCE_ID(Adapter));
-    }
+    // If we did not get a custom address, copy the existing permanent address
+    ETH_COPY_NETWORK_ADDRESS(CurrentAddress, Adapter->PermanentAddress);
 }
 
 NDIS_STATUS
@@ -401,12 +392,9 @@ tapReadConfiguration(
                 }
             }
 
-            // Read MAC PermanentAddress setting from registry.
-            tapReadPermanentAddress(
-                Adapter,
-                configHandle,
-                Adapter->PermanentAddress
-                );
+            // Adapter Permanent Address is expected to be a fixed value shipped with a NIC
+            // As a proxy, generate an address based on the device instance.
+            GenerateRandomMac(Adapter->PermanentAddress, (PUCHAR)MINIPORT_INSTANCE_ID(Adapter));
 
             DEBUGP (("[%s] Using MAC PermanentAddress %2.2x:%2.2x:%2.2x:%2.2x:%2.2x:%2.2x\n",
                 MINIPORT_INSTANCE_ID (Adapter),
@@ -418,8 +406,13 @@ tapReadConfiguration(
                 Adapter->PermanentAddress[5])
                 );
 
-            // Now seed the current MAC address with the permanent address.
-            ETH_COPY_NETWORK_ADDRESS(Adapter->CurrentAddress, Adapter->PermanentAddress);
+
+            // If a custom MAC address is configured, use it as the Current Address.
+            tapReadCurrentAddress(
+                Adapter,
+                configHandle,
+                Adapter->CurrentAddress
+                );
 
             DEBUGP (("[%s] Using MAC CurrentAddress %2.2x:%2.2x:%2.2x:%2.2x:%2.2x:%2.2x\n",
                 MINIPORT_INSTANCE_ID (Adapter),
