@@ -351,12 +351,6 @@ Return Value:
     inBufLength = irpSp->Parameters.DeviceIoControl.InputBufferLength;
     outBufLength = irpSp->Parameters.DeviceIoControl.OutputBufferLength;
 
-    if (!inBufLength || !outBufLength)
-    {
-        ntStatus = STATUS_INVALID_PARAMETER;
-        goto End;
-    }
-
     //
     // Determine which I/O control code was specified.
     //
