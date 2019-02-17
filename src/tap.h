@@ -78,6 +78,8 @@ typedef struct _TAP_GLOBAL
 
     BOOLEAN             RunningWindows8OrGreater;
 
+    BOOLEAN             EnableTapDiag;
+
 } TAP_GLOBAL, *PTAP_GLOBAL;
 
 

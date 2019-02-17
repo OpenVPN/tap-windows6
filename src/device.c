@@ -331,9 +331,6 @@ Return Value:
     PTAP_ADAPTER_CONTEXT    adapter = NULL;
     ULONG                   inBufLength; // Input buffer length
     ULONG                   outBufLength; // Output buffer length
-    PCHAR                   inBuf, outBuf; // pointer to Input and output buffer
-    PMDL                    mdl = NULL;
-    PCHAR                   buffer = NULL;
 
     PAGED_CODE();
 
@@ -713,8 +710,6 @@ Return Value:
         break;
     }
 
-End:
-
     //
     // Finish the I/O operation by simply completing the packet and returning
     // the same status as in the packet itself.
@@ -934,6 +929,269 @@ Return Value:
     return status;
 }
 
+
+// IRP_MJ_CREATE
+NTSTATUS
+TapDiagDeviceCreate(
+    PDEVICE_OBJECT DeviceObject,
+    PIRP Irp
+    )
+/*++
+
+Routine Description:
+
+    This routine is called by the I/O system when the device is opened.
+
+    No action is performed other than completing the request successfully.
+
+Arguments:
+
+    DeviceObject - a pointer to the object that represents the device
+    that I/O is to be done on.
+
+    Irp - a pointer to the I/O Request Packet for this request.
+
+Return Value:
+
+    NT status code
+
+--*/
+{
+    NTSTATUS                status = STATUS_SUCCESS; // Assume success
+    PIO_STACK_LOCATION      irpSp;// Pointer to current stack location
+    PTAP_ADAPTER_CONTEXT    adapter = NULL;
+
+    PAGED_CODE();
+
+    DEBUGP (("[TAP] --> TapDiagDeviceCreate\n"));
+
+    irpSp = IoGetCurrentIrpStackLocation(Irp);
+
+    //
+    // Invalidate file context
+    //
+    irpSp->FileObject->FsContext = NULL;
+    irpSp->FileObject->FsContext2 = NULL;
+
+    //
+    // Find adapter context for this device.
+    // -------------------------------------
+    // Returns with added reference on adapter context.
+    //
+    adapter = tapAdapterContextFromDeviceObject(DeviceObject);
+
+    // Insure that adapter exists.
+    ASSERT(adapter);
+
+    if(adapter == NULL )
+    {
+        DEBUGP (("[TAP] release [%d.%d] diag open request; adapter not found\n",
+            TAP_DRIVER_MAJOR_VERSION,
+            TAP_DRIVER_MINOR_VERSION
+            ));
+
+        Irp->IoStatus.Status = STATUS_DEVICE_DOES_NOT_EXIST;
+        Irp->IoStatus.Information = 0;
+
+        IoCompleteRequest( Irp, IO_NO_INCREMENT );
+
+        return STATUS_DEVICE_DOES_NOT_EXIST;
+    }
+
+    DEBUGP(("[%s] [TAP] release [%d.%d] diag open request (TapDiagFileIsOpen=%d)\n",
+        MINIPORT_INSTANCE_ID(adapter),
+        TAP_DRIVER_MAJOR_VERSION,
+        TAP_DRIVER_MINOR_VERSION,
+        adapter->TapDiagFileIsOpen
+        ));
+
+    irpSp->FileObject->FsContext = adapter; // Quick reference
+
+    // NOTE!!! Reference added by tapAdapterContextFromDeviceObject
+    // will be removed when file is closed.
+
+
+    // Complete the IRP.
+    Irp->IoStatus.Status = status;
+    Irp->IoStatus.Information = 0;
+
+    IoCompleteRequest( Irp, IO_NO_INCREMENT );
+
+    DEBUGP (("[TAP] <-- TapDiagDeviceCreate; status = %8.8X\n",status));
+
+    return status;
+}
+
+
+// IRP_MJ_DEVICE_CONTROL callback.
+NTSTATUS
+TapDiagDeviceControl(
+    PDEVICE_OBJECT DeviceObject,
+    PIRP Irp
+    )
+
+/*++
+
+Routine Description:
+
+    This routine is called by the I/O system to perform a device I/O
+    control function.
+
+Arguments:
+
+    DeviceObject - a pointer to the object that represents the device
+        that I/O is to be done on.
+
+    Irp - a pointer to the I/O Request Packet for this request.
+
+Return Value:
+
+    NT status code
+
+--*/
+
+{
+    NTSTATUS                ntStatus = STATUS_SUCCESS; // Assume success
+    PIO_STACK_LOCATION      irpSp; // Pointer to current stack location
+    PTAP_ADAPTER_CONTEXT    adapter = NULL;
+    ULONG                   inBufLength; // Input buffer length
+    ULONG                   outBufLength; // Output buffer length
+
+    PAGED_CODE();
+
+    irpSp = IoGetCurrentIrpStackLocation( Irp );
+
+    //
+    // Forward certain control codes directly to the non-diag handler for this device.
+    //
+    switch ( irpSp->Parameters.DeviceIoControl.IoControlCode )
+    {
+        case TAP_WIN_IOCTL_SET_MEDIA_STATUS:
+        case TAP_WIN_IOCTL_PRIORITY_BEHAVIOR:
+            return TapDeviceControl(DeviceObject, Irp);
+    }
+    //
+    // Fetch adapter context for this device.
+    // --------------------------------------
+    // Adapter pointer was stashed in FsContext when handle was opened.
+    //
+    adapter = (PTAP_ADAPTER_CONTEXT )(irpSp->FileObject)->FsContext;
+
+    ASSERT(adapter);
+
+    inBufLength = irpSp->Parameters.DeviceIoControl.InputBufferLength;
+    outBufLength = irpSp->Parameters.DeviceIoControl.OutputBufferLength;
+
+    //
+    // Determine which I/O control code was specified.
+    //
+    switch ( irpSp->Parameters.DeviceIoControl.IoControlCode )
+    {
+        //
+        // Future: Diag device can handle additional IOCTLs here.
+        //
+
+
+
+    default:
+
+        //
+        // The specified I/O control code is unrecognized by this driver.
+        //
+        ntStatus = STATUS_INVALID_DEVICE_REQUEST;
+        break;
+    }
+
+    //
+    // Finish the I/O operation by simply completing the packet and returning
+    // the same status as in the packet itself.
+    //
+    Irp->IoStatus.Status = ntStatus;
+
+    IoCompleteRequest( Irp, IO_NO_INCREMENT );
+
+    return ntStatus;    
+}
+
+
+// IRP_MJ_CLOSE
+NTSTATUS
+TapDiagDeviceClose(
+    PDEVICE_OBJECT DeviceObject,
+    PIRP Irp
+    )
+/*++
+
+Routine Description:
+
+    Receipt of this request indicates that the last handle of the file
+    object that is associated with the target device object has been closed
+    and released.
+    
+    All outstanding I/O requests have been completed or canceled.
+
+Arguments:
+
+    DeviceObject - a pointer to the object that represents the device
+    to be closed.
+
+    Irp - a pointer to the I/O Request Packet for this request.
+
+Return Value:
+
+    NT status code
+
+--*/
+
+{
+    NDIS_STATUS             status = NDIS_STATUS_SUCCESS;   // Always succeed.
+    PIO_STACK_LOCATION      irpSp;  // Pointer to current stack location
+    PTAP_ADAPTER_CONTEXT    adapter = NULL;
+
+    PAGED_CODE();
+
+    DEBUGP (("[TAP] --> TapDiagDeviceClose\n"));
+
+    irpSp = IoGetCurrentIrpStackLocation(Irp);
+
+    //
+    // Fetch adapter context for this device.
+    // --------------------------------------
+    // Adapter pointer was stashed in FsContext when handle was opened.
+    //
+    adapter = (PTAP_ADAPTER_CONTEXT )(irpSp->FileObject)->FsContext;
+
+    // Insure that adapter exists.
+    ASSERT(adapter);
+
+    if(adapter == NULL )
+    {
+        DEBUGP (("[TAP] release [%d.%d] diag close request; adapter not found\n",
+            TAP_DRIVER_MAJOR_VERSION,
+            TAP_DRIVER_MINOR_VERSION
+            ));
+    }
+
+    if(adapter != NULL )
+    {
+        irpSp->FileObject = NULL;
+
+        // Remove reference added by when handle was opened.
+        tapAdapterContextDereference(adapter);
+    }
+
+    // Complete the IRP.
+    Irp->IoStatus.Status = status;
+    Irp->IoStatus.Information = 0;
+
+    IoCompleteRequest( Irp, IO_NO_INCREMENT );
+
+    DEBUGP (("[TAP] <-- TapDiagDeviceClose; status = %8.8X\n",status));
+
+    return status;
+}
+
+
 NTSTATUS
 tapConcatenateNdisStrings(
     __inout     PNDIS_STRING    DestinationString,
@@ -999,6 +1257,45 @@ tapMakeDeviceNames(
 
         status = tapConcatenateNdisStrings(
                     &Adapter->LinkName,
+                    &linkNamePrefix,
+                    &Adapter->NetCfgInstanceId,
+                    &tapNameSuffix
+                    );
+    }
+
+    return status;
+}
+
+
+NTSTATUS
+tapMakeDiagDeviceNames(
+    __in PTAP_ADAPTER_CONTEXT   Adapter
+    )
+{
+    NDIS_STATUS     status;
+    NDIS_STRING     deviceNamePrefix = NDIS_STRING_CONST("\\Device\\");
+    NDIS_STRING     tapNameSuffix = NDIS_STRING_CONST(".tapdiag");
+
+    // Generate DeviceName from NetCfgInstanceId.
+    Adapter->DiagDeviceName.Buffer = Adapter->DiagDeviceNameBuffer;
+    Adapter->DiagDeviceName.MaximumLength = sizeof(Adapter->DiagDeviceNameBuffer);
+
+    status = tapConcatenateNdisStrings(
+                &Adapter->DiagDeviceName,
+                &deviceNamePrefix,
+                &Adapter->NetCfgInstanceId,
+                &tapNameSuffix
+                );
+
+    if(status == STATUS_SUCCESS)
+    {
+        NDIS_STRING     linkNamePrefix = NDIS_STRING_CONST("\\DosDevices\\Global\\");
+
+        Adapter->DiagLinkName.Buffer = Adapter->DiagLinkNameBuffer;
+        Adapter->DiagLinkName.MaximumLength = sizeof(Adapter->DiagLinkNameBuffer);
+
+        status = tapConcatenateNdisStrings(
+                    &Adapter->DiagLinkName,
                     &linkNamePrefix,
                     &Adapter->NetCfgInstanceId,
                     &tapNameSuffix
@@ -1085,7 +1382,7 @@ CreateTapDevice(
     {
         // Set TAP device flags.
         (Adapter->DeviceObject)->Flags &= ~DO_BUFFERED_IO;
-        (Adapter->DeviceObject)->Flags |= DO_DIRECT_IO;;
+        (Adapter->DeviceObject)->Flags |= DO_DIRECT_IO;
 
       //========================
       // Finalize initialization
@@ -1098,6 +1395,47 @@ CreateTapDevice(
             &Adapter->DeviceName
             ));
     }
+
+    if(NT_SUCCESS(status) && GlobalData.EnableTapDiag)
+    {
+        //
+        // If enabled, create a secondary device for diagnostic tasks
+        // This allows some tweaking of parameters while a client is running and holding the file object open exclusively.
+        // It's being added to allow reconfiguring of the link state for HLK testing.
+        //
+
+        status = tapMakeDiagDeviceNames(Adapter);
+        if(NT_SUCCESS(status))
+        {
+            // Initialize dispatch table.
+            NdisZeroMemory(dispatchTable, (IRP_MJ_MAXIMUM_FUNCTION+1) * sizeof(PDRIVER_DISPATCH));
+
+            dispatchTable[IRP_MJ_CREATE] = TapDiagDeviceCreate;
+            dispatchTable[IRP_MJ_CLOSE] = TapDiagDeviceClose;
+            dispatchTable[IRP_MJ_DEVICE_CONTROL] = TapDiagDeviceControl;
+
+            //
+            // Create a device object and register dispatch handlers
+            //
+            NdisZeroMemory(&deviceAttribute, sizeof(NDIS_DEVICE_OBJECT_ATTRIBUTES));
+
+            deviceAttribute.Header.Type = NDIS_OBJECT_TYPE_DEVICE_OBJECT_ATTRIBUTES;
+            deviceAttribute.Header.Revision = NDIS_DEVICE_OBJECT_ATTRIBUTES_REVISION_1;
+            deviceAttribute.Header.Size = sizeof(NDIS_DEVICE_OBJECT_ATTRIBUTES);
+
+            deviceAttribute.DeviceName = &Adapter->DiagDeviceName;
+            deviceAttribute.SymbolicName = &Adapter->DiagLinkName;
+            deviceAttribute.MajorFunctions = &dispatchTable[0];
+
+            status = NdisRegisterDeviceEx(
+                Adapter->MiniportAdapterHandle,
+                &deviceAttribute,
+                &Adapter->DiagDeviceObject,
+                &Adapter->DiagDeviceHandle
+                );
+        }
+    }
+
 
     DEBUGP (("[TAP] <-- CreateTapDevice; status = %8.8X\n",status));
 
@@ -1174,6 +1512,11 @@ DestroyTapDevice(
     }
 
     Adapter->DeviceHandle = NULL;
+
+    if(Adapter->DiagDeviceHandle)
+    {
+        NdisDeregisterDeviceEx(Adapter->DiagDeviceHandle);
+    }
 
     DEBUGP (("[TAP] <-- DestroyTapDevice\n"));
 }

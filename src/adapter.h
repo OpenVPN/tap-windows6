@@ -29,7 +29,8 @@
 #define TAP_RX_NBL_TAG              ((ULONG)'RpaT')     // "TapR
 #define TAP_RX_INJECT_BUFFER_TAG    ((ULONG)'IpaT')     // "TapI
 
-#define TAP_MAX_NDIS_NAME_LENGTH     64     // 38 character GUID string plus extra..
+#define TAP_MAX_NDIS_NAME_LENGTH        64     // 38 character GUID string plus extra..
+#define TAP_MAX_NDIS_DIAG_NAME_LENGTH   96     // Diag name is a little longer
 
 // TAP receive indication NBL flag definitions.
 #define TAP_RX_NBL_FLAGS                    NBL_FLAGS_MINIPORT_RESERVED
@@ -158,6 +159,15 @@ typedef struct _TAP_ADAPTER_CONTEXT
     PFILE_OBJECT                TapFileObject;      // Exclusive access
     BOOLEAN                     TapFileIsOpen;      // WAS: m_TapOpens
     LONG                        TapFileOpenCount;   // WAS: m_NumTapOpens
+
+    NDIS_STRING                 DiagDeviceName;
+    WCHAR                       DiagDeviceNameBuffer[TAP_MAX_NDIS_DIAG_NAME_LENGTH];
+
+    NDIS_STRING                 DiagLinkName;
+    WCHAR                       DiagLinkNameBuffer[TAP_MAX_NDIS_DIAG_NAME_LENGTH];
+
+    NDIS_HANDLE                 DiagDeviceHandle;
+    PDEVICE_OBJECT              DiagDeviceObject;
 
     // Cancel-Safe read IRP queue.
     TAP_IRP_CSQ                 PendingReadIrpQueue;
