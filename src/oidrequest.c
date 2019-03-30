@@ -648,17 +648,23 @@ Return Value:
         break;
 
     case OID_GEN_INTERRUPT_MODERATION:
-        {
-            PNDIS_INTERRUPT_MODERATION_PARAMETERS moderationParams
-                = (PNDIS_INTERRUPT_MODERATION_PARAMETERS)OidRequest->DATA.QUERY_INFORMATION.InformationBuffer;
+		{
+			if (OidRequest->DATA.QUERY_INFORMATION.InformationBufferLength >= sizeof(NDIS_INTERRUPT_MODERATION_PARAMETERS)) {
+				PNDIS_INTERRUPT_MODERATION_PARAMETERS moderationParams
+					= (PNDIS_INTERRUPT_MODERATION_PARAMETERS)OidRequest->DATA.QUERY_INFORMATION.InformationBuffer;
 
-            moderationParams->Header.Type = NDIS_OBJECT_TYPE_DEFAULT; 
-            moderationParams->Header.Revision = NDIS_INTERRUPT_MODERATION_PARAMETERS_REVISION_1;
-            moderationParams->Header.Size = NDIS_SIZEOF_INTERRUPT_MODERATION_PARAMETERS_REVISION_1;
-            moderationParams->Flags = 0;
-            moderationParams->InterruptModeration = NdisInterruptModerationNotSupported;
-            ulInfoLen = NDIS_SIZEOF_INTERRUPT_MODERATION_PARAMETERS_REVISION_1;
-        }
+				moderationParams->Header.Type = NDIS_OBJECT_TYPE_DEFAULT;
+				moderationParams->Header.Revision = NDIS_INTERRUPT_MODERATION_PARAMETERS_REVISION_1;
+				moderationParams->Header.Size = NDIS_SIZEOF_INTERRUPT_MODERATION_PARAMETERS_REVISION_1;
+				moderationParams->Flags = 0;
+				moderationParams->InterruptModeration = NdisInterruptModerationNotSupported;
+				ulInfoLen = NDIS_SIZEOF_INTERRUPT_MODERATION_PARAMETERS_REVISION_1;
+			}
+			else
+			{
+				OidRequest->DATA.QUERY_INFORMATION.BytesNeeded = sizeof(NDIS_INTERRUPT_MODERATION_PARAMETERS);
+			}
+		}
         break;
 
     case OID_PNP_QUERY_POWER:
