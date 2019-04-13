@@ -2,7 +2,7 @@ dnl define the TAP version
 define([PRODUCT_NAME], [TAP-Windows])
 define([PRODUCT_PUBLISHER], [OpenVPN Technologies, Inc.])
 define([PRODUCT_VERSION], [9.22.1])
-define([PRODUCT_VERSION_RESOURCE], [9,0,0,22])
+define([PRODUCT_VERSION_RESOURCE], [9,22,1,601])
 define([PRODUCT_TAP_WIN_COMPONENT_ID], [tap0901])
 define([PRODUCT_TAP_WIN_MAJOR], [9])
 define([PRODUCT_TAP_WIN_MINOR], [22])

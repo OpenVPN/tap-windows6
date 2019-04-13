@@ -648,10 +648,18 @@ Return Value:
         break;
 
     case OID_GEN_INTERRUPT_MODERATION:
+        if (OidRequest->DATA.QUERY_INFORMATION.InformationBufferLength < sizeof(NDIS_INTERRUPT_MODERATION_PARAMETERS))
+        {
+            status = NDIS_STATUS_INVALID_LENGTH;
+            OidRequest->DATA.QUERY_INFORMATION.BytesNeeded = sizeof(NDIS_INTERRUPT_MODERATION_PARAMETERS);
+            break;
+        }
+        else
         {
             PNDIS_INTERRUPT_MODERATION_PARAMETERS moderationParams
                 = (PNDIS_INTERRUPT_MODERATION_PARAMETERS)OidRequest->DATA.QUERY_INFORMATION.InformationBuffer;
 
+            {C_ASSERT(sizeof(NDIS_INTERRUPT_MODERATION_PARAMETERS) >= NDIS_SIZEOF_INTERRUPT_MODERATION_PARAMETERS_REVISION_1);}
             moderationParams->Header.Type = NDIS_OBJECT_TYPE_DEFAULT; 
             moderationParams->Header.Revision = NDIS_INTERRUPT_MODERATION_PARAMETERS_REVISION_1;
             moderationParams->Header.Size = NDIS_SIZEOF_INTERRUPT_MODERATION_PARAMETERS_REVISION_1;

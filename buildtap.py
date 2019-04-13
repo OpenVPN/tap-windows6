@@ -21,9 +21,10 @@ class BuildTAPWindows(object):
             if opt.package:
                 raise ValueError("parameter -p must be used with --ti")
 
-        # path to EWDK
-        self.ewdk_path = paths.EWDK
-        self.ewdk_cmd = os.path.join(self.ewdk_path, "BuildEnv", "SetupBuildEnv.cmd")
+        if opt.sdk == "ewdk":
+            # path to EWDK
+            self.ewdk_path = paths.EWDK
+            self.ewdk_cmd = os.path.join(self.ewdk_path, "BuildEnv", "SetupBuildEnv.cmd")
 
         # path to makensis
         self.makensis = os.path.join(paths.NSIS, 'makensis.exe')
@@ -72,7 +73,9 @@ class BuildTAPWindows(object):
     # run a command
     def system(self, cmd):
         print "RUN:", cmd
-        os.system(cmd)
+        result = os.system(cmd)
+        if result != 0:
+            raise ValueError("command failed")
 
     # make a directory
     def mkdir(self, dir):
@@ -131,9 +134,15 @@ class BuildTAPWindows(object):
         self.makedirs(dir)
         return dir
 
-    # run an EWDK command
+    # run an (E)WDK command
     def run_ewdk(self, cmd):
-        self.system('cmd /c ""%s" && %s"' % (self.ewdk_cmd, cmd))
+        if opt.sdk == "ewdk":
+            # In EWDK case, run the command after setting the building environment.
+            self.system('cmd /c ""%s" && %s"' % (self.ewdk_cmd, cmd))
+        else:
+            # In WDK case, run the command directly, as the building environment should be set
+            # within Visual Studio Command Prompt already.
+            self.system(cmd)
 
     # parse version.m4 file
     def parse_version_m4(self):
@@ -182,9 +191,9 @@ class BuildTAPWindows(object):
         self.preprocess(kv, os.path.join(self.src, "tap-windows6.vcxproj"))
         self.preprocess(kv, os.path.join(self.src, "config.h"))
 
-    # build a "msbuild" file using EWDK
+    # build a "msbuild" file using (E)WDK
     def build_ewdk(self, project_file, arch):
-        self.run_ewdk('msbuild %s /p:Configuration=%s /p:Platform=%s' % (
+        self.run_ewdk('msbuild.exe %s /p:Configuration=%s /p:Platform=%s' % (
                project_file,
                self.configuration,
                self.architecture_platform_map[arch]
@@ -302,10 +311,11 @@ class BuildTAPWindows(object):
             installer_type = "-oas"
         installer_file=os.path.join(self.top, 'tap-windows'+installer_type+'-'+kv['PRODUCT_VERSION']+'-I'+kv['PRODUCT_TAP_WIN_BUILD']+'.exe')
 
-        installer_cmd = "\"\"%s\" -DDEVCON32=%s -DDEVCON64=%s -DDEVCON_BASENAME=%s -DPRODUCT_TAP_WIN_COMPONENT_ID=%s -DPRODUCT_NAME=%s -DPRODUCT_PUBLISHER=\"%s\" -DPRODUCT_VERSION=%s -DPRODUCT_TAP_WIN_BUILD=%s -DOUTPUT=%s -DIMAGE=%s %s\"" % \
+        installer_cmd = "\"\"%s\" -DDEVCON32=%s -DDEVCON64=%s -DDEVCONARM64=%s -DDEVCON_BASENAME=%s -DPRODUCT_TAP_WIN_COMPONENT_ID=%s -DPRODUCT_NAME=%s -DPRODUCT_PUBLISHER=\"%s\" -DPRODUCT_VERSION=%s -DPRODUCT_TAP_WIN_BUILD=%s -DOUTPUT=%s -DIMAGE=%s %s\"" % \
                         (self.makensis,
                          self.tifile_dst(arch="i386"),
                          self.tifile_dst(arch="amd64"),
+                         self.tifile_dst(arch="arm64"),
                          'tapinstall.exe',
                          kv['PRODUCT_TAP_WIN_COMPONENT_ID'],
                          kv['PRODUCT_NAME'],
@@ -442,6 +452,7 @@ if __name__ == '__main__':
 
     # defaults
     src = os.path.dirname(os.path.realpath(__file__))
+    sdk = "ewdk"
     cert = "openvpn"
     crosscert = "MSCV-VSClass3.cer" # cross certs available here: http://msdn.microsoft.com/en-us/library/windows/hardware/dn170454(v=vs.85).aspx
     timestamp = "http://timestamp.verisign.com/scripts/timstamp.dll"
@@ -458,6 +469,9 @@ if __name__ == '__main__':
                   help="do an nmake clean before build")
     op.add_option("-b", "--build", action="store_true", dest="build",
                   help="build TAP-Windows and possibly tapinstall (add -c to clean before build)")
+    op.add_option("--sdk", dest="sdk", metavar="SDK",
+                  default=sdk,
+                  help="SDK to use for building: ewdk or wdk, default=%s" % (sdk,))
     op.add_option("--sign", action="store_true", dest="codesign",
                   default=False, help="sign the driver files")
     op.add_option("-p", "--package", action="store_true", dest="package",

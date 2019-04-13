@@ -11,9 +11,8 @@ To build, the following prerequisites are required:
 
 - Python 2.7
 - Microsoft Windows 10 EWDK (Enterprise Windows Driver Kit)
-    - WDK works too, but
-        - the tool paths are all different
-        - the environment script is the one for the Developer Command Prompt for VS 2017
+    - Visual Studio+Windows Driver Kit works too. Make sure to work from a
+      "Command Prompt for Visual Studio" and to call buildtap.py with "--sdk=wdk".
 - Source code directory of **devcon** sample from WDK (optional)
     - https://github.com/Microsoft/Windows-driver-samples/ setup/devcon
 - Windows code signing certificate
@@ -30,23 +29,28 @@ View build script options::
 
   $ python buildtap.py
   Usage: buildtap.py [options]
-
+  
   Options:
-    -h, --help         show this help message and exit
-    -s SRC, --src=SRC  TAP-Windows top-level directory, default=<CWD>
-    --ti=TAPINSTALL    tapinstall (i.e. devcon) directory (optional)
-    -d, --debug        enable debug build
-    -c, --clean        do an nmake clean before build
-    -b, --build        build TAP-Windows and possibly tapinstall (add -c to
-                       clean before build)
-    --sign         sign the driver files (disabled by default)
-    -p, --package      generate an NSIS installer from the compiled files
-    --cert=CERT        Common name of code signing certificate, default=openvpn
-    --crosscert=CERT   The cross-certificate file to use, default=MSCV-
-                       VSClass3.cer
-    --timestamp=URL    Timestamp URL to use, default=http://timestamp.verisign.c
-                       om/scripts/timstamp.dll
-    -a, --oas          Build for OpenVPN Access Server clients
+    -h, --help           show this help message and exit
+    -s SRC, --src=SRC    TAP-Windows top-level directory, default=<CWD>
+    --ti=TAPINSTALL      tapinstall (i.e. devcon) directory (optional)
+    -d, --debug          enable debug build
+    -c, --clean          do an nmake clean before build
+    -b, --build          build TAP-Windows and possibly tapinstall (add -c to
+                         clean before build)
+    --sdk=SDK            SDK to use for building: ewdk or wdk, default=ewdk
+    --sign               sign the driver files
+    -p, --package        generate an NSIS installer from the compiled files
+    --cert=CERT          Common name of code signing certificate,
+                         default=openvpn
+    --certfile=CERTFILE  Path to the code signing certificate
+    --certpw=CERTPW      Password for the code signing certificate/key
+                         (optional)
+    --crosscert=CERT     The cross-certificate file to use, default=MSCV-
+                         VSClass3.cer
+    --timestamp=URL      Timestamp URL to use, default=http://timestamp.verisign
+                         .com/scripts/timstamp.dll
+    -a, --oas            Build for OpenVPN Access Server clients
 
 Edit **version.m4** and **paths.py** as necessary then build::
 
