@@ -1,8 +1,10 @@
 TAP-Windows driver (NDIS 6)
 ===========================
 
-This is an NDIS 6.20 implementation of the TAP-Windows driver, used by
-OpenVPN and other apps. NDIS 6.20 drivers can run on Windows 7 or higher.
+This is an NDIS 6.20/6.30 implementation of the TAP-Windows driver, used by
+OpenVPN and other apps. NDIS 6.20 drivers can run on Windows 7 or higher except
+on ARM64 desktop systems where, since the platform relies on next-gen power
+management in its drivers, NDIS 6.30 is required.
 
 Build
 -----
@@ -72,10 +74,17 @@ by using the --sign parameter.
 Building tapinstall (optional)
 ------------------------------
 
-The build system supports building tapinstall.exe (a.k.a. devcon.exe), but the
-default behavior is to reuse pre-built executables. To make sure the buildsystem
-finds the executables create the following directory structure under
-tap-windows6 directory:
+The easiest way to build tapinstall is to clone the Microsoft driver samples
+and copy the source for devcon.exe into the tap-windows6 tree. Using PowerShell:
+
+    git clone https://github.com/Microsoft/Windows-driver-samples
+    Copy-Item -Recurse Windows-driver-samples/setup/devcon tap-windows6
+    cd tap-windows6
+    python.exe buildtap.py -b --ti=devcon
+
+The build system also supports reuse of pre-built executables. To make sure the
+buildsystem finds the executables, create the following directory structure
+under tap-windows6 directory:
 ::
   tapinstall
   ├── Release
