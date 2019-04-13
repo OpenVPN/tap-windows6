@@ -121,6 +121,10 @@
     <Link>
       <AdditionalDependencies>%(AdditionalDependencies);$(KernelBufferOverflowLib);$(DDK_LIB_PATH)ntoskrnl.lib;$(DDK_LIB_PATH)hal.lib;$(DDK_LIB_PATH)wmilib.lib;ndis.lib;ntstrsafe.lib;wdmsec.lib</AdditionalDependencies>
     </Link>
+    <Inf>
+      <TimeStamp>@PRODUCT_TAP_WIN_MAJOR@.@PRODUCT_TAP_WIN_MINOR@.@PRODUCT_TAP_WIN_REVISION@.@PRODUCT_TAP_WIN_BUILD@</TimeStamp>
+      <DateStamp>@PRODUCT_TAP_WIN_RELDATE@</DateStamp>
+    </Inf>
   </ItemDefinitionGroup>
   <ItemGroup>
     <Inf Include="OemVista.inf" />
