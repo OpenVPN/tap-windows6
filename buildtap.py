@@ -35,9 +35,9 @@ class BuildTAPWindows(object):
         # The installation script has a set of architecture-specific paths.
         # The driver kit build system has a set of architecture-specific parameters.
         # architecture -> build system parameter map
-        self.architecture_platform_map = {"i386": "Win32", "amd64": "x64"}
+        self.architecture_platform_map = {"i386": "Win32", "amd64": "x64", "arm64": "arm64"}
         # architecture -> build system folder name fragment map
-        self.architecture_platform_folder_map = {"i386": "", "amd64": "x64"}
+        self.architecture_platform_folder_map = {"i386": "", "amd64": "x64", "arm64": "arm64"}
         # supported arch names, also installation script folder names
         self.architectures_supported = self.architecture_platform_map.keys()
         # Release vs Debug
@@ -355,7 +355,7 @@ class BuildTAPWindows(object):
                 else:
                     path = os.path.join(dirpath, d)
                     deldir = False
-                    if d in ('x64', 'Debug', 'Release', 'dist'):
+                    if d in ('arm64', 'x64', 'Debug', 'Release', 'dist'):
                         deldir = True
                     if deldir:
                         self.rmtree(path)
@@ -402,6 +402,8 @@ class BuildTAPWindows(object):
             oslist = "Vista_X64,Server2008_X64,Server2008R2_X64,7_X64"
         elif arch == "i386":
             oslist = "Vista_X86,Server2008_X86,7_X86"
+        elif arch == "arm64":
+            oslist = "10_ARM64"
         else:
             print("ERROR: inf2cat OS list not known for architecture %s!!" % (arch))
         self.run_ewdk("%s /driver:%s /os:%s" % (self.inf2cat_cmd, self.mkdir_dist(arch), oslist))
