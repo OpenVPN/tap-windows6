@@ -9,7 +9,7 @@ management in its drivers, NDIS 6.30 is required.
 Build
 -----
 
-To build, the following prerequisites are required:
+The prerequisites for building are:
 
 - Python 2.7
 - Microsoft Windows 10 EWDK (Enterprise Windows Driver Kit)
@@ -17,7 +17,6 @@ To build, the following prerequisites are required:
       "Command Prompt for Visual Studio" and to call buildtap.py with "--sdk=wdk".
 - Source code directory of **devcon** sample from WDK (optional)
     - https://github.com/Microsoft/Windows-driver-samples/ setup/devcon
-    - Until [PR #238](https://github.com/Microsoft/Windows-driver-samples/pull/238) is resolved, you will have to add your own ARM64 configurations
 - Windows code signing certificate
 - Git (not strictly required, but useful for running commands using bundled bash shell)
 - MakeNSIS (optional)
@@ -26,7 +25,8 @@ To build, the following prerequisites are required:
 Make sure you add Python's install directory (usually c:\\python27) to the PATH 
 environment variable.
 
-These instructions have been tested on Windows 10 using Windows' CMD.exe.
+Tap-windows6 has been successfully build on Windows 10 and Windows Server 2016 using
+CMD.exe, Powershell and Git Bash.
 
 View build script options::
 
@@ -63,15 +63,6 @@ On successful completion, all build products will be placed in the "dist"
 directory as well as tap6.tar.gz. The NSIS installer package will be placed to
 the build root directory.
 
-Note that due to the strict driver signing requirements in Windows 10 you need
-an EV certificate to sign the driver files. These EV certificates may be
-stored inside a hardware device, which makes fully automated signing process
-difficult, dangerous or impossible. Eventually the signing process will become
-even more involved, with drivers having to be submitted to the Windows
-Hardware Developer Center Dashboard portal. Therefore, by default, this
-buildsystem no longer signs any files. You can revert to the old behavior
-by using the --sign parameter.
-
 Building tapinstall (optional)
 ------------------------------
 
@@ -83,11 +74,11 @@ and copy the source for devcon.exe into the tap-windows6 tree. Using PowerShell:
     cd tap-windows6
     python.exe buildtap.py -b --ti=devcon
 
-The build system also supports reuse of pre-built executables. To make sure the
-buildsystem finds the executables, create the following directory structure
-under tap-windows6 directory:
+The build system also supports reuse of pre-built tapinstall.exe executables.
+To make sure the buildsystem finds the executables, create the following
+directory structure under tap-windows6 directory:
 ::
-  tapinstall
+  devcon
   ├── Release
   │   └── devcon.exe
   ├── x64
@@ -97,8 +88,8 @@ under tap-windows6 directory:
       └── Release
           └── devcon.exe
 
-This structure is equal to what building tapinstall would create. Call
-buildtap.py with "--ti=tapinstall".
+This structure is equal to what building tapinstall would create. Then call
+buildtap.py with "--ti=devcon".
 
 Please note that the NSIS packaging (-p) step will fail if you don't have
 tapinstall.exe available. Also don't use the "-c" flag or the above directories
@@ -140,16 +131,12 @@ also needs to be restarted to make use of new proxy settings.
 Notes on Authenticode signatures
 --------------------------------
 
-Recent Windows versions such as Windows 10 are fairly picky about the
-Authenticode signatures of kernel-mode drivers. In addition making older Windows
-versions such as Vista play along with signatures that Windows 10 accepts can be
-rather challenging. A good starting point on this topic is the
-`building tap-windows6 <https://community.openvpn.net/openvpn/wiki/BuildingTapWindows6>`_
-page on the OpenVPN community wiki. As that page points out, having two
-completely separate Authenticode signatures may be the only reasonable option.
-Fortunately there is a tool, `Sign-Tap6 <https://github.com/mattock/sign-tap6/>`_,
-which can be used to append secondary signatures to the tap-windows6 driver or
-to handle the entire signing process if necessary.
+Microsoft's driver signing requirements have tightened considerably over the
+last several years. Because of this this buildsystem no longer attempts to sign
+files by default. If you want to sign the files at build time use the --sign
+option.
+
+For details on Windows driver signing requirements refer to the `this article <https://community.openvpn.net/openvpn/wiki/BuildingTapWindows6>` on OpenVPN community wiki.
 
 License
 -------
