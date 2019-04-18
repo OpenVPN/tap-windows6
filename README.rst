@@ -13,10 +13,8 @@ The prerequisites for building are:
 
 - Python 2.7
 - Microsoft Windows 10 EWDK (Enterprise Windows Driver Kit)
-    - Visual Studio+Windows Driver Kit works too. Make sure to work from a
-      "Command Prompt for Visual Studio" and to call buildtap.py with "--sdk=wdk".
-- Source code directory of **devcon** sample from WDK (optional)
-    - https://github.com/Microsoft/Windows-driver-samples/ setup/devcon
+    - Visual Studio+Windows Driver Kit works too. Make sure to work from a "Command Prompt for Visual Studio" and to call buildtap.py with "--sdk=wdk".
+- The devcon source code directory (setup/devcon) from `Windows-driver-samples <https://github.com/Microsoft/Windows-driver-samples>`_ (optional)
 - Windows code signing certificate
 - Git (not strictly required, but useful for running commands using bundled bash shell)
 - MakeNSIS (optional)
@@ -68,7 +66,7 @@ Building tapinstall (optional)
 
 The easiest way to build tapinstall is to clone the Microsoft driver samples
 and copy the source for devcon.exe into the tap-windows6 tree. Using PowerShell:
-
+::
     git clone https://github.com/Microsoft/Windows-driver-samples
     Copy-Item -Recurse Windows-driver-samples/setup/devcon tap-windows6
     cd tap-windows6
@@ -120,6 +118,63 @@ Remove::
 
   $ tapinstall remove TAP0901
 
+Release signing
+---------------
+
+Microsoft's driver signing requirements have tightened considerably over the
+last several years. Because of this this buildsystem no longer attempts to sign
+files by default. If you want to sign the files at build time use the --sign
+option. The "sign" directory contains several Powershell scripts that help
+produce release-signed tap-windows6 packages:
+
+- *Cross-Sign*: cross-sign tap-windows6 driver files and tapinstall.exe
+- *Create-DriverSubmission*: create architecture-specific attestation signing submission cabinet files
+- *Extract-DriverSubmission*: extract attestation-signed zip files
+- *Sign-File*: sign files (e.g. tap-windows6 installer or driver submission cabinet files)
+- *Sign-tap6.conf.ps1*: configuration file for all the scripts above
+
+With the exception of Sign-File these scripts operate on the "dist" directory
+that tap-windows6 build system produces. Below it is assumed that building and
+signing is done on the same computer. It is also assumed that Cross-Sign.ps1 is
+run as Administrator; according to Microsoft documentation Inf2Cat, which
+Cross-Sign.ps1 uses to create (unsigned) catalog files, needs to run with
+administrator privileges.
+
+First produce cross-signed drivers and installers (Windows 7/8/8.1/Server 2012r2):
+::
+    $ python.exe buildtap.py -c -b --ti=devcon
+    $ sign\Cross-Sign.ps1 -SourceDir dist -Force
+    $ python.exe buildtap.py -p --ti=devcon
+    $ Get-Item tap-windows*.exe|sign\Sign-File.ps1
+
+Note that the "-Force" option for Cross-Sign.ps1 is *required* except in the
+unlikely case you're appending a signature.
+
+Next produce a driver submission cabinet files for attestation signing:
+::
+    $ sign\Create-DriverSubmission.ps1
+    $ Get-ChildItem -Path disk1|sign\Sign-File.ps1
+
+Three architecture-specific (i386, amd64, arm64) cabinet files are created.
+Submit these to Windows Dev Center for attestation signing. Take care to only
+request signatures applicable for each architecture.
+
+After downloading the attestation-signed drivers as zip files put them into
+a temporary directory under the tap-windows6 directory. Then extract the drivers
+into the "dist" directory, produce an installer and sign it:
+::
+   $ cd tap-windows6
+   $ Get-ChildItem -Path tempdir -Filter "*.zip"|sign\Extract-DriverSubmission.ps1
+   $ python.exe buildtap.py -p --ti=devcon
+   $ Get-Item tap-windows*.exe|sign\Sign-File.ps1
+
+Note that these steps will fail unless cross-signed tapinstall.exe is present
+in each architecture-specific directory (i386, amd64, arm64) under the "dist"
+directory.
+
+For more detailed instructions and background information please refer to
+`this article <https://community.openvpn.net/openvpn/wiki/BuildingTapWindows6>`_ on OpenVPN community wiki.
+
 Notes on proxies
 ----------------
 
@@ -127,16 +182,6 @@ It is possible to build tap-windows6 without connectivity to the Internet but
 any attempt to timestamp the driver will fail. For this reason configure your 
 outbound proxy server before starting the build. Note that the command prompt 
 also needs to be restarted to make use of new proxy settings.
-
-Notes on Authenticode signatures
---------------------------------
-
-Microsoft's driver signing requirements have tightened considerably over the
-last several years. Because of this this buildsystem no longer attempts to sign
-files by default. If you want to sign the files at build time use the --sign
-option.
-
-For details on Windows driver signing requirements refer to the `this article <https://community.openvpn.net/openvpn/wiki/BuildingTapWindows6>` on OpenVPN community wiki.
 
 License
 -------
