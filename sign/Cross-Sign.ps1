@@ -98,14 +98,16 @@ if (Test-Path $cat_x64) {
 # Sign the catalogs
 foreach ($file in $cat_x86,$cat_x64,$cat_arm64,$devcon_x86,$devcon_x64,$devcon_arm64) {
     $not_signed = ((Get-AuthenticodeSignature $file).Status -eq "NotSigned")
-    # signtool.exe counterintuitively rejects the /tp 0, claiming that the index is invalid;
-    # hence we only define /tp if we're adding a second signature.
-    if ($not_signed) { $tp="" }
-    else { $tp="/tp 1" }
-
+ 
     if ( ($not_signed) -or ($Append) ) {
         & $signtool sign /v /s My /n $subject /ac $crosscert /as /fd $digest $file
-        & $signtool timestamp /tr $timestamp /td $digest $tp $file
+        # signtool.exe counterintuitively rejects the /tp 0, claiming that the index is invalid;
+        # hence we only define /tp if we're adding a second signature.
+        if ($Append) { 
+            & $signtool timestamp /tr $timestamp /td $digest /tp 1 $file
+        } else {
+		    & $signtool timestamp /tr $timestamp /td $digest $file
+        }
     } else {
         Write-Host "${file} is signed already, not signing it"
     }
