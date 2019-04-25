@@ -14,7 +14,8 @@ The prerequisites for building are:
 - Python 2.7
 - Microsoft Windows 10 EWDK (Enterprise Windows Driver Kit)
     - Visual Studio+Windows Driver Kit works too. Make sure to work from a "Command Prompt for Visual Studio" and to call buildtap.py with "--sdk=wdk".
-- The devcon source code directory (setup/devcon) from `Windows-driver-samples <https://github.com/Microsoft/Windows-driver-samples>`_ (optional)
+- The devcon source code directory (setup/devcon) from `Windows-driver-samples <https://github.com/OpenVPN/Windows-driver-samples>`_ (optional)
+    - If you use the repo from `upstream <https://github.com/Microsoft/Windows-driver-samples>`_ remember to include our patch to devcon.vcxproj to ensure that devcon.exe is statically linked.
 - Windows code signing certificate
 - Git (not strictly required, but useful for running commands using bundled bash shell)
 - MakeNSIS (optional)
