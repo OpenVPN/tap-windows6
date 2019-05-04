@@ -55,6 +55,10 @@ class BuildTAPWindows(object):
 
         self.timestamp_server = opt.timestamp
 
+        # Allow overriding settings in version.m4. Useful when several
+        # differently named tap-windows6 drivers have to be built.
+        self.versionoverride = opt.versionoverride
+
     # split a path into a list of components
     @staticmethod
     def path_split(path):
@@ -142,11 +146,11 @@ class BuildTAPWindows(object):
             # within Visual Studio Command Prompt already.
             self.system(cmd)
 
-    # parse version.m4 file
-    def parse_version_m4(self):
+    # parse version.m4 files
+    def parse_version_m4(self, versionfile="version.m4"):
         kv = {}
         r = re.compile(r'^define\(\[?(\w+)\]?,\s*\[(.*)\]\)')
-        with open(os.path.join(self.top, 'version.m4')) as f:
+        with open(os.path.join(self.top, versionfile)) as f:
             for line in f:
                 line = line.rstrip()
                 m = re.match(r, line)
@@ -157,13 +161,9 @@ class BuildTAPWindows(object):
 
     # our tap-windows version.m4 settings
     def gen_version_m4(self):
-        kv = self.parse_version_m4()
-        if self.opt.oas: # for OpenVPN Connect (i.e. OpenVPN Access Server)
-            kv['PRODUCT_NAME'] = "OpenVPNAS"
-            kv['PRODUCT_TAP_WIN_DEVICE_DESCRIPTION'] = "TAP Adapter OAS NDIS 6.0"
-            kv['PRODUCT_TAP_WIN_PROVIDER'] = "TAP-Win32 Provider OAS"
-            kv['PRODUCT_TAP_WIN_COMPONENT_ID'] = "tapoas"
-
+        kv = dict(self.parse_version_m4())
+        if self.versionoverride:
+            kv.update(self.parse_version_m4(self.versionoverride))
         return kv
 
     # return tapinstall source directory
@@ -278,7 +278,7 @@ class BuildTAPWindows(object):
         print("***** Generated files")
         self.dump_dist()
 
-        tapbase = "tapoas6" if self.opt.oas else "tap6"
+        tapbase = "tap6"
         self.make_tarball(os.path.join(self.top, tapbase+".tar.gz"),
                           self.dist_path(),
                           tapbase)
@@ -452,11 +452,11 @@ if __name__ == '__main__':
     src = os.path.dirname(os.path.realpath(__file__))
     sdk = "ewdk"
     cert = "openvpn"
+    versionoverride = False
     crosscert = "MSCV-VSClass3.cer" # cross certs available here: http://msdn.microsoft.com/en-us/library/windows/hardware/dn170454(v=vs.85).aspx
     timestamp = "http://timestamp.verisign.com/scripts/timstamp.dll"
 
     op.add_option("-s", "--src", dest="src", metavar="SRC",
-
                   default=src,
                   help="TAP-Windows top-level directory, default=%s" % (src,))
     op.add_option("--ti", dest="tapinstall", metavar="TAPINSTALL",
@@ -487,8 +487,9 @@ if __name__ == '__main__':
     op.add_option("--timestamp", dest="timestamp", metavar="URL",
                   default=timestamp,
                   help="Timestamp URL to use, default=%s" % (timestamp,))
-    op.add_option("-a", "--oas", action="store_true", dest="oas",
-                  help="Build for OpenVPN Access Server clients")
+    op.add_option("--versionoverride", dest="versionoverride", metavar="FILE",
+                  default=versionoverride,
+                  help="Path to the version override file")
     (opt, args) = op.parse_args()
 
     if len(sys.argv) <= 1:
