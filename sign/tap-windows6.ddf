@@ -11,6 +11,6 @@
 .Set Cabinet=on
 .Set Compress=on
 ;Specify file name for new cab file
-.Set CabinetNameTemplate=tap-windows6-%ARCH%.cab
+.Set CabinetNameTemplate=%CABINETBASENAME%-%ARCH%.cab
 ;Specify files to be included in cab file
 .Set DestinationDir=%ARCH%

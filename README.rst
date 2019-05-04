@@ -52,7 +52,8 @@ View build script options::
                          VSClass3.cer
     --timestamp=URL      Timestamp URL to use, default=http://timestamp.verisign
                          .com/scripts/timstamp.dll
-    -a, --oas            Build for OpenVPN Access Server clients
+    --versionoverride=FILE
+                         Path to the version override file
 
 Edit **version.m4** and **paths.py** as necessary then build::
 
@@ -175,6 +176,16 @@ directory.
 
 For more detailed instructions and background information please refer to
 `this article <https://community.openvpn.net/openvpn/wiki/BuildingTapWindows6>`_ on OpenVPN community wiki.
+
+Overriding setting defined in version.m4
+----------------------------------------
+
+It is possible to override one or more of the settings in version.m4 file with
+the --versionoverride <file> option. Any settings given in the override file
+have precedence over those in version.m4.
+
+This is useful when building several tap-windows6 drivers with different
+component ids for example.
 
 Notes on proxies
 ----------------
