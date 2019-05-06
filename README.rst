@@ -37,6 +37,7 @@ View build script options::
     -s SRC, --src=SRC    TAP-Windows top-level directory, default=<CWD>
     --ti=TAPINSTALL      tapinstall (i.e. devcon) directory (optional)
     -d, --debug          enable debug build
+    --hlk                build for HLK tests (test sign, no debug)
     -c, --clean          do an nmake clean before build
     -b, --build          build TAP-Windows and possibly tapinstall (add -c to
                          clean before build)
@@ -89,7 +90,8 @@ directory structure under tap-windows6 directory:
           └── devcon.exe
 
 This structure is equal to what building tapinstall would create. Then call
-buildtap.py with "--ti=devcon".
+buildtap.py with "--ti=devcon". Replace "Release" with your build configuration;
+for example, when using --Hlk you'd use "Hlk".
 
 Please note that the NSIS packaging (-p) step will fail if you don't have
 tapinstall.exe available. Also don't use the "-c" flag or the above directories
@@ -119,6 +121,19 @@ Update::
 Remove::
 
   $ tapinstall remove TAP0901
+
+Build for HLK tests
+-------------------
+
+A test-signed version of tap-windows6 driver should be used for the HLK tests.
+The recommended procedure is to use pre-built, cross-signed devcon.exe and use
+the WDK-generated key for signing the driver.
+
+First setup the directory with prebuilt devcon as described above.
+Then run the build with the --hlk option:
+
+::
+  $ python.exe buildtap.py -c -b --ti=devcon-prebuilt --hlk
 
 Release signing
 ---------------

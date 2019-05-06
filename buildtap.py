@@ -41,7 +41,14 @@ class BuildTAPWindows(object):
         # supported arch names, also installation script folder names
         self.architectures_supported = self.architecture_platform_map.keys()
         # Release vs Debug
-        self.configuration = 'Debug' if opt.debug else 'Release'
+        if opt.debug and opt.hlk:
+            raise ValueError("--debug is mutually exclusive with --hlk!")
+        elif opt.debug:
+            self.configuration = 'Debug'
+        elif opt.hlk:
+            self.configuration = 'Hlk'
+        else:
+            self.configuration = 'Release'
 
         # driver signing options
         self.codesign = opt.codesign
@@ -351,7 +358,7 @@ class BuildTAPWindows(object):
                 else:
                     path = os.path.join(dirpath, d)
                     deldir = False
-                    if d in ('arm64', 'x64', 'Debug', 'Release', 'dist'):
+                    if d in ('arm64', 'x64', 'Hlk', 'Debug', 'Release', 'dist'):
                         deldir = True
                     if deldir:
                         self.rmtree(path)
@@ -463,6 +470,8 @@ if __name__ == '__main__':
                   help="tapinstall (i.e. devcon) directory (optional)")
     op.add_option("-d", "--debug", action="store_true", dest="debug",
                   help="enable debug build")
+    op.add_option("--hlk", action="store_true", dest="hlk",
+                  help="build for HLK tests (test sign, no debug)")
     op.add_option("-c", "--clean", action="store_true", dest="clean",
                   help="do an nmake clean before build")
     op.add_option("-b", "--build", action="store_true", dest="build",
