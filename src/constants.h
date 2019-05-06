@@ -101,7 +101,7 @@
 #define TAP_CONNECTION_TYPE                NET_IF_CONNECTION_DEDICATED
 
 // This value must match the *IfType in the driver .inf file
-#define TAP_IFTYPE                         IF_TYPE_ETHERNET_CSMACD
+#define TAP_IFTYPE                         IF_TYPE_PROP_VIRTUAL
 
 //
 // This is a virtual device, so it can tolerate surprise removal and
