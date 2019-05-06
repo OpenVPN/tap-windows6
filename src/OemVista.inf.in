@@ -91,7 +91,7 @@
    Characteristics = @PRODUCT_TAP_WIN_CHARACTERISTICS@
    *IfType            = 0x6 ; IF_TYPE_ETHERNET_CSMACD
    *MediaType         = 0x0 ; NdisMedium802_3
-   *PhysicalMediaType = 14  ; NdisPhysicalMedium802_3
+   *PhysicalMediaType = 0   ; NdisPhysicalMediumUnspecified
 
 [@PRODUCT_TAP_WIN_COMPONENT_ID@.ndi.Services]
    AddService = @PRODUCT_TAP_WIN_COMPONENT_ID@,        2, @PRODUCT_TAP_WIN_COMPONENT_ID@.service
