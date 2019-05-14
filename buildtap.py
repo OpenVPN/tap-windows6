@@ -16,6 +16,8 @@ class BuildTAPWindows(object):
         self.src = os.path.join(self.top, 'src')                     # src/openvpn dir
         if opt.tapinstall:
             self.top_tapinstall = os.path.realpath(opt.tapinstall)   # tapinstall dir
+            devcon_project_file = os.path.join(self.top_tapinstall, "devcon.sln")
+            self.using_prebuilt_tapinstall = not os.path.isfile(devcon_project_file)
         else:
             self.top_tapinstall = None
             if opt.package:
@@ -262,11 +264,10 @@ class BuildTAPWindows(object):
     # build tapinstall
     def build_tapinstall(self):
         project_file = os.path.join(self.tapinstall_src(), "devcon.sln")
-        using_prebuilt = not os.path.isfile(project_file)
 
         for arch in self.architectures_supported:
             print("***** BUILD TAPINSTALL arch=%s" % (arch,))
-            if using_prebuilt:
+            if self.using_prebuilt_tapinstall:
                 print("***** BUILD TAPINSTALL - devcon solution file not found; relying on prebuilt binary")
             else:
                 self.build_ewdk(project_file=project_file, arch=arch)
@@ -358,7 +359,7 @@ class BuildTAPWindows(object):
                 else:
                     path = os.path.join(dirpath, d)
                     deldir = False
-                    if d in ('arm64', 'x64', 'Hlk', 'Debug', 'Release', 'dist'):
+                    if d in ('ARM64', 'arm64', 'amd64', 'i386', 'x64', 'Hlk', 'Debug', 'Release', 'include'):
                         deldir = True
                     if deldir:
                         self.rmtree(path)
@@ -377,8 +378,9 @@ class BuildTAPWindows(object):
 
     # remove generated files for both tap-windows and tapinstall
     def clean(self):
-        self.clean_tree(self.top)
-        if self.top_tapinstall:
+        self.clean_tree(self.src)
+        self.clean_tree(self.dist_path())
+        if not self.using_prebuilt_tapinstall:
             self.clean_tree(self.top_tapinstall)
 
     # Calculate tapinstall.exe file names
