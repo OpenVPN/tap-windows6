@@ -998,11 +998,10 @@ Return Value:
         return STATUS_DEVICE_DOES_NOT_EXIST;
     }
 
-    DEBUGP(("[%s] [TAP] release [%d.%d] diag open request (TapDiagFileIsOpen=%d)\n",
+    DEBUGP(("[%s] [TAP] release [%d.%d] diag open request\n",
         MINIPORT_INSTANCE_ID(adapter),
         TAP_DRIVER_MAJOR_VERSION,
-        TAP_DRIVER_MINOR_VERSION,
-        adapter->TapDiagFileIsOpen
+        TAP_DRIVER_MINOR_VERSION
         ));
 
     irpSp->FileObject->FsContext = adapter; // Quick reference
