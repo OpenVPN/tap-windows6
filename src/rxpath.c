@@ -513,7 +513,7 @@ TapSharedSendPacket(
             if(mdl == NULL)            
             {
                 DEBUGP (("[%s] NdisAllocateMdl failed in IRP_MJ_WRITE\n",
-                    MINIPORT_INSTANCE_ID (adapter)));
+                    MINIPORT_INSTANCE_ID (Adapter)));
                 NOTE_ERROR ();
 
                 // Fail the IRP
@@ -548,7 +548,7 @@ TapSharedSendPacket(
             }
 
             DEBUGP (("[%s] NdisAllocateNetBufferAndNetBufferList failed in IRP_MJ_WRITE\n",
-                MINIPORT_INSTANCE_ID (adapter)));
+                MINIPORT_INSTANCE_ID (Adapter)));
             NOTE_ERROR ();
 
             // Fail the IRP
