@@ -152,6 +152,8 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <TargetName>@PRODUCT_TAP_WIN_COMPONENT_ID@</TargetName>
+    <RunCodeAnalysis>true</RunCodeAnalysis>
+    <CodeAnalysisRuleSet>$(WDKContentRoot)CodeAnalysis\DriverMinimumRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
@@ -171,6 +173,7 @@
       <DisableSpecificWarnings>%(DisableSpecificWarnings);4201;4214;4100;4101;4200;4057;4127</DisableSpecificWarnings>
       <TreatWarningAsError>false</TreatWarningAsError>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);TAP_DRIVER_MAJOR_VERSION=@PRODUCT_TAP_WIN_MAJOR@;TAP_DRIVER_MINOR_VERSION=@PRODUCT_TAP_WIN_MINOR@;NDIS_WDM=1;NDIS_MINIPORT_DRIVER=1;NDIS620_MINIPORT=1;NDIS630_MINIPORT=1</PreprocessorDefinitions>
+      <EnablePREfast Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</EnablePREfast>
     </ClCompile>
     <Link>
       <AdditionalDependencies>%(AdditionalDependencies);$(KernelBufferOverflowLib);$(DDK_LIB_PATH)ntoskrnl.lib;$(DDK_LIB_PATH)hal.lib;$(DDK_LIB_PATH)wmilib.lib;ndis.lib;ntstrsafe.lib;wdmsec.lib</AdditionalDependencies>
