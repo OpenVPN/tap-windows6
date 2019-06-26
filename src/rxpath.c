@@ -392,8 +392,8 @@ TapSharedSendPacket(
     __in PIRP Irp,
     __in unsigned char * PacketBuffer,
     __in ULONG PacketLength,
-    __in PVOID PacketPriority,
-    __in const PUCHAR PrefixData,
+    __in_opt PVOID PacketPriority,
+    __in_opt const PUCHAR PrefixData,
     __in const unsigned int PrefixLength
     )
 {
