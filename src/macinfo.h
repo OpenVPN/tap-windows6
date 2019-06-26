@@ -45,7 +45,7 @@ GenerateRandomMac(
 
 VOID
 GenerateRelatedMAC(
-    __in MACADDR dest,
+    __out MACADDR dest,
     __in const MACADDR src,
     __in const int delta
     );

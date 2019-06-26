@@ -352,7 +352,7 @@ tapGetNetBufferFrameType(
 ULONG
 tapGetNetBufferCountsFromNetBufferList(
     __in PNET_BUFFER_LIST   NetBufferList,
-    __inout_opt PULONG      TotalByteCount      // Of all linked NBs
+    __out_opt PULONG        TotalByteCount      // Of all linked NBs
     );
 
 // Prototypes for standard NDIS miniport entry points

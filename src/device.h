@@ -47,4 +47,13 @@ DRIVER_DISPATCH TapDeviceCleanup;
 __drv_dispatchType(IRP_MJ_CLOSE)
 DRIVER_DISPATCH TapDeviceClose;
 
+__drv_dispatchType(IRP_MJ_CREATE)
+DRIVER_DISPATCH TapDiagDeviceCreate;
+
+__drv_dispatchType(IRP_MJ_DEVICE_CONTROL)
+DRIVER_DISPATCH TapDiagDeviceControl;
+
+__drv_dispatchType(IRP_MJ_CLOSE)
+DRIVER_DISPATCH TapDiagDeviceClose;
+
 #endif // __TAP_DEVICE_H_

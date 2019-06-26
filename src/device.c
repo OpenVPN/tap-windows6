@@ -38,6 +38,9 @@
 #pragma alloc_text( PAGE, TapDeviceControl)
 #pragma alloc_text( PAGE, TapDeviceCleanup)
 #pragma alloc_text( PAGE, TapDeviceClose)
+#pragma alloc_text( PAGE, TapDiagDeviceCreate)
+#pragma alloc_text( PAGE, TapDiagDeviceControl)
+#pragma alloc_text( PAGE, TapDiagDeviceClose)
 #endif // ALLOC_PRAGMA
 
 //===================================================================
