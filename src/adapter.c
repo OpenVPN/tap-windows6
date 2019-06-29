@@ -1541,8 +1541,15 @@ Return Value:
 {
     PTAP_ADAPTER_CONTEXT   adapter = (PTAP_ADAPTER_CONTEXT )MiniportAdapterContext;
 
-    UNREFERENCED_PARAMETER(ShutdownAction);
     UNREFERENCED_PARAMETER(MiniportAdapterContext);
+
+    if(ShutdownAction == NdisShutdownBugCheck)
+    {
+        // In some NDIS6 versions, this function could be called during a bugcheck.
+        // (Starting in NDIS 6.3, this will only happen if we set a flag in adapter registration.)
+        // Under those circumstances, it's not safe to do any of the normal shutdown tasks in this function.
+        return;
+    }
 
     DEBUGP (("[TAP] --> AdapterShutdownEx\n"));
 
@@ -1723,6 +1730,11 @@ Return Value:
                         );
 
     ASSERT(ethernetHeader);
+    if(ethernetHeader == NULL)
+    {
+        // This should never happen, but don't cause a bugcheck if it does.
+        return NDIS_PACKET_TYPE_DIRECTED;
+    }
 
     if (ETH_IS_BROADCAST(ethernetHeader->dest))
     {
@@ -1791,6 +1803,11 @@ Return Value:
     return netBufferCount;
 }
 
+_Requires_lock_not_held_(Adapter->AdapterLock)
+_Acquires_lock_(Adapter->AdapterLock)
+_IRQL_requires_max_(DISPATCH_LEVEL)
+_IRQL_saves_global_(SpinLock, Adapter)
+_IRQL_raises_(DISPATCH_LEVEL)
 VOID
 tapAdapterAcquireLock(
     __in    PTAP_ADAPTER_CONTEXT    Adapter,
@@ -1809,6 +1826,10 @@ tapAdapterAcquireLock(
     }
 }
 
+_Requires_lock_held_(Adapter->AdapterLock)
+_Releases_lock_(Adapter->AdapterLock)
+_IRQL_requires_(DISPATCH_LEVEL)
+_IRQL_restores_global_(SpinLock, Adapter)
 VOID
 tapAdapterReleaseLock(
     __in    PTAP_ADAPTER_CONTEXT    Adapter,

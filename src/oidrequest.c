@@ -928,7 +928,7 @@ Return Value:
 
             /* Errors in */
             Statistics->ifInErrors =
-                Adapter->RxCrcErrors +
+                (ULONG64)Adapter->RxCrcErrors +
                 Adapter->RxAlignmentErrors +
                 Adapter->RxDmaOverrunErrors +
                 Adapter->RxRuntErrors;
@@ -964,7 +964,7 @@ Return Value:
 
             /* Errors out */
             Statistics->ifOutErrors =
-                Adapter->TxAbortExcessCollisions +
+                (ULONG64)Adapter->TxAbortExcessCollisions +
                 Adapter->TxDmaUnderrun +
                 Adapter->TxLostCRS +
                 Adapter->TxLateCollisions+
