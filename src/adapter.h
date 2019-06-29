@@ -309,12 +309,21 @@ tapAdapterContextDereference(
     return refCount;
 }
 
+_Requires_lock_not_held_(Adapter->AdapterLock)
+_Acquires_lock_(Adapter->AdapterLock)
+_IRQL_requires_max_(DISPATCH_LEVEL)
+_IRQL_saves_global_(SpinLock, Adapter)
+_IRQL_raises_(DISPATCH_LEVEL)
 VOID
 tapAdapterAcquireLock(
     __in    PTAP_ADAPTER_CONTEXT    Adapter,
     __in    BOOLEAN                 DispatchLevel
     );
 
+_Requires_lock_held_(Adapter->AdapterLock)
+_Releases_lock_(Adapter->AdapterLock)
+_IRQL_restores_global_(SpinLock, Adapter)
+_IRQL_requires_(DISPATCH_LEVEL)
 VOID
 tapAdapterReleaseLock(
     __in    PTAP_ADAPTER_CONTEXT    Adapter,

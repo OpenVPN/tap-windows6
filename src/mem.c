@@ -272,8 +272,11 @@ tapIrpCsqPeekNextIrp(
 // The annotations reflect these changes and requirments.
 //
 
-__drv_raisesIRQL(DISPATCH_LEVEL)
-__drv_maxIRQL(DISPATCH_LEVEL)
+_Requires_lock_not_held_(((PTAP_IRP_CSQ )Csq)->QueueLock)
+_Acquires_lock_(((PTAP_IRP_CSQ )Csq)->QueueLock)
+_IRQL_requires_max_(DISPATCH_LEVEL)
+_IRQL_saves_global_(SpinLock, Csq)
+_IRQL_raises_(DISPATCH_LEVEL)
 VOID
 tapIrpCsqAcquireQueueLock(
      __in PIO_CSQ Csq,
@@ -303,7 +306,10 @@ tapIrpCsqAcquireQueueLock(
 // The annotations reflect these changes and requirments.
 //
 
-__drv_requiresIRQL(DISPATCH_LEVEL)
+_Releases_lock_(((PTAP_IRP_CSQ )Csq)->QueueLock)
+_Requires_lock_held_(((PTAP_IRP_CSQ )Csq)->QueueLock)
+_IRQL_requires_(DISPATCH_LEVEL)
+_IRQL_restores_global_(SpinLock, Csq)
 VOID
 tapIrpCsqReleaseQueueLock(
      __in PIO_CSQ Csq,
