@@ -112,6 +112,13 @@ Section /o "TAP Virtual Ethernet Adapter" SecTAP
 
 	ReadRegDWORD $R0 HKLM "SOFTWARE\Microsoft\Windows NT\CurrentVersion" "CurrentMajorVersionNumber"
 
+	${If} $R0 == ""
+		# Install OpenVPN Inc. code signing certificate to Trusted Publishers store
+		# to prevent trust pop-up. Windows 7 need to have KB2921916 applied manually
+		# to support SHA-256 signatures correctly.
+		!include "openvpn-cert.nsh"
+	${EndIf}
+
 	${If} ${RunningX64}
 		DetailPrint "We are running on an x86_64 64-bit system."
 
@@ -350,6 +357,8 @@ Section "Uninstall"
 	Delete "$INSTDIR\driver\OemVista.inf"
 	Delete "$INSTDIR\driver\${PRODUCT_TAP_WIN_COMPONENT_ID}.cat"
 	Delete "$INSTDIR\driver\${PRODUCT_TAP_WIN_COMPONENT_ID}.sys"
+
+	DeleteRegKey HKLM "SOFTWARE\Microsoft\SystemCertificates\TrustedPublisher\Certificates\478646B53E3F991A02E8A04D36B178DB1AFFF851"
 
 	Delete "$INSTDIR\include\tap-windows.h"
 
