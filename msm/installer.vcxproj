@@ -139,18 +139,30 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Platform)'=='Win32'">
+    <ClCompile>
+      <PreprocessorDefinitions>HAVE_EV;HAVE_WHQL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
     <ResourceCompile>
       <AdditionalIncludeDirectories>..\dist\i386</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>HAVE_EV;HAVE_WHQL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Platform)'=='x64'">
+    <ClCompile>
+      <PreprocessorDefinitions>HAVE_EV;HAVE_WHQL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
     <ResourceCompile>
       <AdditionalIncludeDirectories>..\dist\amd64</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>HAVE_EV;HAVE_WHQL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Platform)'=='ARM64'">
+    <ClCompile>
+      <PreprocessorDefinitions>HAVE_WHQL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
     <ResourceCompile>
       <AdditionalIncludeDirectories>..\dist\arm64</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>HAVE_WHQL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />

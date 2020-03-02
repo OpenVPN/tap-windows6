@@ -261,9 +261,17 @@ InstallDriver(BOOL UpdateExisting)
         goto cleanupFree;
 
     BOOL UseWHQL = FALSE;
+#if defined(HAVE_EV) && defined(HAVE_WHQL)
     DWORD MajorVersion;
     RtlGetNtVersionNumbers(&MajorVersion, NULL, NULL);
     UseWHQL = MajorVersion >= 10;
+#elif defined(HAVE_EV)
+    UseWHQL = FALSE;
+#elif defined(HAVE_WHQL)
+    UseWHQL = TRUE;
+#else
+    #error No driver available
+#endif
     if (!UseWHQL && !InstallDriverCertificate(TEXT("driver.sys")))
         PrintError(LOG_WARN, TEXT("Unable to install code signing certificate"));
 
