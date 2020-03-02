@@ -4,10 +4,11 @@ tap-windows6 license
 The source and object code of the tap-windows6 project
 is Copyright (C) 2002-2014 OpenVPN Technologies, Inc. The
 NSIS installer is Copyright (C) 2014 OpenVPN Technologies,
-Inc. and (C) 2012 Alon Bar-Lev. Both are released under the
-GPL version 2. See COPYRIGHT.GPL for the full GPL license.
-The licensors also make the following statement borrowed
-from the SPICE project:
+Inc. and (C) 2012 Alon Bar-Lev. The installer.dll MSI helper
+is Copyright (C) 2018-2019 WireGuard LLC. All are released
+under the GPL version 2. See COPYRIGHT.GPL for the full GPL
+license. The licensors also make the following statement
+borrowed from the SPICE project:
 
 With respect to binaries built using the Microsoft(R)
 Windows Driver Kit (WDK), GPLv2 does not extend to any code

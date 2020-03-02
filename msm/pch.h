@@ -9,5 +9,8 @@
 
 // add headers that you want to pre-compile here
 #include "framework.h"
+#include "installation.h"
+
+#include "../src/config.h"
 
 #endif //PCH_H
