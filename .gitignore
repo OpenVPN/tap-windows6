@@ -16,4 +16,8 @@ src/Release
 src/Debug
 src/x64
 src/arm64
+src/smvbuild.log
+src/smvstats.txt
+src/tap0901.DVL.XML
 .vs
+*.vcxproj.user
