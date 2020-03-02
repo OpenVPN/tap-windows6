@@ -14,6 +14,7 @@ class BuildTAPWindows(object):
             raise ValueError("source directory undefined")
         self.top = os.path.realpath(opt.src)                         # top-level dir
         self.src = os.path.join(self.top, 'src')                     # src/openvpn dir
+        self.msm = os.path.join(self.top, 'msm')                     # msm dir
         if opt.tapinstall:
             self.top_tapinstall = os.path.realpath(opt.tapinstall)   # tapinstall dir
             devcon_project_file = os.path.join(self.top_tapinstall, "devcon.sln")
@@ -197,6 +198,7 @@ class BuildTAPWindows(object):
         self.preprocess(kv, os.path.join(self.src, "OemVista.inf"))
         self.preprocess(kv, os.path.join(self.src, "tap-windows6.vcxproj"))
         self.preprocess(kv, os.path.join(self.src, "config.h"))
+        self.preprocess(kv, os.path.join(self.msm, "resource.rc"))
 
     # build a "msbuild" file using (E)WDK
     def build_ewdk(self, project_file, arch):
