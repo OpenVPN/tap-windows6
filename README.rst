@@ -20,6 +20,7 @@ The prerequisites for building are:
 - Git (not strictly required, but useful for running commands using bundled bash shell)
 - MakeNSIS (optional)
 - Prebuilt tapinstall.exe binaries (optional)
+- WiX Toolset (optional)
 
 Make sure you add Python's install directory (usually c:\\python27) to the PATH 
 environment variable.
@@ -44,6 +45,7 @@ View build script options::
     --sdk=SDK            SDK to use for building: ewdk or wdk, default=ewdk
     --sign               sign the driver files
     -p, --package        generate an NSIS installer from the compiled files
+    -m, --package-msm    generate a MSM installer from the compiled files
     --cert=CERT          Common name of code signing certificate,
                          default=openvpn
     --certfile=CERTFILE  Path to the code signing certificate

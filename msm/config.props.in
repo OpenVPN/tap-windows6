@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+	SPDX-License-Identifier: GPL-2.0
+
+	Copyright (C) 2020 Simon Rozman. All Rights Reserved.
+-->
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	<PropertyGroup>
+		<ProductName>@PRODUCT_NAME@</ProductName>
+		<ProductPublisher>@PRODUCT_PUBLISHER@</ProductPublisher>
+		<ProductVersion>@PRODUCT_VERSION@</ProductVersion>
+		<ProductVersionResource>@PRODUCT_VERSION_RESOURCE@</ProductVersionResource>
+		<ProductTapWinComponentId>@PRODUCT_TAP_WIN_COMPONENT_ID@</ProductTapWinComponentId>
+		<ProductTapWinMajor>@PRODUCT_TAP_WIN_MAJOR@</ProductTapWinMajor>
+		<ProductTapWinMinor>@PRODUCT_TAP_WIN_MINOR@</ProductTapWinMinor>
+		<ProductTapWinRevision>@PRODUCT_TAP_WIN_REVISION@</ProductTapWinRevision>
+		<ProductTapWinBuild>@PRODUCT_TAP_WIN_BUILD@</ProductTapWinBuild>
+		<ProductTapWinProvider>@PRODUCT_TAP_WIN_PROVIDER@</ProductTapWinProvider>
+		<ProductTapWinCharacteristics>@PRODUCT_TAP_WIN_CHARACTERISTICS@</ProductTapWinCharacteristics>
+		<ProductTapWinDeviceDescription>@PRODUCT_TAP_WIN_DEVICE_DESCRIPTION@</ProductTapWinDeviceDescription>
+		<ProductTapWinReldate>@PRODUCT_TAP_WIN_RELDATE@</ProductTapWinReldate>
+
+		<WixCandleFlags>$(WixCandleFlags) -dPRODUCT_NAME="@PRODUCT_NAME@"</WixCandleFlags>
+		<WixCandleFlags>$(WixCandleFlags) -dPRODUCT_PUBLISHER="@PRODUCT_PUBLISHER@"</WixCandleFlags>
+		<WixCandleFlags>$(WixCandleFlags) -dPRODUCT_VERSION="@PRODUCT_VERSION@"</WixCandleFlags>
+		<WixCandleFlags>$(WixCandleFlags) -dPRODUCT_TAP_WIN_COMPONENT_ID="@PRODUCT_TAP_WIN_COMPONENT_ID@"</WixCandleFlags>
+	</PropertyGroup>
+</Project>

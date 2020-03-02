@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SPDX-License-Identifier: GPL-2.0
+
+  Copyright (C) 2018-2019 WireGuard LLC. All Rights Reserved.
+-->
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Module Id="$(var.PRODUCT_TAP_WIN_COMPONENT_ID)" Language="0" Version="$(var.PRODUCT_VERSION)">
+    <Package
+      Id="8d9a59ba-33c1-4ca0-96af-e7f728dec8d7"
+      Description="$(var.PRODUCT_NAME)"
+      Manufacturer="$(var.PRODUCT_PUBLISHER)"
+      InstallerVersion="200"
+      InstallPrivileges="elevated"
+      InstallScope="perMachine"
+      ReadOnly="yes" />
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Component Guid="b937efa3-ce00-4e5b-86c8-8cb67a32d448">
+        <RegistryValue
+          Root="HKLM"
+          Key="SOFTWARE\$(var.PRODUCT_TAP_WIN_COMPONENT_ID)"
+          Type="integer"
+          Value="1"
+          KeyPath="yes" />
+      </Component>
+    </Directory>
+
+    <Property Id="$(var.PRODUCT_TAP_WIN_COMPONENT_ID)_InstallerHash" Value="$(var.INSTALLER_LIBRARY_HASH)" SuppressModularization="yes" />
+    <Property Id="$(var.PRODUCT_TAP_WIN_COMPONENT_ID)_InstallerBuildtime" Value="$(var.INSTALLER_LIBRARY_TIME)" SuppressModularization="yes" />
+    <Property Id="$(var.PRODUCT_TAP_WIN_COMPONENT_ID)_Version" Value="$(var.PRODUCT_VERSION)" SuppressModularization="yes" />
+
+    <Binary Id="installer.dll" SourceFile="!(bindpath.output_dir)installer.dll" />
+    <CustomAction Id="$(var.PRODUCT_TAP_WIN_COMPONENT_ID)_Evaluate" SuppressModularization="yes" BinaryKey="installer.dll" DllEntry="MsiEvaluate" Execute="immediate" />
+    <CustomAction Id="$(var.PRODUCT_TAP_WIN_COMPONENT_ID)_Process" SuppressModularization="yes" BinaryKey="installer.dll" DllEntry="MsiProcess" Execute="deferred" Impersonate="no" />
+    <InstallExecuteSequence>
+      <Custom Action="$(var.PRODUCT_TAP_WIN_COMPONENT_ID)_Evaluate" Before="$(var.PRODUCT_TAP_WIN_COMPONENT_ID)_Process" />
+      <Custom Action="$(var.PRODUCT_TAP_WIN_COMPONENT_ID)_Process" After="InstallFiles" />
+    </InstallExecuteSequence>
+
+    <?if $(var.PLATFORM) = "Win32"?>
+    <CustomAction Id="WoW64Unsupported" Error="You are attempting to install the 32-bit variant of [ProductName] on a 64-bit operating system, which is not supported. Please install the 64-bit variant instead." />
+    <InstallExecuteSequence>
+      <Custom Action="WoW64Unsupported" After="LaunchConditions"><![CDATA[VersionNT64]]></Custom>
+    </InstallExecuteSequence>
+    <InstallUISequence>
+      <Custom Action="WoW64Unsupported" After="LaunchConditions"><![CDATA[VersionNT64]]></Custom>
+    </InstallUISequence>
+    <?endif?>
+  </Module>
+</Wix>

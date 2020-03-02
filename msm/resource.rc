@@ -1,0 +1,14 @@
+/* SPDX-License-Identifier: GPL-2.0
+ *
+ * Copyright (C) 2018-2019 WireGuard LLC. All Rights Reserved.
+ */
+
+#ifndef _M_ARM64
+driver.inf RCDATA DRIVER_INF
+driver.cat RCDATA DRIVER_CAT
+driver.sys RCDATA DRIVER_SYS
+#endif
+
+driver-whql.inf RCDATA DRIVER_INF_WHQL
+driver-whql.cat RCDATA DRIVER_CAT_WHQL
+driver-whql.sys RCDATA DRIVER_SYS_WHQL

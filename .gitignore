@@ -4,6 +4,7 @@ dist/**
 *.pyc
 *.tar.gz
 tap-windows-*.exe
+tap-windows-*.msm
 
 # builttap.py-generated files
 src/config.h

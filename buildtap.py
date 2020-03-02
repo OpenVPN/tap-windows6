@@ -198,7 +198,7 @@ class BuildTAPWindows(object):
         self.preprocess(kv, os.path.join(self.src, "OemVista.inf"))
         self.preprocess(kv, os.path.join(self.src, "tap-windows6.vcxproj"))
         self.preprocess(kv, os.path.join(self.src, "config.h"))
-        self.preprocess(kv, os.path.join(self.msm, "resource.rc"))
+        self.preprocess(kv, os.path.join(self.msm, "config.props"))
 
     # build a "msbuild" file using (E)WDK
     def build_ewdk(self, project_file, arch):
@@ -333,6 +333,18 @@ class BuildTAPWindows(object):
         self.system(installer_cmd)
         if self.codesign:
             self.sign(installer_file)
+
+    # build MSM installer
+    def package_msm(self):
+        self.config_tap()
+        project_file = os.path.join(self.msm, "installer.vcxproj")
+        for arch in ("i386", "amd64"): #self.architectures_supported
+            print("***** BUILD MSM arch=%s" % (arch,))
+            self.run_ewdk('msbuild.exe %s /t:MSM /p:Configuration=%s /p:Platform=%s' % (
+                project_file,
+                self.configuration,
+                self.architecture_platform_map[arch]
+                ))
 
     # like find . | sort
     def enum_tree(self, dir):
@@ -484,6 +496,8 @@ if __name__ == '__main__':
                   default=False, help="sign the driver files")
     op.add_option("-p", "--package", action="store_true", dest="package",
                   help="generate an NSIS installer from the compiled files")
+    op.add_option("-m", "--package-msm", action="store_true", dest="package_msm",
+                  help="generate a MSM installer from the compiled files")
     op.add_option("--cert", dest="cert", metavar="CERT",
                   default=cert,
                   help="Common name of code signing certificate, default=%s" % (cert,))
@@ -513,3 +527,5 @@ if __name__ == '__main__':
         btw.build()
     if opt.package:
         btw.package()
+    if opt.package_msm:
+        btw.package_msm()
