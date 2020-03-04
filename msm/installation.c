@@ -60,6 +60,13 @@ PrintError(_In_ LOGGER_LEVEL Level, _In_ const TCHAR *Prefix)
 
 HINSTANCE ResourceModule;
 
+static BOOL IsOurDriver(const TCHAR *HardwareID)
+{
+    return
+        !_tcsicmp(HardwareID, TEXT("root\\") TEXT(PRODUCT_TAP_WIN_COMPONENT_ID)) ||
+        !_tcsicmp(HardwareID, TEXT(PRODUCT_TAP_WIN_COMPONENT_ID));
+}
+
 static BOOL IsDriverLoaded(VOID)
 {
     DWORD RequiredSize = 0, CurrentSize = 0;
@@ -287,7 +294,7 @@ InstallDriver(BOOL UpdateExisting)
     BOOL RebootRequired = FALSE;
     if (UpdateExisting &&
         !UpdateDriverForPlugAndPlayDevices(
-            NULL, TEXT(PRODUCT_TAP_WIN_COMPONENT_ID), InfPath, INSTALLFLAG_FORCE | INSTALLFLAG_NONINTERACTIVE, &RebootRequired))
+            NULL, TEXT("root\\") TEXT(PRODUCT_TAP_WIN_COMPONENT_ID), InfPath, INSTALLFLAG_FORCE | INSTALLFLAG_NONINTERACTIVE, &RebootRequired))
         PrintError(LOG_WARN, TEXT("Could not update existing adapters"));
     if (RebootRequired)
         Logger(LOG_WARN, TEXT("A reboot might be required"));
@@ -336,7 +343,7 @@ static BOOL RemoveDriver(VOID)
             free(DriverDetail);
             goto cleanupDriverInfoList;
         }
-        if (!_tcsicmp(DriverDetail->HardwareID, TEXT(PRODUCT_TAP_WIN_COMPONENT_ID)))
+        if (IsOurDriver(DriverDetail->HardwareID))
         {
             PathStripPath(DriverDetail->InfFileName);
             Logger(LOG_INFO, TEXT("Removing existing driver"));
@@ -381,7 +388,7 @@ IsOurAdapter(_In_ HDEVINFO DeviceInfoSet, _Inout_ SP_DEVINFO_DATA *DeviceInfo)
         DriverDetail->cbSize = sizeof(*DriverDetail);
         if (SetupDiGetDriverInfoDetail(
                 DeviceInfoSet, DeviceInfo, &DriverInfo, DriverDetail, RequiredSize, &RequiredSize) &&
-            !_tcsicmp(DriverDetail->HardwareID, TEXT(PRODUCT_TAP_WIN_COMPONENT_ID)))
+            IsOurDriver(DriverDetail->HardwareID))
         {
             free(DriverDetail);
             Found = TRUE;
