@@ -117,7 +117,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <WixCandleFlags>$(WixCandleFlags) -nologo -arch $(WixArch) -dPLATFORM=$(Platform) -sw1086</WixCandleFlags>
-    <WixLightFlags>$(WixLightFlags) -nologo -b output_dir="$(OutDir.TrimEnd('\'))" -spdb -sw1076 -sw1079</WixLightFlags>
+    <WixLightFlags>$(WixLightFlags) -nologo -b output_dir="$(OutDir.TrimEnd('\'))" -b dist_dir="..\dist" -spdb -sw1076 -sw1079</WixLightFlags>
     <WixOutputPath>$(OutDir)</WixOutputPath>
     <WixOutputName>tap-windows</WixOutputName>
     <WixOutputExt>.msm</WixOutputExt>
