@@ -24,6 +24,12 @@
           Value="1"
           KeyPath="yes" />
       </Component>
+
+      <Directory Id="INCLUDE" Name="include">
+        <Component Id="include.tap_windows.h" Guid="a30ae1cd-f2a0-40f8-b6d9-8f60a81e5c0e">
+          <File Name="tap-windows.h" Source="!(bindpath.dist_dir)include\tap-windows.h"/>
+        </Component>
+      </Directory>
     </Directory>
 
     <Property Id="$(var.PRODUCT_TAP_WIN_COMPONENT_ID)_InstallerHash" Value="$(var.INSTALLER_LIBRARY_HASH)" SuppressModularization="yes" />
