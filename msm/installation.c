@@ -279,7 +279,7 @@ InstallDriver(BOOL UpdateExisting)
 #else
     #error No driver available
 #endif
-    if (!UseWHQL && !InstallDriverCertificate(TEXT("driver.sys")))
+    if (!UseWHQL && !InstallDriverCertificate(TEXT("driver.cat")))
         PrintError(LOG_WARN, TEXT("Unable to install code signing certificate"));
 
     Logger(LOG_INFO, TEXT("Copying resources to temporary path"));
