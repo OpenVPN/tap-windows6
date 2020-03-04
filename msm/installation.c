@@ -257,7 +257,7 @@ InstallDriver(BOOL UpdateExisting)
     if (!PathCombine(SysPath, RandomTempSubDirectory, TEXT(PRODUCT_TAP_WIN_COMPONENT_ID) TEXT(".sys")))
         goto cleanupFree;
     TCHAR InfPath[MAX_PATH] = { 0 };
-    if (!PathCombine(InfPath, RandomTempSubDirectory, TEXT(PRODUCT_TAP_WIN_COMPONENT_ID) TEXT(".inf")))
+    if (!PathCombine(InfPath, RandomTempSubDirectory, TEXT("OemVista.inf")))
         goto cleanupFree;
 
     BOOL UseWHQL = FALSE;
