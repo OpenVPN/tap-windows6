@@ -1,0 +1,16 @@
+/* SPDX-License-Identifier: GPL-2.0
+ *
+ * Copyright (C) 2018-2019 WireGuard LLC. All Rights Reserved.
+ */
+
+#ifdef HAVE_EV
+driver.inf RCDATA "OemVista.inf"
+driver.cat RCDATA "@PRODUCT_TAP_WIN_COMPONENT_ID@.cat"
+driver.sys RCDATA "@PRODUCT_TAP_WIN_COMPONENT_ID@.sys"
+#endif
+
+#ifdef HAVE_WHQL
+driver-whql.inf RCDATA "win10\\OemVista.inf"
+driver-whql.cat RCDATA "win10\\@PRODUCT_TAP_WIN_COMPONENT_ID@.cat"
+driver-whql.sys RCDATA "win10\\@PRODUCT_TAP_WIN_COMPONENT_ID@.sys"
+#endif

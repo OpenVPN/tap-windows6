@@ -199,6 +199,7 @@ class BuildTAPWindows(object):
         self.preprocess(kv, os.path.join(self.src, "tap-windows6.vcxproj"))
         self.preprocess(kv, os.path.join(self.src, "config.h"))
         self.preprocess(kv, os.path.join(self.msm, "config.props"))
+        self.preprocess(kv, os.path.join(self.msm, "resource.rc"))
 
     # build a "msbuild" file using (E)WDK
     def build_ewdk(self, project_file, arch):

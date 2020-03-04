@@ -139,9 +139,6 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
-    <ResourceCompile>
-      <PreprocessorDefinitions>DRIVER_INF=OemVista.inf;DRIVER_CAT=$(ProductTapWinComponentId).cat;DRIVER_SYS=$(ProductTapWinComponentId).sys;DRIVER_INF_WHQL=win10\\OemVista.inf;DRIVER_CAT_WHQL=win10\\$(ProductTapWinComponentId).cat;DRIVER_SYS_WHQL=win10\\$(ProductTapWinComponentId).sys;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ResourceCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <AdditionalDependencies>Cfgmgr32.lib;Crypt32.lib;Msi.lib;Newdev.lib;ntdll.lib;Setupapi.lib;Shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -219,6 +216,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="exports.def" />
+    <None Include="resource.rc.in" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
