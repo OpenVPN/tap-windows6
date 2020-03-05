@@ -230,7 +230,7 @@ extern VOID NTAPI
 RtlGetNtVersionNumbers(_Out_opt_ DWORD *MajorVersion, _Out_opt_ DWORD *MinorVersion, _Out_opt_ DWORD *BuildNumber);
 
 static BOOL
-InstallDriver(BOOL UpdateExisting)
+InstallDriver(_In_ BOOL UpdateExisting, _Inout_ BOOL *IsRebootRequired)
 {
     DWORD LastError = ERROR_SUCCESS;
     TCHAR WindowsDirectory[MAX_PATH];
@@ -296,8 +296,10 @@ InstallDriver(BOOL UpdateExisting)
         !UpdateDriverForPlugAndPlayDevices(
             NULL, TEXT("root\\") TEXT(PRODUCT_TAP_WIN_COMPONENT_ID), InfPath, INSTALLFLAG_FORCE | INSTALLFLAG_NONINTERACTIVE, &RebootRequired))
         PrintError(LOG_WARN, TEXT("Could not update existing adapters"));
-    if (RebootRequired)
+    if (RebootRequired) {
         Logger(LOG_WARN, TEXT("A reboot might be required"));
+        *IsRebootRequired = TRUE;
+    }
 
 cleanupDelete:
     LastError = GetLastError();
@@ -513,7 +515,7 @@ EnableOurAdapters(_In_ HDEVINFO DeviceInfoSet, _In_ SP_DEVINFO_DATA_LIST *Adapte
     return Ret;
 }
 
-BOOL InstallOrUpdate(VOID)
+BOOL InstallOrUpdate(_Inout_ BOOL *IsRebootRequired)
 {
     BOOL Ret = FALSE;
     HDEVINFO DeviceInfoSet = SetupDiGetClassDevsEx(&GUID_DEVCLASS_NET, NULL, NULL, DIGCF_PRESENT, NULL, NULL, NULL);
@@ -535,7 +537,7 @@ BOOL InstallOrUpdate(VOID)
         PrintError(LOG_ERR, TEXT("Failed to uninstall old drivers"));
         goto cleanupAdapters;
     }
-    if (!InstallDriver(!!ExistingAdapters))
+    if (!InstallDriver(!!ExistingAdapters, IsRebootRequired))
     {
         PrintError(LOG_ERR, TEXT("Failed to install driver"));
         goto cleanupAdapters;

@@ -242,9 +242,12 @@ UINT __stdcall MsiProcess(MSIHANDLE Handle)
         *RegValues++ = TEXT('\0');
     if (!_tcscmp(Value, ACTION_INSTALL))
     {
-        Ret = InstallOrUpdate();
+        BOOL RebootRequired = FALSE;
+        Ret = InstallOrUpdate(&RebootRequired);
         if (RegValues && Ret)
             Ret = WriteRegKeys(RegValues);
+        if (RebootRequired)
+            MsiSetMode(Handle, MSIRUNMODE_REBOOTATEND, TRUE);
     }
     else if (!_tcscmp(Value, ACTION_UNINSTALL))
     {

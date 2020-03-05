@@ -17,7 +17,7 @@ typedef VOID (*LoggerFunction)(_In_ LOGGER_LEVEL, _In_ const TCHAR *);
 VOID
 SetLogger(_In_ LoggerFunction NewLogger);
 
-BOOL InstallOrUpdate(VOID);
+BOOL InstallOrUpdate(_Inout_ BOOL *IsRebootRequired);
 BOOL Uninstall(VOID);
 
 extern HINSTANCE ResourceModule;
