@@ -20,7 +20,7 @@ The prerequisites for building are:
 - Git (not strictly required, but useful for running commands using bundled bash shell)
 - MakeNSIS (optional)
 - Prebuilt tapinstall.exe binaries (optional)
-- WiX Toolset (optional)
+- Visual Studio 2019 and WiX Toolset for MSM packaging (optional)
 
 Make sure you add Python's install directory (usually c:\\python27) to the PATH 
 environment variable.
@@ -211,6 +211,60 @@ It is possible to build tap-windows6 without connectivity to the Internet but
 any attempt to timestamp the driver will fail. For this reason configure your 
 outbound proxy server before starting the build. Note that the command prompt 
 also needs to be restarted to make use of new proxy settings.
+
+MSM packaging
+-------------
+
+In order to build the MSM packages build and sign the driver first:
+
+- Build the TAP driver with buildtap.py and "-b" flag.
+- EV-sign the drivers
+- WHQL/Attestation-sign the drivers
+
+Place the signed drivers in a directory structure under tap-windows6
+directory. Each platform directory should contain the EV-signed driver with a
+"win10" subdirectory containing WHQL/Attestation signed driver for that
+platform:
+::
+  dist
+  ├── amd64
+  │   ├── win10
+  │   │   ├── OemVista.inf
+  │   │   ├── tap0901.cat
+  │   │   └── tap0901.sys
+  │   ├── OemVista.inf
+  │   ├── tap0901.cat
+  │   └── tap0901.sys
+  ├── arm64
+  │   ├── win10
+  │   │   ├── OemVista.inf
+  │   │   ├── tap0901.cat
+  │   │   └── tap0901.sys
+  │   └── (Note: EV-signed driver for arm64 is not used.)
+  └── i386
+      ├── win10
+      │   ├── OemVista.inf
+      │   ├── tap0901.cat
+      │   └── tap0901.sys
+      ├── OemVista.inf
+      ├── tap0901.cat
+      └── tap0901.sys
+
+Building MSM packages requires Visual Studio 2019 (EWDK is not sufficient) and
+the WiX Toolset installed. In a Developer Command Prompt for Visual Studio
+2019, run:
+::
+  $ python buildtap.py -m --sdk=wdk
+
+This will compile the installer.dll file with embedded drivers and package it
+as a platform-dependent tap-windows-<version>-<platform>.msm files.
+
+As the WiX Toolset does not support the arm64 platform yet, only amd64 and
+i386 MSM files are built.
+
+Optional: Consider EV-signing the MSM packages before deploying them. Thou,
+MSM signature is ignored when merging MSM into MSI package, users get a choice
+to validate the integrity of the downloaded MSM packages manually.
 
 License
 -------
