@@ -31,10 +31,21 @@ SetLogger(_In_ LoggerFunction NewLogger)
 }
 
 static VOID
-PrintError(_In_ LOGGER_LEVEL Level, _In_ const TCHAR *Prefix)
+PrintError(_In_ LOGGER_LEVEL Level, _In_z_ const TCHAR *Prefix, ...)
 {
     DWORD ErrorCode = GetLastError();
-    TCHAR *SystemMessage = NULL, *FormattedMessage = NULL;
+    TCHAR *Message = NULL, *SystemMessage = NULL, *FormattedMessage = NULL;
+    va_list Args;
+    va_start(Args, Prefix);
+    FormatMessage(
+        FORMAT_MESSAGE_FROM_STRING | FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_MAX_WIDTH_MASK,
+        Prefix,
+        0,
+        0,
+        (VOID *)&Message,
+        0,
+        &Args);
+    va_end(Args);
     FormatMessage(
         FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_MAX_WIDTH_MASK,
         NULL,
@@ -51,11 +62,12 @@ PrintError(_In_ LOGGER_LEVEL Level, _In_ const TCHAR *Prefix)
         0,
         (VOID *)&FormattedMessage,
         0,
-        (va_list *)(DWORD_PTR[]){ (DWORD_PTR)Prefix, (DWORD_PTR)ErrorCode, (DWORD_PTR)SystemMessage });
+        (va_list *)(DWORD_PTR[]){ (DWORD_PTR)Message, (DWORD_PTR)ErrorCode, (DWORD_PTR)SystemMessage });
     if (FormattedMessage)
         Logger(Level, FormattedMessage);
     LocalFree(FormattedMessage);
     LocalFree(SystemMessage);
+    LocalFree(Message);
 }
 
 HINSTANCE ResourceModule;
@@ -291,14 +303,20 @@ InstallDriver(_In_ BOOL UpdateExisting, _Inout_ BOOL *IsRebootRequired)
 
     Logger(LOG_INFO, TEXT("Installing driver"));
     Ret = SetupCopyOEMInf(InfPath, NULL, SPOST_PATH, 0, NULL, 0, NULL, NULL);
-    BOOL RebootRequired = FALSE;
-    if (UpdateExisting &&
-        !UpdateDriverForPlugAndPlayDevices(
-            NULL, TEXT("root\\") TEXT(PRODUCT_TAP_WIN_COMPONENT_ID), InfPath, INSTALLFLAG_FORCE | INSTALLFLAG_NONINTERACTIVE, &RebootRequired))
-        PrintError(LOG_WARN, TEXT("Could not update existing adapters"));
-    if (RebootRequired) {
-        Logger(LOG_WARN, TEXT("A reboot might be required"));
-        *IsRebootRequired = TRUE;
+    static const TCHAR *HwID[] = {
+        TEXT("root\\") TEXT(PRODUCT_TAP_WIN_COMPONENT_ID),
+        TEXT(PRODUCT_TAP_WIN_COMPONENT_ID)
+    };
+    for (int i = 0; i < _countof(HwID); ++i) {
+        BOOL RebootRequired = FALSE;
+        if (UpdateExisting &&
+            !UpdateDriverForPlugAndPlayDevices(
+                NULL, HwID[i], InfPath, INSTALLFLAG_FORCE | INSTALLFLAG_NONINTERACTIVE, &RebootRequired))
+            PrintError(LOG_WARN, TEXT("Could not update existing %1 adapters"), HwID[i]);
+        if (RebootRequired) {
+            Logger(LOG_WARN, TEXT("A reboot might be required"));
+            *IsRebootRequired = TRUE;
+        }
     }
 
 cleanupDelete:
