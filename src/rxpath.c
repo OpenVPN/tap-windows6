@@ -375,7 +375,7 @@ TapStrip8021Q(
 
             // Copy the first part of the ethernet header up and over the protocol and 802.1Q data
             // Don't copy the ethernet header's protocol, leave the inner value from the 802.1Q header.
-            NdisMoveMemory(buffer+4, buffer, ETHERNET_HEADER_SIZE-2);
+            RtlMoveMemory(buffer+4, buffer, ETHERNET_HEADER_SIZE-2);
 
             // Update pointer/length to reflect this change.
             *PacketBuffer = buffer+4;
