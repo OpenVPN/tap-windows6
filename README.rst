@@ -146,7 +146,7 @@ Again, unsigned drivers require test mode.
 - With an unsigned driver you will need to enable Windows Test Mode via BCEDIT
 - For details: https://docs.microsoft.com/en-us/windows-hardware/manufacture/desktop/bcdedit-command-line-options
 - Specifically, ``bcdedit /set testsigning off`` or ``bcdedit /set testsigning on``
-- The result should be "Test Mode" in the bottom right corner of the windows screen.
+- The result should be ``Test Mode`` in the bottom right corner of the windows screen.
   
 Driver Installation::
 
