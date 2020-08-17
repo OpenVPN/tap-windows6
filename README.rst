@@ -176,7 +176,7 @@ The Manual process is::
 
 Steps
 
-- Step 1 - Obtain a list of Installed drivers via the command: ``pnputil -e``, this will list all of the "oemNUMBER.inf" files that are in the driver store.
+- Step 1 - Obtain a list of Installed drivers via the command: ``pnputil -e``, this will list all of the ``oemNUMBER.inf`` files that are in the driver store.
 - Step 2 - Find your driver in that list, it will be some ``oem<NUMBER>.inf`` file
 - Step 3 - Use ``pnputil.exe /d oemNUMBER.inf``
 - Now, use ``tapinstall install OemVista.inf TAP0901`` to install your driver
