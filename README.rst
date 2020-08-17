@@ -124,8 +124,8 @@ Remove::
 
   $ tapinstall remove TAP0901
 
-Removing and Replacing the Driver
----------------------------------
+Developer Mode: Removing and Replacing the Driver
+-------------------------------------------------
 
 If you are actively developing the driver (e.g.: Edit, Compile, Debug, Loop...), you may not be signing your driver each time, thus you need to be aware of the following items
 
