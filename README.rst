@@ -99,8 +99,8 @@ Please note that the NSIS packaging (-p) step will fail if you don't have
 tapinstall.exe available. Also don't use the "-c" flag or the above directories
 will get wiped before MakeNSIS is able to find them.
 
-Install/Update/Remove
----------------------
+Developer Mode: Installing,  Removing and Replacing the Driver
+-------------------------------------------------
 
 The driver can be installed using a command-line tool, tapinstall.exe, which is
 bundled with OpenVPN and tap-windows installers. Note that in some versions of
@@ -112,26 +112,12 @@ tap-windows NDIS 6 driver follow these steps:
 - cd to **dist**
 - cd to **amd64**, **i386**, or **arm64** depending on your system's processor architecture.
 
-Install::
 
-  $ tapinstall install OemVista.inf TAP0901
-
-Update::
-
-  $ tapinstall update OemVista.inf TAP0901
-
-Remove::
-
-  $ tapinstall remove TAP0901
-
-Developer Mode: Removing and Replacing the Driver
--------------------------------------------------
-
-If you are actively developing the driver (e.g.: Edit, Compile, Debug, Loop...), you may not be signing your driver each time, thus you need to be aware of the following items
+If you are actively developing the driver (e.g.: Edit, Compile, Debug, Loop...), you may not be signing your driver each time, thus you need to be aware of the following additional items.
 
 Disable Secure Boot::
 
-Using an unsigned driver, requires disabling secure boot.
+Unsigned drivers require disabling secure boot.
 
 - Secure Boot: Varies depending on PC Maker and/or the BIOS setting on your test machine.
 - https://docs.microsoft.com/en-us/windows-hardware/manufacture/desktop/disabling-secure-boot
@@ -141,9 +127,9 @@ Using an unsigned driver, requires disabling secure boot.
 
 Enable Windows Test Mode::
 
-Again, unsigned drivers require test mode.
+Test mode is also required.
 
-- With an unsigned driver you will need to enable Windows Test Mode via BCEDIT
+- Enable Windows Test Mode via BCEDIT
 - For details: https://docs.microsoft.com/en-us/windows-hardware/manufacture/desktop/bcdedit-command-line-options
 - Specifically, ``bcdedit /set testsigning off`` or ``bcdedit /set testsigning on``
 - The result should be ``Test Mode`` in the bottom right corner of the windows screen.
