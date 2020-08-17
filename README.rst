@@ -174,6 +174,8 @@ There is a script to do this, but it only works if you have not changed the text
 
 The Manual process is::
 
+Steps
+
 - Step 1 - Obtain a list of Installed drivers via the command: ``pnputil -e``, this will list all of the "oemNUMBER.inf" files that are in the driver store.
 - Step 2 - Find your driver in that list, it will be some ``oem<NUMBER>.inf`` file
 - Step 3 - Use ``pnputil.exe /d oemNUMBER.inf``
