@@ -131,6 +131,8 @@ If you are actively developing the driver (e.g.: Edit, Compile, Debug, Loop...),
 
 Disable Secure Boot::
 
+Using an unsigned driver, requires disabling secure boot.
+
 - Secure Boot: Varies depending on PC Maker and/or the BIOS setting on your test machine.
 - https://docs.microsoft.com/en-us/windows-hardware/manufacture/desktop/disabling-secure-boot
 - VMWare (one example): https://docs.vmware.com/en/VMware-vSphere/7.0/com.vmware.vsphere.vm_admin.doc/GUID-898217D4-689D-4EB5-866C-888353FE241C.html
@@ -139,12 +141,16 @@ Disable Secure Boot::
 
 Enable Windows Test Mode::
 
+Again, unsigned drivers require test mode.
+
 - With an unsigned driver you will need to enable Windows Test Mode via BCEDIT
 - For details: https://docs.microsoft.com/en-us/windows-hardware/manufacture/desktop/bcdedit-command-line-options
 - Specifically, `bcdedit /set testsigning off` or `bcdedit /set testsigning on`
 - The result should be "Test Mode" in the bottom right corner of the windows screen.
   
 Driver Installation::
+
+Notes
 
 - The command `tapinstall install OemVista.inf TAP0901` installs the driver
 - The `tapinstall install` step will pop up the "Big Scary Unsigned Driver Warning", you'll need to click OK.
