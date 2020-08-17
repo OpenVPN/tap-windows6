@@ -163,16 +163,21 @@ At some point, you will build a shinny new driver and want to try it out.
 - The command ``tapinstall remove TAP0901`` - removes the driver
 - However, the previously approved driver is still in the Windows Driver Store
 - Typing ``tapinstall install ...`` now, only re-installs the old driver that was copied into the driver store.
-- The driver needs to be removed from the driver store also.
+
+Problem: The driver needs to be removed from the driver store also.
   - Details: https://docs.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2008-R2-and-2008/cc730875(v=ws.11)
-  - There is a script to do this, but it only works if you have not changed the text strings in your driver package
+    
+There is a script to do this, but it only works if you have not changed the text strings in your driver package
   - Script Location: https://github.com/mattock/tap-windows-scripts
-  -  Step 1 - Obtain a list of Installed drivers via the command: ``pnputil -e``, this will list all of the "oemNUMBER.inf" files that are in the driver store.
-  - Step 2 - Find your driver in that list, it will be some ``oem<NUMBER>.inf`` file
-  - Step 3 - Use ``pnputil.exe /d oemNUMBER.inf``
+
+The Manual process is:
+
+-  Step 1 - Obtain a list of Installed drivers via the command: ``pnputil -e``, this will list all of the "oemNUMBER.inf" files that are in the driver store.
+- Step 2 - Find your driver in that list, it will be some ``oem<NUMBER>.inf`` file
+- Step 3 - Use ``pnputil.exe /d oemNUMBER.inf``
 - Now, use ``tapinstall install OemVista.inf TAP0901`` to install your driver
 
-Key Point::
+Important::
 
 If you do not see the Big Scary Unsigned Driver Warning - Windows will use the old (not new) driver.
 
