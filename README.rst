@@ -286,9 +286,8 @@ platform::
   │   │   ├── tap0901.cat
   │   │   └── tap0901.sys
   │   └── (Note: EV-signed driver for arm64 is not used.)
-  ├── dist
-  │   └── include
-  │       └── tap-windows.h
+  ├── include
+  │   └── tap-windows.h
   └── i386
       ├── win10
       │   ├── OemVista.inf
