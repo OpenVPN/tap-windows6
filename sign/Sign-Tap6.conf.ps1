@@ -1,7 +1,7 @@
 # Adapt this file to match your system
-$ddk_bin = "C:\Program Files (x86)\Windows Kits\10\bin\x86"
-$inf2cat = "C:\Program Files (x86)\Windows Kits\10\bin\x86\inf2cat.exe"
-$signtool = "C:\Program Files (x86)\Windows Kits\10\bin\x64\signtool.exe"
+$ddk_bin = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0x86"
+$inf2cat = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x86\Inf2Cat.exe"
+$signtool = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x86\signtool.exe"
 
 # Signtool.exe selects the certificate based on the Subject[name] field.
 # This script only searches from under CurrentUser\My certificate store.
