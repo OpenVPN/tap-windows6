@@ -457,8 +457,8 @@ DisableOurAdapters(_In_ HDEVINFO DeviceInfoSet, _Inout_ SP_DEVINFO_DATA_LIST **D
                 DeviceInfoSet, &DeviceNode->Data, &Params.ClassInstallHeader, sizeof(Params)) ||
             !SetupDiCallClassInstaller(DIF_PROPERTYCHANGE, DeviceInfoSet, &DeviceNode->Data))
         {
-            PrintError(LOG_WARN, TEXT("Unable to disable existing adapter"));
             LastError = LastError ? LastError : GetLastError();
+            PrintError(LOG_WARN, TEXT("Unable to disable existing adapter"));
             Ret = FALSE;
             goto cleanupDeviceInfoData;
         }
@@ -498,8 +498,8 @@ RemoveOurAdapters(_In_ HDEVINFO DeviceInfoSet)
         if (!SetupDiSetClassInstallParams(DeviceInfoSet, &DeviceInfo, &Params.ClassInstallHeader, sizeof(Params)) ||
             !SetupDiCallClassInstaller(DIF_REMOVE, DeviceInfoSet, &DeviceInfo))
         {
-            PrintError(LOG_WARN, TEXT("Unable to remove existing adapter"));
             LastError = LastError ? LastError : GetLastError();
+            PrintError(LOG_WARN, TEXT("Unable to remove existing adapter"));
             Ret = FALSE;
         }
     }
@@ -524,8 +524,8 @@ EnableOurAdapters(_In_ HDEVINFO DeviceInfoSet, _In_ SP_DEVINFO_DATA_LIST *Adapte
                 DeviceInfoSet, &DeviceNode->Data, &Params.ClassInstallHeader, sizeof(Params)) ||
             !SetupDiCallClassInstaller(DIF_PROPERTYCHANGE, DeviceInfoSet, &DeviceNode->Data))
         {
-            LastError = LastError ? LastError : GetLastError();
             PrintError(LOG_WARN, TEXT("Unable to enable existing adapter"));
+            LastError = LastError ? LastError : GetLastError();
             Ret = FALSE;
         }
     }
