@@ -21,6 +21,7 @@ class BuildTAPWindows(object):
             self.using_prebuilt_tapinstall = not os.path.isfile(devcon_project_file)
         else:
             self.top_tapinstall = None
+            self.using_prebuilt_tapinstall = True
             if opt.package:
                 raise ValueError("parameter -p must be used with --ti")
 
