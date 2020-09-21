@@ -89,7 +89,7 @@
    AddReg          = @PRODUCT_TAP_WIN_COMPONENT_ID@.reg
    AddReg          = @PRODUCT_TAP_WIN_COMPONENT_ID@.params.reg
    Characteristics = @PRODUCT_TAP_WIN_CHARACTERISTICS@
-   *IfType            = 53  ; IF_TYPE_PROP_VIRTUAL
+   *IfType            = 0x6 ; IF_TYPE_ETHERNET_CSMACD
    *MediaType         = 0x0 ; NdisMedium802_3
    *PhysicalMediaType = 0   ; NdisPhysicalMediumUnspecified
 
