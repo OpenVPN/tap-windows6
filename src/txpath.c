@@ -156,7 +156,7 @@ HandleIPv6NeighborDiscovery(
 
     // ethernet header
     na->eth.proto = htons(NDIS_ETH_TYPE_IPV6);
-    ETH_COPY_NETWORK_ADDRESS(na->eth.dest, Adapter->PermanentAddress);
+    ETH_COPY_NETWORK_ADDRESS(na->eth.dest, Adapter->CurrentAddress);
     ETH_COPY_NETWORK_ADDRESS(na->eth.src, Adapter->m_TapToUser.dest);
 
     // IPv6 header
@@ -225,8 +225,8 @@ ProcessARP(
     // Is this the kind of packet we are looking for?
     //-----------------------------------------------
     if (src->m_Proto == htons (NDIS_ETH_TYPE_ARP)
-        && MAC_EQUAL (src->m_MAC_Source, Adapter->PermanentAddress)
-        && MAC_EQUAL (src->m_ARP_MAC_Source, Adapter->PermanentAddress)
+        && MAC_EQUAL (src->m_MAC_Source, Adapter->CurrentAddress)
+        && MAC_EQUAL (src->m_ARP_MAC_Source, Adapter->CurrentAddress)
         && ETH_IS_BROADCAST(src->m_MAC_Destination)
         && src->m_ARP_Operation == htons (ARP_REQUEST)
         && src->m_MAC_AddressType == htons (MAC_ADDR_TYPE)
@@ -254,9 +254,9 @@ ProcessARP(
             // ARP addresses
             //----------------------------------------------      
             ETH_COPY_NETWORK_ADDRESS (arp->m_MAC_Source, mac);
-            ETH_COPY_NETWORK_ADDRESS (arp->m_MAC_Destination, Adapter->PermanentAddress);
+            ETH_COPY_NETWORK_ADDRESS (arp->m_MAC_Destination, Adapter->CurrentAddress);
             ETH_COPY_NETWORK_ADDRESS (arp->m_ARP_MAC_Source, mac);
-            ETH_COPY_NETWORK_ADDRESS (arp->m_ARP_MAC_Destination, Adapter->PermanentAddress);
+            ETH_COPY_NETWORK_ADDRESS (arp->m_ARP_MAC_Destination, Adapter->CurrentAddress);
             arp->m_ARP_IP_Source = src->m_ARP_IP_Destination;
             arp->m_ARP_IP_Destination = adapter_ip;
 

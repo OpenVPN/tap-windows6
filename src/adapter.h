@@ -142,8 +142,8 @@ typedef struct _TAP_ADAPTER_CONTEXT
 
     BOOLEAN                     AllowNonAdmin;
 
-    MACADDR                     PermanentAddress;   // From registry, if available
-    MACADDR                     CurrentAddress;
+    MACADDR                     PermanentAddress;   // Generated from adapter GUID
+    MACADDR                     CurrentAddress;     // From registry or same as above
 
     // Device registration parameters from NdisRegisterDeviceEx.
     NDIS_STRING                 DeviceName;
