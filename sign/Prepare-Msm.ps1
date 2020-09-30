@@ -37,7 +37,7 @@ if (Test-Path $Target) {
 Remove-Item -Recurse $Target
 New-Item -ItemType Directory $Target
 
-foreach ($dir in "amd64", "amd64/win10", "arm64", "arm64/win10", "dist", "dist/include", "i386", "i386/win10") {
+foreach ($dir in "amd64", "amd64/win10", "arm64", "arm64/win10", "include", "i386", "i386/win10") {
     New-Item -ItemType Directory "${Target}/${dir}"
 }
 
@@ -49,6 +49,6 @@ foreach ($arch in "amd64", "arm64", "i386") {
     Copy-Item "${Win10dist}\${arch}\*" "${Target}\${arch}\win10\"
 }
 
-Copy-Item "${Win10dist}\include\tap-windows.h" "${Target}\dist\include\"
+Copy-Item "${Win10dist}\include\tap-windows.h" "${Target}\include\"
 
 Get-ChildItem -Recurse $Target -Filter "tapinstall.exe"|Remove-Item
