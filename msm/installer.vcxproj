@@ -233,7 +233,7 @@
       <WixCandleFlags>$(WixCandleFlags) -dINSTALLER_LIBRARY_HASH=@(InstallerLibraryHash-&gt;Metadata('FileHash')) -dINSTALLER_LIBRARY_TIME=$([System.IO.File]::GetLastWriteTime('$(OutDir)$(TargetName)$(TargetExt)').Ticks)</WixCandleFlags>
     </PropertyGroup>
   </Target>
-  <Target Name="WixCompile" DependsOnTargets="HashInstallerLibrary" Inputs="installer.wxs" Outputs="$(IntDir)installer.wixobj">
+  <Target Name="WixCompile" DependsOnTargets="HashInstallerLibrary" Inputs="installer.wxs;config.props;$(OutDir)$(TargetName)$(TargetExt)" Outputs="$(IntDir)installer.wixobj">
     <Exec Command="&quot;$(WIX)bin\candle.exe&quot; $(WixCandleFlags) -out &quot;$(IntDir)installer.wixobj&quot; installer.wxs" />
   </Target>
   <Target Name="WixLink" DependsOnTargets="Build;WixCompile" Inputs="$(IntDir)installer.wixobj;$(OutDir)$(TargetName)$(TargetExt)" Outputs="$(WixOutputPath)$(WixOutputName)$(WixOutputExt)">
