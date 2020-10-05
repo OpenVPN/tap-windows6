@@ -367,9 +367,9 @@ static BOOL RemoveDriver(VOID)
         {
             PathStripPath(DriverDetail->InfFileName);
             Logger(LOG_INFO, TEXT("Removing existing driver"));
-            if (!SetupUninstallOEMInf(DriverDetail->InfFileName, SUOI_FORCEDELETE, NULL))
+            if (!SetupUninstallOEMInf(DriverDetail->InfFileName, 0, NULL))
             {
-                PrintError(LOG_ERR, TEXT("Unable to remove existing driver"));
+                PrintError(LOG_WARN, TEXT("Unable to remove existing driver"));
                 Ret = FALSE;
             }
         }
@@ -552,8 +552,7 @@ BOOL InstallOrUpdate(_Inout_ BOOL *IsRebootRequired)
     }
     if (!RemoveDriver())
     {
-        PrintError(LOG_ERR, TEXT("Failed to uninstall old drivers"));
-        goto cleanupAdapters;
+        PrintError(LOG_WARN, TEXT("Failed to uninstall old drivers, probably some are in use by adapters. Continuing."));
     }
     if (!InstallDriver(!!ExistingAdapters, IsRebootRequired))
     {
