@@ -226,8 +226,53 @@ WriteRegKeys(_In_ TCHAR *Values)
     return Ret;
 }
 
+#ifdef _DEBUG
+
+/**
+ * Pops up a message box creating a time window to attach a debugger to the installer process in
+ * order to debug exported function.
+ *
+ * @param szFunctionName  Function name that triggered the pop-up. Displayed in message box's
+ *                        title.
+ */
+static void
+_debug_popup(_In_z_ LPCTSTR szFunctionName)
+{
+    TCHAR szTitle[0x100], szMessage[0x100 + MAX_PATH], szProcessPath[MAX_PATH];
+
+    /* Compose pop-up title. The dialog title will contain function name to ease the process
+     * locating. Mind that Visual Studio displays window titles on the process list. */
+    _stprintf_s(szTitle, _countof(szTitle), TEXT("%s"), szFunctionName);
+
+    /* Get process name. */
+    GetModuleFileName(NULL, szProcessPath, _countof(szProcessPath));
+    LPCTSTR szProcessName = _tcsrchr(szProcessPath, TEXT('\\'));
+    szProcessName = szProcessName ? szProcessName + 1 : szProcessPath;
+
+    /* Compose the pop-up message. */
+    _stprintf_s(
+        szMessage, _countof(szMessage),
+        TEXT("The %s process (PID: %u) has started to execute the %s function.\r\n")
+        TEXT("\r\n")
+        TEXT("If you would like to debug the function, attach a debugger to this process and set breakpoints before dismissing this dialog.\r\n")
+        TEXT("\r\n")
+        TEXT("If you are not debugging this function, you can safely ignore this message."),
+        szProcessName,
+        GetCurrentProcessId(),
+        szFunctionName);
+
+    MessageBox(NULL, szMessage, szTitle, MB_OK);
+}
+
+#define debug_popup(f) _debug_popup(f)
+#else  /* ifdef _DEBUG */
+#define debug_popup(f)
+#endif /* ifdef _DEBUG */
+
 UINT __stdcall MsiProcess(MSIHANDLE Handle)
 {
+    debug_popup(TEXT(__FUNCTION__));
+
     MsiHandle = Handle;
     SetLogger(MsiLogger);
     BOOL IsComInitialized = SUCCEEDED(CoInitialize(NULL));
