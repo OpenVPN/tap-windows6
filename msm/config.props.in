@@ -7,6 +7,7 @@
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 	<PropertyGroup>
 		<ProductName>@PRODUCT_NAME@</ProductName>
+		<ProductPackageName>@PRODUCT_PACKAGE_NAME@</ProductPackageName>
 		<ProductPublisher>@PRODUCT_PUBLISHER@</ProductPublisher>
 		<ProductVersion>@PRODUCT_VERSION@</ProductVersion>
 		<ProductVersionResource>@PRODUCT_VERSION_RESOURCE@</ProductVersionResource>

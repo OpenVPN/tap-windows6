@@ -119,7 +119,7 @@
     <WixCandleFlags>$(WixCandleFlags) -nologo -arch $(WixArch) -dPLATFORM=$(Platform) -sw1086</WixCandleFlags>
     <WixLightFlags>$(WixLightFlags) -nologo -b output_dir="$(OutDir.TrimEnd('\'))" -b dist_dir="..\dist" -spdb -sw1076 -sw1079</WixLightFlags>
     <WixOutputPath>$(OutDir)</WixOutputPath>
-    <WixOutputName>tap-windows</WixOutputName>
+    <WixOutputName>$(ProductPackageName)</WixOutputName>
     <WixOutputExt>.msm</WixOutputExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)'=='Debug'">
@@ -128,7 +128,7 @@
   <PropertyGroup Condition="'$(Configuration)'=='Release'">
     <LinkIncremental>false</LinkIncremental>
     <WixOutputPath>..\</WixOutputPath>
-    <WixOutputName>tap-windows-$(ProductVersion)-I$(ProductTapWinBuild)-$(OpenVPNPlatform)</WixOutputName>
+    <WixOutputName>$(ProductPackageName)-$(ProductVersion)-I$(ProductTapWinBuild)-$(OpenVPNPlatform)</WixOutputName>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>

@@ -22,7 +22,7 @@ The prerequisites for building are:
 - Prebuilt tapinstall.exe binaries (optional)
 - Visual Studio 2019 and WiX Toolset for MSM packaging (optional)
 
-Make sure you add Python's install directory (usually c:\\python27) to the PATH 
+Make sure you add Python's install directory (usually c:\\python27) to the PATH
 environment variable.
 
 Tap-windows6 has been successfully build on Windows 10 and Windows Server 2016 using
@@ -32,7 +32,7 @@ View build script options::
 
   $ python buildtap.py
   Usage: buildtap.py [options]
-  
+
   Options:
     -h, --help           show this help message and exit
     -s SRC, --src=SRC    TAP-Windows top-level directory, default=<CWD>
@@ -62,7 +62,7 @@ Edit **version.m4** and **paths.py** as necessary then build::
 
   $ python buildtap.py -b
 
-On successful completion, all build products will be placed in the "dist" 
+On successful completion, all build products will be placed in the "dist"
 directory as well as tap6.tar.gz. The NSIS installer package will be placed to
 the build root directory.
 
@@ -72,7 +72,7 @@ Building tapinstall (optional)
 The easiest way to build tapinstall is to clone the Microsoft driver samples
 and copy the source for devcon.exe into the tap-windows6 tree. Using PowerShell::
 
-  $ git clone https://github.com/Microsoft/Windows-driver-samples
+  $ git clone https://github.com/OpenVPN/Windows-driver-samples.git
   $ Copy-Item -Recurse Windows-driver-samples/setup/devcon tap-windows6
   $ cd tap-windows6
   $ python.exe buildtap.py -b --ti=devcon
@@ -133,7 +133,7 @@ Test mode is also required.
 - For details: https://docs.microsoft.com/en-us/windows-hardware/manufacture/desktop/bcdedit-command-line-options
 - Specifically, ``bcdedit /set testsigning off`` or ``bcdedit /set testsigning on``
 - The result should be ``Test Mode`` in the bottom right corner of the windows screen.
-  
+
 Driver Installation::
 
 Notes
@@ -141,7 +141,7 @@ Notes
 - The command ``tapinstall install OemVista.inf TAP0901`` installs the driver
 - Because your driver is not signed, the ``tapinstall install`` step will pop up the "Big Scary Unsigned Driver Warning", you'll need to click OK.
 - As a result, the driver will be copied into the Windows Driver Store
-  
+
 Updating the Driver, and the Windows Driver Store::
 
 At some point, you will build a shinny new driver and need to test it.
@@ -153,13 +153,13 @@ At some point, you will build a shinny new driver and need to test it.
 Key step: The driver needs to be removed from the driver store also.
 
 - Details: https://docs.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2008-R2-and-2008/cc730875(v=ws.11)
-    
+
 There is a script to do this, but it only works if you have not changed the text strings in your driver package
 
 - Script Location: https://github.com/mattock/tap-windows-scripts
 
 The manual steps are:
-  
+
 - Step 1 - Obtain a list of Installed drivers via the command: ``pnputil -e``, this will list all of the ``oemNUMBER.inf`` files that are in the driver store.
 - Step 2 - Find your driver in that list, it will be some ``oem<NUMBER>.inf`` file
 - Step 3 - To delete, use ``pnputil.exe /d oemNUMBER.inf``
@@ -275,9 +275,9 @@ component ids for example.
 Notes on proxies
 ----------------
 
-It is possible to build tap-windows6 without connectivity to the Internet but 
-any attempt to timestamp the driver will fail. For this reason configure your 
-outbound proxy server before starting the build. Note that the command prompt 
+It is possible to build tap-windows6 without connectivity to the Internet but
+any attempt to timestamp the driver will fail. For this reason configure your
+outbound proxy server before starting the build. Note that the command prompt
 also needs to be restarted to make use of new proxy settings.
 
 MSM packaging

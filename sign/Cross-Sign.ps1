@@ -55,6 +55,9 @@ $arm64_driver_basename = (Get-ChildItem $arm64_driver_dir -Filter "*.sys").BaseN
 $cat_x86 = "${x86_driver_dir}\${x86_driver_basename}.cat"
 $cat_x64 = "${x64_driver_dir}\${x64_driver_basename}.cat"
 $cat_arm64 = "${arm64_driver_dir}\${arm64_driver_basename}.cat"
+$sys_x86 = "${x86_driver_dir}\${x86_driver_basename}.sys"
+$sys_x64 = "${x64_driver_dir}\${x64_driver_basename}.sys"
+$sys_arm64 = "${arm64_driver_dir}\${arm64_driver_basename}.sys"
 $devcon_x86 = (Get-ChildItem $x86_driver_dir -Filter "*.exe").FullName
 $devcon_x64 = (Get-ChildItem $x64_driver_dir -Filter "*.exe").FullName
 $devcon_arm64 = (Get-ChildItem $arm64_driver_dir -Filter "*.exe").FullName
@@ -96,14 +99,14 @@ if (Test-Path $cat_x64) {
 }
 
 # Sign the catalogs
-foreach ($file in $cat_x86,$cat_x64,$cat_arm64,$devcon_x86,$devcon_x64,$devcon_arm64) {
+foreach ($file in $sys_x86,$sys_x64,$sys_arm64,$cat_x86,$cat_x64,$cat_arm64,$devcon_x86,$devcon_x64,$devcon_arm64) {
     $not_signed = ((Get-AuthenticodeSignature $file).Status -eq "NotSigned")
- 
+
     if ( ($not_signed) -or ($Append) ) {
         & $signtool sign /v /s My /n $subject /ac $crosscert /as /fd $digest $file
         # signtool.exe counterintuitively rejects the /tp 0, claiming that the index is invalid;
         # hence we only define /tp if we're adding a second signature.
-        if ($Append) { 
+        if ($Append) {
             & $signtool timestamp /tr $timestamp /td $digest /tp 1 $file
         } else {
 		    & $signtool timestamp /tr $timestamp /td $digest $file

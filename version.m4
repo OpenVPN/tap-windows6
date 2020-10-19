@@ -1,5 +1,6 @@
 dnl define the TAP version
 define([PRODUCT_NAME], [TAP-Windows])
+define([PRODUCT_PACKAGE_NAME], [tap-windows])
 define([PRODUCT_PUBLISHER], [OpenVPN Technologies, Inc.])
 define([PRODUCT_VERSION], [9.24.6])
 define([PRODUCT_VERSION_RESOURCE], [9,24,6,601])
