@@ -316,7 +316,8 @@ class BuildTAPWindows(object):
         # Get variables from version.m4
         kv = self.gen_version_m4()
 
-        installer_file=os.path.join(self.top, 'tap-windows-'+kv['PRODUCT_VERSION']+'-I'+kv['PRODUCT_TAP_WIN_BUILD']+'.exe')
+        installer_file = os.path.join(
+            self.top, kv['PRODUCT_PACKAGE_NAME']+'-'+kv['PRODUCT_VERSION']+'-I'+kv['PRODUCT_TAP_WIN_BUILD']+'.exe')
 
         installer_variables_generator = ("\"-D%s=%s\"" % (k, v) for k, v in kv.items())
 

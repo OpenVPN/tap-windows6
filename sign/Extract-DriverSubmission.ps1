@@ -16,6 +16,10 @@ Begin {
     if (Test-Path $DistDir) {
         Copy-Item -Recurse $DistDir "${DistDir}.${timestamp}"
     }
+    # Create disk directory again after rename or if its doesnt already exists.
+    if (!(Test-Path $DistDir)) {
+        New-Item -ItemType Directory -Force -Path $DistDir
+    }
 }
 
 Process {
