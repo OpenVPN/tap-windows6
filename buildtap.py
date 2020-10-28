@@ -188,9 +188,9 @@ class BuildTAPWindows(object):
             return kv.get(var, '')
         if out_path is None:
             out_path = in_path
-        with open(in_path+'.in') as f:
+        with open(in_path+'.in', encoding='utf_8_sig') as f:
             modtxt = re.sub(self.macro_amper, repfn, f.read())
-        with open(out_path, "w") as f:
+        with open(out_path, "w", encoding='utf_8_sig') as f:
             f.write(modtxt)
 
     # set up configuration files for building tap driver
