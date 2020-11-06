@@ -106,6 +106,11 @@ ReserveFile "install-whirl.bmp"
 Section /o "TAP Virtual Ethernet Adapter" SecTAP
 
 	SetOverwrite on
+	${If} ${IsWow64}
+		SetRegView 64
+	${EndIf}
+
+	ReadRegDWORD $R0 HKLM "SOFTWARE\Microsoft\Windows NT\CurrentVersion" "CurrentMajorVersionNumber"
 
 	${If} ${RunningX64}
 		DetailPrint "We are running on an x86_64 64-bit system."
@@ -114,9 +119,15 @@ Section /o "TAP Virtual Ethernet Adapter" SecTAP
 		File "${DEVCON64}"
 
 		SetOutPath "$INSTDIR\driver"
-		File "${IMAGE}\amd64\OemVista.inf"
-		File "${IMAGE}\amd64\${PRODUCT_TAP_WIN_COMPONENT_ID}.cat"
-		File "${IMAGE}\amd64\${PRODUCT_TAP_WIN_COMPONENT_ID}.sys"
+		${If} $R0 == ""
+			File "${IMAGE}\amd64\OemVista.inf"
+			File "${IMAGE}\amd64\${PRODUCT_TAP_WIN_COMPONENT_ID}.cat"
+			File "${IMAGE}\amd64\${PRODUCT_TAP_WIN_COMPONENT_ID}.sys"
+		${Else}
+			File "${IMAGE}\amd64\win10\OemVista.inf"
+			File "${IMAGE}\amd64\win10\${PRODUCT_TAP_WIN_COMPONENT_ID}.cat"
+			File "${IMAGE}\amd64\win10\${PRODUCT_TAP_WIN_COMPONENT_ID}.sys"
+		${EndIf}
 	${ElseIf} ${RunningArm64}
 		DetailPrint "We are running on an ARM64 64-bit system."
 
@@ -134,9 +145,15 @@ Section /o "TAP Virtual Ethernet Adapter" SecTAP
 		File "${DEVCON32}"
 
 		SetOutPath "$INSTDIR\driver"
-		File "${IMAGE}\i386\OemVista.inf"
-		File "${IMAGE}\i386\${PRODUCT_TAP_WIN_COMPONENT_ID}.cat"
-		File "${IMAGE}\i386\${PRODUCT_TAP_WIN_COMPONENT_ID}.sys"
+		${If} $R0 == ""
+			File "${IMAGE}\i386\OemVista.inf"
+			File "${IMAGE}\i386\${PRODUCT_TAP_WIN_COMPONENT_ID}.cat"
+			File "${IMAGE}\i386\${PRODUCT_TAP_WIN_COMPONENT_ID}.sys"
+		${Else}
+			File "${IMAGE}\i386\win10\OemVista.inf"
+			File "${IMAGE}\i386\win10\${PRODUCT_TAP_WIN_COMPONENT_ID}.cat"
+			File "${IMAGE}\i386\win10\${PRODUCT_TAP_WIN_COMPONENT_ID}.sys"
+		${EndIf}
 	${Else}
 		DetailPrint "Native architecture not recognized!"
 	${EndIf}
