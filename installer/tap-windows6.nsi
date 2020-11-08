@@ -202,7 +202,7 @@ ${EndIf}
 	!insertmacro MULTIUSER_INIT
 	SetShellVarContext all
 
-	${If} ${RunningX64}
+	${If} ${IsWow64}
 		SetRegView 64
 		StrCpy $INSTDIR "$PROGRAMFILES64\${PRODUCT_NAME}"
 	${Else}
@@ -315,7 +315,7 @@ Function un.onInit
 	ClearErrors
 	!insertmacro MULTIUSER_UNINIT
 	SetShellVarContext all
-	${If} ${RunningX64}
+	${If} ${IsWow64}
 		SetRegView 64
 	${EndIf}
 FunctionEnd
