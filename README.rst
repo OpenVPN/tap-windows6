@@ -11,7 +11,7 @@ Build
 
 The prerequisites for building are:
 
-- Python 2.7
+- Python 2.7 or higher 
 - Microsoft Windows 10 EWDK (Enterprise Windows Driver Kit)
     - Visual Studio+Windows Driver Kit works too. Make sure to work from a "Command Prompt for Visual Studio" and to call buildtap.py with "--sdk=wdk".
 - The devcon source code directory (setup/devcon) from `Windows-driver-samples <https://github.com/OpenVPN/Windows-driver-samples>`_ (optional)
@@ -22,7 +22,7 @@ The prerequisites for building are:
 - Prebuilt tapinstall.exe binaries (optional)
 - Visual Studio 2019 and WiX Toolset for MSM packaging (optional)
 
-Make sure you add Python's install directory (usually c:\\python27) to the PATH
+Make sure you add Python's install directory to the PATH
 environment variable.
 
 Tap-windows6 has been successfully build on Windows 10 and Windows Server 2016 using
