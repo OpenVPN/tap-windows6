@@ -298,13 +298,12 @@ class BuildTAPWindows(object):
     # package the produced files into an NSIS installer
     def package(self):
 
-        # Generate license.txt and converting LF -> CRLF as we go. Apparently
-        # this type of conversion will stop working in Python 3.x.
-        dst = open(os.path.join(self.dist_path(), 'license.txt'), mode='wb')
+        # Generate license.txt
+        dst = open(os.path.join(self.dist_path(), 'license.txt'), mode='w')
 
         for f in (os.path.join(self.top, 'COPYING'), os.path.join(self.top, 'COPYRIGHT.GPL')):
-            src=open(f, mode='rb')
-            dst.write(src.read()+'\r\n')
+            src=open(f, mode='r')
+            dst.write(src.read() + os.linesep)
             src.close()
 
         dst.close()
