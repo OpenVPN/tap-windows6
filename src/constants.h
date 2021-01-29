@@ -113,7 +113,6 @@
 #define TAP_SUPPORTED_FILTERS ( \
                 NDIS_PACKET_TYPE_DIRECTED   | \
                 NDIS_PACKET_TYPE_MULTICAST  | \
-                NDIS_PACKET_TYPE_BROADCAST  | \
                 NDIS_PACKET_TYPE_ALL_LOCAL  | \
                 NDIS_PACKET_TYPE_PROMISCUOUS | \
                 NDIS_PACKET_TYPE_ALL_MULTICAST)
