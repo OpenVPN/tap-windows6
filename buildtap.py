@@ -27,11 +27,11 @@ class BuildTAPWindows(object):
 
         if opt.sdk == "ewdk":
             # path to EWDK
-            self.ewdk_path = paths.EWDK
+            self.ewdk_path = os.getenv('EWDK', paths.EWDK)
             self.ewdk_cmd = os.path.join(self.ewdk_path, "BuildEnv", "SetupBuildEnv.cmd")
 
         # path to makensis
-        self.makensis = os.path.join(paths.NSIS, 'makensis.exe')
+        self.makensis = os.path.join(os.getenv('NSIS', paths.NSIS), 'makensis.exe')
 
         # Driver Kit build system strings
         # This driver builds for a specific set of architectures.
