@@ -113,7 +113,7 @@ tapAdapterContextAllocate(
 
         adapter->ReceiveNblPool = NdisAllocateNetBufferListPool(
             adapter->MiniportAdapterHandle,
-            &nblPoolParameters); 
+            &nblPoolParameters);
 
         if (adapter->ReceiveNblPool == NULL)
         {
@@ -136,11 +136,6 @@ tapAdapterContextAllocate(
 
         // NBL pool for making TAP receive indications.
         NdisZeroMemory(&nblPoolParameters, sizeof(NET_BUFFER_LIST_POOL_PARAMETERS));
-
-        // Initialize event used to determine when all receive NBLs have been returned.
-        NdisInitializeEvent(&adapter->ReceiveNblInFlightCountZeroEvent);
-
-
 
         // Add initial reference. Normally removed in AdapterHalt.
         adapter->RefCount = 1;
@@ -181,7 +176,7 @@ tapReadCurrentAddress(
 
     if (status == NDIS_STATUS_SUCCESS && configAddressLength == 6)
     {
-        
+
         if ((ETH_IS_MULTICAST(configAddress)
                 || ETH_IS_BROADCAST(configAddress))
                 || !NIC_ADDR_IS_LOCALLY_ADMINISTERED(configAddress))
@@ -251,7 +246,7 @@ tapReadConfiguration(
         //
         // NetCfgInstanceId is  a GUID string provided by NDIS that identifies
         // the adapter instance. An example is:
-        // 
+        //
         //    NetCfgInstanceId={410EB49D-2381-4FE7-9B36-498E22619DF0}
         //
         // Other names are derived from NetCfgInstanceId. For example, MiniportName:
@@ -281,7 +276,7 @@ tapReadConfiguration(
                 Adapter->NetCfgInstanceId.Buffer = Adapter->NetCfgInstanceIdBuffer;
 
                 NdisMoveMemory(
-                    Adapter->NetCfgInstanceId.Buffer, 
+                    Adapter->NetCfgInstanceId.Buffer,
                     configParameter->ParameterData.StringData.Buffer,
                     Adapter->NetCfgInstanceId.Length
                     );
@@ -797,7 +792,7 @@ AdapterCreate(
         genAttributes.IfType = TAP_IFTYPE;
         genAttributes.IfConnectorPresent = TAP_HAS_PHYSICAL_CONNECTOR;
         genAttributes.SupportedStatistics = TAP_SUPPORTED_STATISTICS;
-        genAttributes.SupportedPauseFunctions = NdisPauseFunctionsUnsupported; // IEEE 802.3 pause frames 
+        genAttributes.SupportedPauseFunctions = NdisPauseFunctionsUnsupported; // IEEE 802.3 pause frames
         genAttributes.DataBackFillSize = 0;
         genAttributes.ContextBackFillSize = 0;
 
@@ -959,63 +954,6 @@ Return Value:
     DEBUGP (("[TAP] <-- AdapterHalt\n"));
 }
 
-VOID
-tapWaitForReceiveNblInFlightCountZeroEvent(
-    __in PTAP_ADAPTER_CONTEXT     Adapter
-    )
-{
-    LONG    nblCount;
-
-    //
-    // Wait until higher-level protocol has returned all NBLs
-    // to the driver.
-    //
-
-    // Add one NBL "bias" to insure allow event to be reset safely.
-    nblCount = NdisInterlockedIncrement(&Adapter->ReceiveNblInFlightCount);
-    ASSERT(nblCount > 0 );
-    NdisResetEvent(&Adapter->ReceiveNblInFlightCountZeroEvent);
-
-    //
-    // Now remove the bias and wait for the ReceiveNblInFlightCountZeroEvent
-    // if the count returned is not zero.
-    //
-    nblCount = NdisInterlockedDecrement(&Adapter->ReceiveNblInFlightCount);
-    ASSERT(nblCount >= 0);
-
-    if(nblCount)
-    {
-        LARGE_INTEGER   startTime, currentTime;
-
-        NdisGetSystemUpTimeEx(&startTime);
-
-        for (;;)
-        {
-            BOOLEAN waitResult = NdisWaitEvent(
-                &Adapter->ReceiveNblInFlightCountZeroEvent, 
-                TAP_WAIT_POLL_LOOP_TIMEOUT
-                );
-
-            NdisGetSystemUpTimeEx(&currentTime);
-
-            if (waitResult)
-            {
-                break;
-            }
-
-            DEBUGP (("[%s] Waiting for %d in-flight receive NBLs to be returned.\n",
-                MINIPORT_INSTANCE_ID (Adapter),
-                Adapter->ReceiveNblInFlightCount
-                ));
-        }
-
-        DEBUGP (("[%s] Waited %d ms for all in-flight NBLs to be returned.\n",
-            MINIPORT_INSTANCE_ID (Adapter),
-            (currentTime.LowPart - startTime.LowPart)
-            ));
-    }
-}
-
 NDIS_STATUS
 AdapterPause(
     __in  NDIS_HANDLE                       MiniportAdapterContext,
@@ -1077,21 +1015,6 @@ Return Value:
     tapAdapterAcquireLock(adapter,FALSE);
     adapter->Locked.AdapterState = MiniportPausingState;
     tapAdapterReleaseLock(adapter,FALSE);
-
-    //
-    // Stop the flow of network data through the receive path
-    // ------------------------------------------------------
-    // In the Pausing and Paused state tapAdapterSendAndReceiveReady
-    // will prevent new calls to NdisMIndicateReceiveNetBufferLists
-    // to indicate additional receive NBLs to the host.
-    //
-    // However, there may be some in-flight NBLs owned by the driver
-    // that have been indicated to the host but have not yet been
-    // returned.
-    //
-    // Wait here for all in-flight receive indications to be returned.
-    //
-    tapWaitForReceiveNblInFlightCountZeroEvent(adapter);
 
     //
     // Stop the flow of network data through the send path
@@ -1643,7 +1566,7 @@ Return Value:
     {
         return 0;
     }
-    
+
     PETH_HEADER ethernetHeader = (PETH_HEADER)PacketBuffer;
     ASSERT(ethernetHeader);
 
@@ -1659,10 +1582,10 @@ Return Value:
         {
             // Note: Counterintutive match code from this macro. 0 = match
             ETH_COMPARE_NETWORK_ADDRESSES_EQ(
-                Adapter->MCList[i], 
-                ethernetHeader->dest, 
+                Adapter->MCList[i],
+                ethernetHeader->dest,
                 &address_match);
-            
+
             if(address_match == 0)
             {
                 // Address is in multicast list
@@ -1677,13 +1600,13 @@ Return Value:
         // Determine if packet is directed to our address or not.
         int address_match = 0;
         ETH_COMPARE_NETWORK_ADDRESSES_EQ(
-            Adapter->CurrentAddress, 
-            ethernetHeader->dest, 
+            Adapter->CurrentAddress,
+            ethernetHeader->dest,
             &address_match);
 
         if(address_match == 0)
         {
-            return NDIS_PACKET_TYPE_DIRECTED;    
+            return NDIS_PACKET_TYPE_DIRECTED;
         }
         else
         {
@@ -1815,7 +1738,7 @@ tapAdapterAcquireLock(
     )
 {
     ASSERT(!DispatchLevel || (DISPATCH_LEVEL == KeGetCurrentIrql()));
-   
+
     if (DispatchLevel)
     {
         NdisDprAcquireSpinLock(&Adapter->AdapterLock);
@@ -1837,7 +1760,7 @@ tapAdapterReleaseLock(
     )
 {
     ASSERT(!DispatchLevel || (DISPATCH_LEVEL == KeGetCurrentIrql()));
-   
+
     if (DispatchLevel)
     {
         NdisDprReleaseSpinLock(&Adapter->AdapterLock);
