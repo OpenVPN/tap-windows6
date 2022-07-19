@@ -20,6 +20,8 @@
  *  along with this program (see the file COPYING included with this
  *  distribution); if not, write to the Free Software Foundation, Inc.,
  *  59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ *  Copyright (C) 2022 Hewlett Packard Enterprise Development LP
  */
 #ifndef __TAP_ADAPTER_CONTEXT_H_
 #define __TAP_ADAPTER_CONTEXT_H_
@@ -272,6 +274,12 @@ typedef struct _TAP_ADAPTER_CONTEXT
   // resources.
   BOOLEAN m_CalledAdapterFreeResources;
   BOOLEAN m_RegisteredAdapterShutdownHandler;
+
+
+#ifdef ARUBA_SPECIFIC
+  // Handle Aruba specific logic
+  BOOLEAN m_IsLoadedByAruba;
+#endif
 
 } TAP_ADAPTER_CONTEXT, *PTAP_ADAPTER_CONTEXT;
 

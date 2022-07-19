@@ -36,11 +36,11 @@
 				VFT2_DRV_COMM
 */
 
-#define VER_COMPANYNAME_STR         "The OpenVPN Project"
-#define VER_FILEDESCRIPTION_STR     "TAP-Windows Virtual Network Driver (NDIS 6.0)"
+#define VER_COMPANYNAME_STR         "Hewlett Packard Enterprise"
+#define VER_FILEDESCRIPTION_STR     "Aruba Networks Virtual Adapter"
 #define VER_ORIGINALFILENAME_STR    PRODUCT_TAP_WIN_COMPONENT_ID ".sys"
 #define VER_LEGALCOPYRIGHT_YEARS    "2003-2018"
-#define VER_LEGALCOPYRIGHT_STR      "OpenVPN Technologies, Inc."
+#define VER_LEGALCOPYRIGHT_STR      "Copyright (C) 2022 Hewlett Packard Enterprise Development LP."
 
 
 #define VER_PRODUCTNAME_STR         VER_FILEDESCRIPTION_STR

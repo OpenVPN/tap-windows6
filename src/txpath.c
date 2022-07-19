@@ -20,6 +20,8 @@
  *  along with this program (see the file COPYING included with this
  *  distribution); if not, write to the Free Software Foundation, Inc.,
  *  59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ *  Copyright (C) 2022 Hewlett Packard Enterprise Development LP
  */
 
 //
@@ -221,6 +223,21 @@ ProcessARP(
     __in const MACADDR mac
     )
 {
+
+#ifdef ARUBA_SPECIFIC
+    BOOLEAN bIsDestinationSame = FALSE;
+
+    if (TRUE == Adapter->m_IsLoadedByAruba)
+    {
+        bIsDestinationSame = TRUE;
+    }
+    else
+    {
+        bIsDestinationSame = (src->m_ARP_IP_Destination & ip_netmask) == ip_network ? TRUE : FALSE;
+    }
+#endif //ARUBA_SPECIFIC
+
+
     //-----------------------------------------------
     // Is this the kind of packet we are looking for?
     //-----------------------------------------------
@@ -234,7 +251,11 @@ ProcessARP(
         && src->m_PROTO_AddressType == htons (NDIS_ETH_TYPE_IPV4)
         && src->m_PROTO_AddressSize == sizeof (IPADDR)
         && src->m_ARP_IP_Source == adapter_ip
+#ifndef ARUBA_SPECIFIC
         && (src->m_ARP_IP_Destination & ip_netmask) == ip_network
+#else
+        && bIsDestinationSame
+#endif
         && src->m_ARP_IP_Destination != adapter_ip)
     {
         ARP_PACKET *arp = (ARP_PACKET *) MemAlloc (sizeof (ARP_PACKET), TRUE);
