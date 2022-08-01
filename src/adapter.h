@@ -21,7 +21,7 @@
  *  distribution); if not, write to the Free Software Foundation, Inc.,
  *  59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Copyright (C) 2022 Hewlett Packard Enterprise Development LP
+ *  Copyright 2022 Hewlett Packard Enterprise Development LP
  */
 #ifndef __TAP_ADAPTER_CONTEXT_H_
 #define __TAP_ADAPTER_CONTEXT_H_
