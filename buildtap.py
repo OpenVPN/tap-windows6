@@ -341,7 +341,7 @@ class BuildTAPWindows(object):
     def package_msm(self):
         self.config_tap()
         project_file = os.path.join(self.msm, "installer.vcxproj")
-        for arch in ("i386", "amd64"): #self.architectures_supported
+        for arch in ("i386", "amd64", "arm64"): #self.architectures_supported
             print("***** BUILD MSM arch=%s" % (arch,))
             self.run_ewdk('msbuild.exe %s /t:MSM /p:Configuration=%s /p:Platform=%s' % (
                 project_file,
