@@ -137,6 +137,9 @@ tapAdapterContextAllocate(
         // NBL pool for making TAP receive indications.
         NdisZeroMemory(&nblPoolParameters, sizeof(NET_BUFFER_LIST_POOL_PARAMETERS));
 
+        // Initialize event used to determine when all receive NBLs have been returned.
+        NdisInitializeEvent(&adapter->ReceiveNblInFlightCountZeroEvent);
+
         // Add initial reference. Normally removed in AdapterHalt.
         adapter->RefCount = 1;
 
@@ -954,6 +957,63 @@ Return Value:
     DEBUGP (("[TAP] <-- AdapterHalt\n"));
 }
 
+VOID
+tapWaitForReceiveNblInFlightCountZeroEvent(
+    __in PTAP_ADAPTER_CONTEXT     Adapter
+)
+{
+    LONG    nblCount;
+
+    //
+    // Wait until higher-level protocol has returned all NBLs
+    // to the driver.
+    //
+
+    // Add one NBL "bias" to insure allow event to be reset safely.
+    nblCount = NdisInterlockedIncrement(&Adapter->ReceiveNblInFlightCount);
+    ASSERT(nblCount > 0);
+    NdisResetEvent(&Adapter->ReceiveNblInFlightCountZeroEvent);
+
+    //
+    // Now remove the bias and wait for the ReceiveNblInFlightCountZeroEvent
+    // if the count returned is not zero.
+    //
+    nblCount = NdisInterlockedDecrement(&Adapter->ReceiveNblInFlightCount);
+    ASSERT(nblCount >= 0);
+
+    if (nblCount)
+    {
+        LARGE_INTEGER   startTime, currentTime;
+
+        NdisGetSystemUpTimeEx(&startTime);
+
+        for (;;)
+        {
+            BOOLEAN waitResult = NdisWaitEvent(
+                &Adapter->ReceiveNblInFlightCountZeroEvent,
+                TAP_WAIT_POLL_LOOP_TIMEOUT
+            );
+
+            NdisGetSystemUpTimeEx(&currentTime);
+
+            if (waitResult)
+            {
+                break;
+            }
+
+            DEBUGP(("[%s] Waiting for %d in-flight receive NBLs to be returned.\n",
+                MINIPORT_INSTANCE_ID(Adapter),
+                Adapter->ReceiveNblInFlightCount
+                ));
+        }
+
+        DEBUGP(("[%s] Waited %d ms for all in-flight NBLs to be returned.\n",
+            MINIPORT_INSTANCE_ID(Adapter),
+            (currentTime.LowPart - startTime.LowPart)
+            ));
+    }
+}
+
 NDIS_STATUS
 AdapterPause(
     __in  NDIS_HANDLE                       MiniportAdapterContext,
@@ -1015,6 +1075,21 @@ Return Value:
     tapAdapterAcquireLock(adapter,FALSE);
     adapter->Locked.AdapterState = MiniportPausingState;
     tapAdapterReleaseLock(adapter,FALSE);
+
+    //
+    // Stop the flow of network data through the receive path
+    // ------------------------------------------------------
+    // In the Pausing and Paused state tapAdapterSendAndReceiveReady
+    // will prevent new calls to NdisMIndicateReceiveNetBufferLists
+    // to indicate additional receive NBLs to the host.
+    //
+    // However, there may be some in-flight NBLs owned by the driver
+    // that have been indicated to the host but have not yet been
+    // returned.
+    //
+    // Wait here for all in-flight receive indications to be returned.
+    //
+    tapWaitForReceiveNblInFlightCountZeroEvent(adapter);
 
     //
     // Stop the flow of network data through the send path
