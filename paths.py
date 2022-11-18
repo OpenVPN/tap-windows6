@@ -3,6 +3,6 @@
 # EWDK = "D:"
 
 # Visual Studio 2019
-EWDK = "C:\Program Files (x86)\Windows Kits\10"
+EWDK = "E:"
 
 NSIS = "C:\\Program Files (x86)\\NSIS"
