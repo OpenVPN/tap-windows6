@@ -170,6 +170,10 @@ Important::
 
 If you do not see the Big Scary Unsigned Driver Warning - Windows will use the old (not new) driver.
 
+Troubleshooting:
+
+Examining the SetupAPI log file helps, see ``C:\Windows\INF\setupapi.dev.log``.
+
 Build for HLK tests
 -------------------
 
