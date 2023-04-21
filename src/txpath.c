@@ -902,10 +902,10 @@ Return Value:
 
             packetLength = NET_BUFFER_DATA_LENGTH(currentNb);
 
-            // Minimum packet size is size of Ethernet plus IPv4 headers.
-            ASSERT(packetLength >= (ETHERNET_HEADER_SIZE + IP_HEADER_SIZE));
+            // Minimum packet size is size of Ethernet.
+            ASSERT(packetLength >= ETHERNET_HEADER_SIZE);
 
-            if(packetLength < (ETHERNET_HEADER_SIZE + IP_HEADER_SIZE))
+            if(packetLength < ETHERNET_HEADER_SIZE)
             {
                 return FALSE;
             }
