@@ -39,8 +39,7 @@
 VOID
 tapFreeReceiveNetBufferList(
     __in  PTAP_ADAPTER_CONTEXT  Adapter,
-    __in  PNET_BUFFER_LIST      NetBufferList,  // Only one NB here...
-    __in  BOOLEAN               DecrementInflight
+    __in  PNET_BUFFER_LIST      NetBufferList  // Only one NB here...
 )
 {
     ULONG   frameType, netBufferCount, byteCount;
@@ -129,17 +128,6 @@ tapFreeReceiveNetBufferList(
         }
 
         NdisFreeMdl(mdl);
-    }
-
-    if (DecrementInflight)
-    {
-        // Decrement in-flight receive NBL count.
-        LONG nblCount = NdisInterlockedDecrement(&Adapter->ReceiveNblInFlightCount);
-        ASSERT(nblCount >= 0);
-        if (0 == nblCount)
-        {
-            NdisSetEvent(&Adapter->ReceiveNblInFlightCountZeroEvent);
-        }
     }
 
     // Free the NBL
@@ -236,7 +224,7 @@ IndicateReceivePacket(
 
             if(netBufferList != NULL)
             {
-                ULONG receiveFlags = 0;
+                ULONG       receiveFlags = NDIS_RECEIVE_FLAGS_RESOURCES;
 
                 NET_BUFFER_LIST_NEXT_NBL(netBufferList) = NULL; // Only one NBL
 
@@ -251,10 +239,6 @@ IndicateReceivePacket(
 
                 netBufferList->MiniportReserved[0] = NULL;
                 netBufferList->MiniportReserved[1] = NULL;
-
-                // Increment in-flight receive NBL count.
-                LONG nblCount = NdisInterlockedIncrement(&Adapter->ReceiveNblInFlightCount);
-                ASSERT(nblCount > 0);
 
                 netBufferList->SourceHandle = Adapter->MiniportAdapterHandle;
 
@@ -271,6 +255,8 @@ IndicateReceivePacket(
                     1,      // NumberOfNetBufferLists
                     receiveFlags
                     );
+
+                tapFreeReceiveNetBufferList(Adapter->MiniportAdapterHandle, netBufferList);
 
                 return;
             }
@@ -306,33 +292,11 @@ AdapterReturnNetBufferLists(
     __in  NDIS_HANDLE             MiniportAdapterContext,
     __in  PNET_BUFFER_LIST        NetBufferLists,
     __in  ULONG                   ReturnFlags
-)
+    )
 {
-    PTAP_ADAPTER_CONTEXT    adapter = (PTAP_ADAPTER_CONTEXT)MiniportAdapterContext;
-    PNET_BUFFER_LIST        currentNbl;
+    PTAP_ADAPTER_CONTEXT    adapter = (PTAP_ADAPTER_CONTEXT )MiniportAdapterContext;
 
-    UNREFERENCED_PARAMETER(ReturnFlags);
-
-    //
-    // Process each NBL individually
-    //
-    currentNbl = NetBufferLists;
-    while (currentNbl)
-    {
-        PNET_BUFFER_LIST    nextNbl;
-
-        nextNbl = NET_BUFFER_LIST_NEXT_NBL(currentNbl);
-        NET_BUFFER_LIST_NEXT_NBL(currentNbl) = NULL;
-
-        // Complete write IRP and free NBL and associated resources.
-        tapFreeReceiveNetBufferList(
-            adapter,
-            currentNbl,
-            TRUE);
-
-        // Move to next NBL
-        currentNbl = nextNbl;
-    }
+    DEBUGP(("[%s] Unexpected AdapterReturnNetBufferLists() call\n", MINIPORT_INSTANCE_ID(adapter)));
 }
 
 static PVOID
@@ -563,7 +527,7 @@ TapSharedSendPacket(
         NDIS_RECEIVE_FLAGS_RESOURCES       // ReceiveFlags
         );
 
-    tapFreeReceiveNetBufferList(Adapter->MiniportAdapterHandle, netBufferList, FALSE);
+    tapFreeReceiveNetBufferList(Adapter->MiniportAdapterHandle, netBufferList);
 
     return STATUS_SUCCESS;
 }
