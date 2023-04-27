@@ -114,7 +114,7 @@ typedef struct _TAP_ADAPTER_CONTEXT
     // ----------------------------------
     // This a GUID string provided by NDIS that identifies the adapter instance.
     // An example is:
-    //
+    // 
     //    NetCfgInstanceId={410EB49D-2381-4FE7-9B36-498E22619DF0}
     //
     // Other names are derived from NetCfgInstanceId. For example, MiniportName:
@@ -183,6 +183,10 @@ typedef struct _TAP_ADAPTER_CONTEXT
 
     // NBL pool for making TAP receive indications.
     NDIS_HANDLE                 ReceiveNblPool;
+
+    volatile LONG               ReceiveNblInFlightCount;
+#define TAP_WAIT_POLL_LOOP_TIMEOUT  3000    // 3 seconds
+    NDIS_EVENT                  ReceiveNblInFlightCountZeroEvent;
 
     // Info for point-to-point mode
     BOOLEAN                     m_tun;

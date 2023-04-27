@@ -36,104 +36,6 @@
 #pragma alloc_text( PAGE, TapDeviceWrite)
 #endif // ALLOC_PRAGMA
 
-VOID
-tapFreeReceiveNetBufferList(
-    __in  PTAP_ADAPTER_CONTEXT  Adapter,
-    __in  PNET_BUFFER_LIST      NetBufferList  // Only one NB here...
-)
-{
-    ULONG   frameType, netBufferCount, byteCount;
-
-    // Fetch NB frame type.
-    frameType = tapGetNetBufferFrameType(NET_BUFFER_LIST_FIRST_NB(NetBufferList));
-
-    // Fetch statistics for all NBs linked to the NB.
-    netBufferCount = tapGetNetBufferCountsFromNetBufferList(
-        NetBufferList,
-        &byteCount
-    );
-
-    // Update statistics by frame type
-    switch (frameType)
-    {
-    case NDIS_PACKET_TYPE_DIRECTED:
-        Adapter->FramesRxDirected += netBufferCount;
-        Adapter->BytesRxDirected += byteCount;
-        break;
-
-    case NDIS_PACKET_TYPE_BROADCAST:
-        Adapter->FramesRxBroadcast += netBufferCount;
-        Adapter->BytesRxBroadcast += byteCount;
-        break;
-
-    case NDIS_PACKET_TYPE_MULTICAST:
-        Adapter->FramesRxMulticast += netBufferCount;
-        Adapter->BytesRxMulticast += byteCount;
-        break;
-
-    default:
-        ASSERT(FALSE);
-        break;
-    }
-
-    //
-    // Handle P2P Packet
-    // -----------------
-    // Free MDL allocated for P2P Ethernet header.
-    //
-    if (TAP_RX_NBL_FLAG_TEST(NetBufferList, TAP_RX_NBL_FLAGS_IS_P2P))
-    {
-        PNET_BUFFER     netBuffer;
-        PMDL            mdl;
-
-        netBuffer = NET_BUFFER_LIST_FIRST_NB(NetBufferList);
-        mdl = NET_BUFFER_FIRST_MDL(netBuffer);
-        mdl->Next = NULL;
-
-        NdisFreeMdl(mdl);
-    }
-
-    //
-    // Handle Injected Packet
-    // -----------------------
-    // Free MDL and data buffer allocated for injected packet.
-    //
-    if (TAP_RX_NBL_FLAG_TEST(NetBufferList, TAP_RX_NBL_FLAGS_IS_INJECTED))
-    {
-        ULONG           pagePriority;
-        PNET_BUFFER     netBuffer;
-        PMDL            mdl;
-        PUCHAR          injectBuffer;
-
-        netBuffer = NET_BUFFER_LIST_FIRST_NB(NetBufferList);
-        mdl = NET_BUFFER_FIRST_MDL(netBuffer);
-
-        //
-        // On Windows versions 8 and above, the MDL can be marked as not executable.
-        // This is required for the driver to function under HyperVisor-enforced
-        // Code Integrity (HVCI).
-        //
-
-        pagePriority = NormalPagePriority;
-
-        if (GlobalData.RunningWindows8OrGreater != FALSE) {
-            pagePriority |= MdlMappingNoExecute;
-        }
-
-        injectBuffer = (PUCHAR)MmGetSystemAddressForMdlSafe(mdl, pagePriority);
-
-        if (injectBuffer)
-        {
-            NdisFreeMemory(injectBuffer, 0, 0);
-        }
-
-        NdisFreeMdl(mdl);
-    }
-
-    // Free the NBL
-    NdisFreeNetBufferList(NetBufferList);
-}
-
 //===============================================================
 // Used in cases where internally generated packets such as
 // ARP or DHCP replies must be returned to the kernel, to be
@@ -224,7 +126,8 @@ IndicateReceivePacket(
 
             if(netBufferList != NULL)
             {
-                ULONG       receiveFlags = NDIS_RECEIVE_FLAGS_RESOURCES;
+                ULONG       receiveFlags = 0;
+                LONG        nblCount;
 
                 NET_BUFFER_LIST_NEXT_NBL(netBufferList) = NULL; // Only one NBL
 
@@ -239,6 +142,10 @@ IndicateReceivePacket(
 
                 netBufferList->MiniportReserved[0] = NULL;
                 netBufferList->MiniportReserved[1] = NULL;
+
+                // Increment in-flight receive NBL count.
+                nblCount = NdisInterlockedIncrement(&Adapter->ReceiveNblInFlightCount);
+                ASSERT(nblCount > 0 );
 
                 netBufferList->SourceHandle = Adapter->MiniportAdapterHandle;
 
@@ -255,8 +162,6 @@ IndicateReceivePacket(
                     1,      // NumberOfNetBufferLists
                     receiveFlags
                     );
-
-                tapFreeReceiveNetBufferList(Adapter->MiniportAdapterHandle, netBufferList);
 
                 return;
             }
@@ -288,6 +193,129 @@ IndicateReceivePacket(
 }
 
 VOID
+tapCompleteIrpAndFreeReceiveNetBufferList(
+    __in  PTAP_ADAPTER_CONTEXT  Adapter,
+    __in  PNET_BUFFER_LIST      NetBufferList,  // Only one NB here...
+    __in  NTSTATUS              IoCompletionStatus
+    )
+{
+    PIRP    irp;
+    ULONG   frameType, netBufferCount, byteCount;
+    LONG    nblCount;
+
+    // Fetch NB frame type.
+    frameType = tapGetNetBufferFrameType(NET_BUFFER_LIST_FIRST_NB(NetBufferList));
+
+    // Fetch statistics for all NBs linked to the NB.
+    netBufferCount = tapGetNetBufferCountsFromNetBufferList(
+                        NetBufferList,
+                        &byteCount
+                        );
+
+    // Update statistics by frame type
+    if(IoCompletionStatus == STATUS_SUCCESS)
+    {
+        switch(frameType)
+        {
+        case NDIS_PACKET_TYPE_DIRECTED:
+            Adapter->FramesRxDirected += netBufferCount;
+            Adapter->BytesRxDirected += byteCount;
+            break;
+
+        case NDIS_PACKET_TYPE_BROADCAST:
+            Adapter->FramesRxBroadcast += netBufferCount;
+            Adapter->BytesRxBroadcast += byteCount;
+            break;
+
+        case NDIS_PACKET_TYPE_MULTICAST:
+            Adapter->FramesRxMulticast += netBufferCount;
+            Adapter->BytesRxMulticast += byteCount;
+            break;
+
+        default:
+            ASSERT(FALSE);
+            break;
+        }
+    }
+
+    //
+    // Handle P2P Packet
+    // -----------------
+    // Free MDL allocated for P2P Ethernet header.
+    //
+    if(TAP_RX_NBL_FLAG_TEST(NetBufferList,TAP_RX_NBL_FLAGS_IS_P2P))
+    {
+        PNET_BUFFER     netBuffer;
+        PMDL            mdl;
+
+        netBuffer = NET_BUFFER_LIST_FIRST_NB(NetBufferList);
+        mdl = NET_BUFFER_FIRST_MDL(netBuffer);
+        mdl->Next = NULL;
+
+        NdisFreeMdl(mdl);
+    }
+
+    //
+    // Handle Injected Packet
+    // -----------------------
+    // Free MDL and data buffer allocated for injected packet.
+    //
+    if(TAP_RX_NBL_FLAG_TEST(NetBufferList,TAP_RX_NBL_FLAGS_IS_INJECTED))
+    {
+        ULONG           pagePriority;
+        PNET_BUFFER     netBuffer;
+        PMDL            mdl;
+        PUCHAR          injectBuffer;
+
+        netBuffer = NET_BUFFER_LIST_FIRST_NB(NetBufferList);
+        mdl = NET_BUFFER_FIRST_MDL(netBuffer);
+
+        //
+        // On Windows versions 8 and above, the MDL can be marked as not executable.
+        // This is required for the driver to function under HyperVisor-enforced
+        // Code Integrity (HVCI).
+        //
+
+        pagePriority = NormalPagePriority;
+
+        if (GlobalData.RunningWindows8OrGreater != FALSE) {
+            pagePriority |= MdlMappingNoExecute;
+        }
+
+        injectBuffer = (PUCHAR )MmGetSystemAddressForMdlSafe(mdl,pagePriority);
+
+        if(injectBuffer)
+        {
+            NdisFreeMemory(injectBuffer,0,0);
+        }
+
+        NdisFreeMdl(mdl);
+    }
+
+    //
+    // Complete the IRP
+    //
+    irp = (PIRP )NetBufferList->MiniportReserved[0];
+
+    if(irp)
+    {
+        irp->IoStatus.Status = IoCompletionStatus;
+        IoCompleteRequest(irp, IO_NO_INCREMENT);
+    }
+
+    // Decrement in-flight receive NBL count.
+    nblCount = NdisInterlockedDecrement(&Adapter->ReceiveNblInFlightCount);
+    ASSERT(nblCount >= 0 );
+    if (0 == nblCount)
+    {
+        NdisSetEvent(&Adapter->ReceiveNblInFlightCountZeroEvent);
+    }
+
+    // Free the NBL
+    NdisFreeNetBufferList(NetBufferList);
+}
+
+VOID
 AdapterReturnNetBufferLists(
     __in  NDIS_HANDLE             MiniportAdapterContext,
     __in  PNET_BUFFER_LIST        NetBufferLists,
@@ -295,11 +323,34 @@ AdapterReturnNetBufferLists(
     )
 {
     PTAP_ADAPTER_CONTEXT    adapter = (PTAP_ADAPTER_CONTEXT )MiniportAdapterContext;
+    PNET_BUFFER_LIST        currentNbl;
 
-    DEBUGP(("[%s] Unexpected AdapterReturnNetBufferLists() call\n", MINIPORT_INSTANCE_ID(adapter)));
+    UNREFERENCED_PARAMETER(ReturnFlags);
+
+    //
+    // Process each NBL individually
+    //
+    currentNbl = NetBufferLists;
+    while (currentNbl)
+    {
+        PNET_BUFFER_LIST    nextNbl;
+
+        nextNbl = NET_BUFFER_LIST_NEXT_NBL(currentNbl);
+        NET_BUFFER_LIST_NEXT_NBL(currentNbl) = NULL;
+
+        // Complete write IRP and free NBL and associated resources.
+        tapCompleteIrpAndFreeReceiveNetBufferList(
+            adapter,
+            currentNbl,
+            STATUS_SUCCESS
+            );
+
+        // Move to next NBL
+        currentNbl = nextNbl;
+    }
 }
 
-static PVOID
+static PVOID 
 TapStrip8021Q(
     __inout unsigned char ** PacketBuffer,
     __inout ULONG *PacketLength
@@ -350,6 +401,8 @@ TapSharedSendPacket(
     unsigned int            fullLength;
     PNET_BUFFER_LIST        netBufferList = NULL;
     PMDL                    mdl = NULL;    // Head of MDL chain.
+    LONG                    nblCount;
+
 
     irpSp = IoGetCurrentIrpStackLocation( Irp );
     fullLength = PacketLength + PrefixLength;
@@ -403,10 +456,10 @@ TapSharedSendPacket(
             NOTE_ERROR ();
 
             NdisFreeMemory(allocBuffer,0,0);
-
+           
             // Fail the IRP
             Irp->IoStatus.Information = 0;
-            return STATUS_INSUFFICIENT_RESOURCES;
+            return STATUS_INSUFFICIENT_RESOURCES; 
         }
 
         mdl->Next = NULL;   // No next MDL
@@ -429,11 +482,11 @@ TapSharedSendPacket(
 
             NdisFreeMdl(mdl);
             NdisFreeMemory(allocBuffer,0,0);
-
+           
             // Fail the IRP
             Irp->IoStatus.Information = 0;
-            return STATUS_INSUFFICIENT_RESOURCES;
-        }
+            return STATUS_INSUFFICIENT_RESOURCES; 
+        }            
 
         // Set flag indicating that this is an injected packet
         // In particular, it has the same cleanup path, and that is all the flag is used for currently.
@@ -441,7 +494,7 @@ TapSharedSendPacket(
         TAP_RX_NBL_FLAG_SET(netBufferList,TAP_RX_NBL_FLAGS_IS_INJECTED);
     }
     else
-    {
+    {       
         if(PrefixLength > 0)
         {
             //
@@ -457,7 +510,7 @@ TapSharedSendPacket(
                 PrefixLength
                 );
 
-            if(mdl == NULL)
+            if(mdl == NULL)            
             {
                 DEBUGP (("[%s] NdisAllocateMdl failed in IRP_MJ_WRITE\n",
                     MINIPORT_INSTANCE_ID (Adapter)));
@@ -512,7 +565,21 @@ TapSharedSendPacket(
 
     NET_BUFFER_LIST_NEXT_NBL(netBufferList) = NULL; // Only one NBL
 
+    // This IRP is pended.
+    IoMarkIrpPending(Irp);
+
+    // This IRP cannot be cancelled while in-flight.
+    IoSetCancelRoutine(Irp,NULL);
+
+    // Stash IRP pointer in NBL MiniportReserved[0] field.
+    netBufferList->MiniportReserved[0] = Irp;
+    netBufferList->MiniportReserved[1] = NULL;
+
     NET_BUFFER_LIST_INFO(netBufferList, Ieee8021QNetBufferListInfo) = PacketPriority;
+
+    // Increment in-flight receive NBL count.
+    nblCount = NdisInterlockedIncrement(&Adapter->ReceiveNblInFlightCount);
+    ASSERT(nblCount > 0 );
 
     //
     // Indicate the packet
@@ -524,12 +591,10 @@ TapSharedSendPacket(
         netBufferList,
         NDIS_DEFAULT_PORT_NUMBER,
         1,      // NumberOfNetBufferLists
-        NDIS_RECEIVE_FLAGS_RESOURCES       // ReceiveFlags
+        0       // ReceiveFlags
         );
 
-    tapFreeReceiveNetBufferList(Adapter->MiniportAdapterHandle, netBufferList);
-
-    return STATUS_SUCCESS;
+    return STATUS_PENDING;
 }
 
 // IRP_MJ_WRITE callback.
@@ -683,7 +748,7 @@ TapDeviceWrite(
                                 packetLength);
             }
 
-            if((adapter->PacketFilter & NDIS_PACKET_TYPE_PROMISCUOUS) ||
+            if((adapter->PacketFilter & NDIS_PACKET_TYPE_PROMISCUOUS) ||  
                (frameType & adapter->PacketFilter))
             {
                 // frame type bit is enabled in the packet filter.
@@ -713,7 +778,7 @@ TapDeviceWrite(
         }
         else if (adapter->m_tun && ((irpSp->Parameters.Write.Length) >= IP_HEADER_SIZE))
         {
-            // TUN mode - Prepend an ethernet header
+            // TUN mode - Prepend an ethernet header 
             PETH_HEADER         p_UserToTap = &adapter->m_UserToTap;
 
             // For IPv6, need to use Ethernet header with IPv6 proto
@@ -782,8 +847,12 @@ TapDeviceWrite(
         ntStatus = STATUS_SUCCESS;
     }
 
-    Irp->IoStatus.Status = ntStatus;
-    IoCompleteRequest(Irp, IO_NO_INCREMENT);
+    if (ntStatus != STATUS_PENDING)
+    {
+        Irp->IoStatus.Status = ntStatus;
+        IoCompleteRequest(Irp, IO_NO_INCREMENT);
+    }
 
     return ntStatus;
 }
+
