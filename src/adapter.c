@@ -722,7 +722,7 @@ AdapterCreate(
         // Specifiy the maximum network frame size, in bytes, that the NIC
         // supports excluding the header.
         //
-        genAttributes.MtuSize = TAP_FRAME_MAX_DATA_SIZE;
+        genAttributes.MtuSize = adapter->MtuSize;
         genAttributes.MaxXmitLinkSpeed = TAP_XMIT_SPEED;
         genAttributes.XmitLinkSpeed = TAP_XMIT_SPEED;
         genAttributes.MaxRcvLinkSpeed = TAP_RECV_SPEED;
