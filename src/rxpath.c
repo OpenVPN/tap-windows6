@@ -26,6 +26,8 @@
 // Include files.
 //
 
+#include <limits.h>
+
 #include "tap.h"
 
 //======================================================================
@@ -398,14 +400,24 @@ TapSharedSendPacket(
     )
 {
     PIO_STACK_LOCATION      irpSp;
-    unsigned int            fullLength;
     PNET_BUFFER_LIST        netBufferList = NULL;
     PMDL                    mdl = NULL;    // Head of MDL chain.
     LONG                    nblCount;
 
-
     irpSp = IoGetCurrentIrpStackLocation( Irp );
-    fullLength = PacketLength + PrefixLength;
+
+    // check for possible ULONG overflow
+    if ((ULONG_MAX - PacketLength) < PrefixLength)
+    {
+        DEBUGP (("[%s] Packet size with prefix exceeds ULONG_MAX\n", MINIPORT_INSTANCE_ID (Adapter)));
+        NOTE_ERROR ();
+
+        // Fail the IRP
+        Irp->IoStatus.Information = 0;
+        return STATUS_INSUFFICIENT_RESOURCES;
+    }
+
+    ULONG fullLength = PacketLength + PrefixLength;
 
     if(fullLength < TAP_MIN_FRAME_SIZE)
     {
