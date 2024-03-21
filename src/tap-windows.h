@@ -21,6 +21,8 @@
  *  along with this program (see the file COPYING included with this
  *  distribution); if not, write to the Free Software Foundation, Inc.,
  *  59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ *  Copyright 2022 Hewlett Packard Enterprise Development LP
  */
 #ifndef __TAP_WIN_H
 #define __TAP_WIN_H
@@ -53,6 +55,9 @@
 
 /* Control whether 802.1Q headers are added for priority */
 #define TAP_WIN_IOCTL_PRIORITY_BEHAVIOR     TAP_WIN_CONTROL_CODE (11, METHOD_BUFFERED)
+#ifdef ARUBA_SPECIFIC
+#define TAP_WIN_IOCTL_CONFIG_LOADER_FLAG	TAP_WIN_CONTROL_CODE (12, METHOD_BUFFERED)
+#endif
 #define TAP_PRIORITY_BEHAVIOR_NOPRIORITY    0
 #define TAP_PRIORITY_BEHAVIOR_ENABLED       1
 #define TAP_PRIORITY_BEHAVIOR_ADDALWAYS     2
@@ -77,6 +82,6 @@
 #define USERMODEDEVICEDIR "\\\\.\\Global\\"
 #define SYSDEVICEDIR      "\\Device\\"
 #define USERDEVICEDIR     "\\DosDevices\\Global\\"
-#define TAP_WIN_SUFFIX    ".tap"
+#define TAP_WIN_SUFFIX    ".avnic"
 
 #endif // __TAP_WIN_H

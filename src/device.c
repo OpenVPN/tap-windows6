@@ -20,6 +20,8 @@
  *  along with this program (see the file COPYING included with this
  *  distribution); if not, write to the Free Software Foundation, Inc.,
  *  59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ *  Copyright 2022 Hewlett Packard Enterprise Development LP
  */
 
 //
@@ -703,7 +705,11 @@ Return Value:
             Irp->IoStatus.Status = ntStatus = STATUS_INVALID_PARAMETER;
         }
         break;
-
+#ifdef ARUBA_SPECIFIC
+    case TAP_WIN_IOCTL_CONFIG_LOADER_FLAG:
+        adapter->m_IsLoadedByAruba = TRUE;
+        break;
+#endif
     default:
 
         //
